@@ -42,6 +42,7 @@ describe('Offers Routes', () => {
           title: 'Warsaw Studio',
           city: 'Warszawa',
           price: 450000,
+          images: ['https://example.com/photo1.jpg', 'https://example.com/photo2.jpg'],
         },
       ],
     });
@@ -58,6 +59,7 @@ describe('Offers Routes', () => {
     const body = getRes.json();
     expect(body.total).toBe(1);
     expect(body.items[0].externalId).toBe('ext-100');
+    expect(body.items[0].images).toEqual(['https://example.com/photo1.jpg', 'https://example.com/photo2.jpg']);
 
     const searchRes = await app.inject({
       method: 'GET',

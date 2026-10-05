@@ -16,6 +16,7 @@ export interface IngestOptions {
   delayMs?: number;
   backendUrl?: string;
   enrichDetails?: boolean;
+  forceEnrich?: boolean;
 }
 
 export interface IngestResult {
@@ -31,7 +32,10 @@ export async function runIngest(options: IngestOptions = {}): Promise<IngestResu
   const backendUrl = options.backendUrl || process.env.BACKEND_URL || 'http://localhost:4000';
   const enrichDetails =
     options.enrichDetails ?? (process.env.SCRAPE_ENRICH === 'true' || process.argv.includes('--enrich'));
+  const forceEnrich =
+    options.forceEnrich ?? (process.env.SCRAPE_FORCE === 'true' || process.argv.includes('--force'));
 
+  const knownIds = forceEnrich ? new Set<string>() : undefined;
   const listings: StandardListing[] = [];
 
   if (portal === 'sprzedajemy' || portal === 'all') {
@@ -41,9 +45,16 @@ export async function runIngest(options: IngestOptions = {}): Promise<IngestResu
       '/nieruchomosci';
     try {
       console.log(
-        `[Ingest-Sprzedajemy] Starting crawl for "${categoryPath}" (maxPages: ${maxPages}, enrichDetails: ${enrichDetails})...`
+        `[Ingest-Sprzedajemy] Starting crawl for "${categoryPath}" (maxPages: ${maxPages}, enrichDetails: ${enrichDetails}, forceEnrich: ${forceEnrich})...`
       );
-      const portalListings = await fetchSprzedajemy({ categoryPath, maxPages, delayMs, enrichDetails, backendUrl });
+      const portalListings = await fetchSprzedajemy({
+        categoryPath,
+        maxPages,
+        delayMs,
+        enrichDetails,
+        backendUrl,
+        knownIds,
+      });
       console.log(`[Ingest-Sprzedajemy] Scraped ${portalListings.length} listings.`);
       listings.push(...portalListings);
     } catch (err) {
@@ -58,9 +69,16 @@ export async function runIngest(options: IngestOptions = {}): Promise<IngestResu
       '/mieszkania/warszawa';
     try {
       console.log(
-        `[Ingest-Morizon] Starting crawl for "${categoryPath}" (maxPages: ${maxPages}, enrichDetails: ${enrichDetails})...`
+        `[Ingest-Morizon] Starting crawl for "${categoryPath}" (maxPages: ${maxPages}, enrichDetails: ${enrichDetails}, forceEnrich: ${forceEnrich})...`
       );
-      const portalListings = await fetchMorizon({ categoryPath, maxPages, delayMs, enrichDetails, backendUrl });
+      const portalListings = await fetchMorizon({
+        categoryPath,
+        maxPages,
+        delayMs,
+        enrichDetails,
+        backendUrl,
+        knownIds,
+      });
       console.log(`[Ingest-Morizon] Scraped ${portalListings.length} listings.`);
       listings.push(...portalListings);
     } catch (err) {
@@ -68,15 +86,16 @@ export async function runIngest(options: IngestOptions = {}): Promise<IngestResu
     }
   }
 
-  console.log(`[Ingest] Total scraped ${listings.length} listings across portals. Exporting to backend...`);
+  const validListings = listings.filter((l) => Array.isArray(l.images) && l.images.length > 0);
 
-  if (listings.length === 0) {
-    return { totalScraped: 0, inserted: 0, updated: 0 };
+  if (validListings.length === 0) {
+    console.log(`[Ingest] No valid listings with images found out of ${listings.length} scraped.`);
+    return { totalScraped: listings.length, inserted: 0, updated: 0 };
   }
 
-  const dtos = listings.map(mapListingToBatchDto);
+  const dtos = validListings.map(mapListingToBatchDto);
   const result = await pushOffersBatch(dtos, backendUrl);
-  console.log(`[Ingest] Ingestion complete: inserted ${result.inserted}, updated ${result.updated}`);
+  console.log(`[Ingest] Ingestion complete: inserted ${result.inserted}, updated ${result.updated} (out of ${validListings.length} with images)`);
 
   return {
     totalScraped: listings.length,
@@ -93,11 +112,15 @@ async function main() {
       | undefined;
     const categoryArg = process.argv.find((a) => a.startsWith('--category='))?.split('=')[1];
     const pagesArg = process.argv.find((a) => a.startsWith('--pages='))?.split('=')[1];
+    const enrichArg = process.argv.includes('--enrich');
+    const forceArg = process.argv.includes('--force');
 
     const result = await runIngest({
       portal: portalArg,
       categoryPath: categoryArg,
       maxPages: pagesArg ? parseInt(pagesArg, 10) : undefined,
+      enrichDetails: enrichArg || undefined,
+      forceEnrich: forceArg || undefined,
     });
     console.log('[Ingest] Summary:', result);
   } catch (error) {
