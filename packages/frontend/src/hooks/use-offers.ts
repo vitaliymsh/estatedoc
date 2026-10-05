@@ -86,37 +86,54 @@ export function useOffers() {
     syncUrlFilters(filter)
   }, [filter])
 
-  // Debounced search query or prompt submit
+  // Debounced search query or prompt submit (500ms debounce)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [])
+
   const handleSearchChange = (value: string) => {
     setSearchInput(value)
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      setFilter((prev) => ({
-        ...prev,
-        prompt: value.trim() ? value.trim() : undefined,
-        q: undefined,
-        page: 1,
-      }))
-    }, 400)
+      const trimmed = value.trim() || undefined
+      setFilter((prev) => {
+        if (prev.prompt === trimmed) return prev
+        return {
+          ...prev,
+          prompt: trimmed,
+          q: undefined,
+          page: 1,
+        }
+      })
+    }, 500)
   }
 
   const handleSearchSubmit = (value?: string) => {
-    const text = (value ?? searchInput).trim()
+    const text = (value ?? searchInput).trim() || undefined
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    setFilter((prev) => ({
-      ...prev,
-      prompt: text || undefined,
-      q: undefined,
-      page: 1,
-    }))
+    setFilter((prev) => {
+      if (prev.prompt === text) return prev
+      return {
+        ...prev,
+        prompt: text,
+        q: undefined,
+        page: 1,
+      }
+    })
   }
 
   const handleClearSearch = () => {
     setSearchInput('')
     if (debounceRef.current) clearTimeout(debounceRef.current)
     setParsedFilters(null)
-    setFilter((prev) => ({ ...prev, prompt: undefined, q: undefined, page: 1 }))
+    setFilter((prev) => {
+      if (!prev.prompt && !prev.q && prev.page === 1) return prev
+      return { ...prev, prompt: undefined, q: undefined, page: 1 }
+    })
   }
 
   // Fetch from backend API
