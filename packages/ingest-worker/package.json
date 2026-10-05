@@ -6,7 +6,7 @@
   "scripts": {
     "ingest": "tsx src/index.ts",
     "build": "tsc",
-    "test": "vitest run"
+    "test": "vitest run src"
   },
   "keywords": [],
   "author": "",
