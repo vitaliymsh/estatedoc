@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "tsx src/db/migrate.ts",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "test": "vitest run"
@@ -17,6 +17,7 @@
   "license": "ISC",
   "dependencies": {
     "@fastify/cors": "^11.3.0",
+    "@fastify/rate-limit": "^11.2.0",
     "dotenv": "^18.0.5",
     "drizzle-orm": "^0.45.3",
     "fastify": "^5.12.5",
@@ -25,7 +26,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.6.4",
-    "drizzle-kit": "^0.31.11",
+    "drizzle-kit": "^0.18.1",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }

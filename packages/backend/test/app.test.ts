@@ -57,4 +57,30 @@ describe('App Integration', () => {
     });
     await errorApp.close();
   });
+
+  it('enforces rate limits and sets rate limit headers', async () => {
+    const rateLimitedApp = await buildApp({
+      repository: new InMemoryOfferRepository(),
+      logger: false,
+      rateLimitMax: 2,
+      rateLimitTimeWindow: '1 minute',
+    });
+    await rateLimitedApp.ready();
+
+    const res1 = await rateLimitedApp.inject({ method: 'GET', url: '/health' });
+    expect(res1.statusCode).toBe(200);
+    expect(Number(res1.headers['x-ratelimit-limit'])).toBe(2);
+    expect(Number(res1.headers['x-ratelimit-remaining'])).toBe(1);
+
+    const res2 = await rateLimitedApp.inject({ method: 'GET', url: '/health' });
+    expect(res2.statusCode).toBe(200);
+    expect(Number(res2.headers['x-ratelimit-remaining'])).toBe(0);
+
+    const res3 = await rateLimitedApp.inject({ method: 'GET', url: '/health' });
+    expect(res3.statusCode).toBe(429);
+
+    await rateLimitedApp.close();
+  });
 });
+
+

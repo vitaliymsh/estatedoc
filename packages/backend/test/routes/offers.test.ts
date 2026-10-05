@@ -124,4 +124,36 @@ describe('Offers Routes', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ existingIds: ['ext-exist-1'] });
   });
+
+  it('sets ETag and Cache-Control, and returns 304 Not Modified on matching If-None-Match', async () => {
+    await repo.upsertBatch([
+      {
+        portal: 'sprzedajemy',
+        externalId: 'ext-etag-1',
+        url: 'https://sprzedajemy.pl/ext-etag-1',
+        title: 'Offer ETag Test',
+        city: 'Krakow',
+      },
+    ]);
+
+    const firstRes = await app.inject({
+      method: 'GET',
+      url: '/api/offers/1',
+    });
+    expect(firstRes.statusCode).toBe(200);
+    const etag = firstRes.headers['etag'];
+    expect(etag).toBeDefined();
+    expect(firstRes.headers['cache-control']).toBe('public, max-age=60');
+
+    const conditionalRes = await app.inject({
+      method: 'GET',
+      url: '/api/offers/1',
+      headers: {
+        'if-none-match': etag as string,
+      },
+    });
+    expect(conditionalRes.statusCode).toBe(304);
+    expect(conditionalRes.body).toBe('');
+  });
 });
+

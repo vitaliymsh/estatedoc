@@ -1,5 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import rateLimit from '@fastify/rate-limit';
 import { db, closeDb } from './db/index.js';
 import { DrizzleOfferRepository } from './repositories/drizzle-offer.repository.js';
 import { offersRoutes } from './routes/offers.js';
@@ -11,11 +12,18 @@ export interface BuildAppOptions {
   repository?: IOfferRepository;
   runner?: IIngestRunner;
   logger?: boolean;
+  rateLimitMax?: number;
+  rateLimitTimeWindow?: string | number;
 }
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
   const app = Fastify({ logger: options.logger ?? false });
   await app.register(cors);
+  await app.register(rateLimit, {
+    max: options.rateLimitMax ?? 100,
+    timeWindow: options.rateLimitTimeWindow ?? '1 minute',
+  });
+
 
   app.setErrorHandler((error, _request, reply) => {
     const err = error as { statusCode?: number; message?: string };

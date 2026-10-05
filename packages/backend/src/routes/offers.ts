@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { FastifyPluginAsync } from 'fastify';
 import type { IOfferRepository } from '../repositories/offer.repository.js';
 import {
@@ -6,6 +7,10 @@ import {
   batchIngestOffersSchema,
   checkExistingOffersSchema,
 } from '../schemas/offer.js';
+
+function computeETag(data: unknown): string {
+  return `"${createHash('sha1').update(JSON.stringify(data)).digest('hex')}"`;
+}
 
 export interface OffersRoutesOptions {
   repository: IOfferRepository;
@@ -20,12 +25,22 @@ export const offersRoutes: FastifyPluginAsync<OffersRoutesOptions> = async (fast
       return reply.status(400).send({ error: 'Invalid query parameters', details: parsed.error.issues });
     }
     const result = await repo.findAll(parsed.data);
-    return {
+    const body = {
       items: result.items,
       total: result.total,
       limit: parsed.data.limit,
       offset: parsed.data.offset,
     };
+
+    const etag = computeETag(body);
+    reply.header('Cache-Control', 'public, max-age=60');
+    reply.header('ETag', etag);
+
+    if (request.headers['if-none-match'] === etag) {
+      return reply.status(304).send();
+    }
+
+    return body;
   });
 
   fastify.get('/:id', async (request, reply) => {
@@ -37,8 +52,18 @@ export const offersRoutes: FastifyPluginAsync<OffersRoutesOptions> = async (fast
     if (!offer) {
       return reply.status(404).send({ error: 'Offer not found' });
     }
+
+    const etag = computeETag(offer);
+    reply.header('Cache-Control', 'public, max-age=60');
+    reply.header('ETag', etag);
+
+    if (request.headers['if-none-match'] === etag) {
+      return reply.status(304).send();
+    }
+
     return offer;
   });
+
 
   fastify.post('/check-existing', async (request, reply) => {
     const parsed = checkExistingOffersSchema.safeParse(request.body);
