@@ -9,7 +9,9 @@ try {
   // Ignore if env file already loaded or not present
 }
 
-const connectionUri = process.env.DATABASE_URL || 'mysql://estateplanner:estateplanner_secret@localhost:3308/estateplanner';
+const connectionUri = process.env.DATABASE_URL || (process.env.DB_HOST
+  ? `mysql://${process.env.DB_USER || 'estateplanner'}:${process.env.DB_PASSWORD || 'estateplanner_secret'}@${process.env.DB_HOST}:${process.env.DB_PORT || 3306}/${process.env.DB_NAME || 'estateplanner'}`
+  : 'mysql://estateplanner:estateplanner_secret@localhost:3308/estateplanner');
 
 export const pool = mysql.createPool(connectionUri);
 export const db = drizzle(pool, { schema, mode: 'default' });

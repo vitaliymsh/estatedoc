@@ -20,4 +20,4 @@ ENV HOST=0.0.0.0
 
 EXPOSE 4000
 
-CMD ["sh", "-c", "npm run db:push && npx tsx src/index.ts"]
+CMD ["sh", "-c", "npm run db:migrate && npx tsx src/index.ts"]
