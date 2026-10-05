@@ -159,4 +159,23 @@ describe('InMemoryOfferRepository', () => {
     const existing = await repo.findExistingExternalIds('sprzedajemy', ['a1', 'a3', 'm1']);
     expect(existing).toEqual(['a1']);
   });
+
+  it('resolves English and shorthand city aliases in query', async () => {
+    await repo.upsertBatch([
+      { portal: 'sprzedajemy', externalId: 'w1', url: 'https://sprzedajemy.pl/w1', title: 'Warsaw Apt', city: 'Warszawa' },
+      { portal: 'sprzedajemy', externalId: 'k1', url: 'https://sprzedajemy.pl/k1', title: 'Krakow Apt', city: 'Kraków' },
+    ]);
+
+    const warsawResult = await repo.findAll({ city: 'warsaw', limit: 10, offset: 0, sortBy: 'newest' });
+    expect(warsawResult.total).toBe(1);
+    expect(warsawResult.items[0].city).toBe('Warszawa');
+
+    const cracowResult = await repo.findAll({ city: 'cracow', limit: 10, offset: 0, sortBy: 'newest' });
+    expect(cracowResult.total).toBe(1);
+    expect(cracowResult.items[0].city).toBe('Kraków');
+
+    const wwaResult = await repo.findAll({ city: 'wwa', limit: 10, offset: 0, sortBy: 'newest' });
+    expect(wwaResult.total).toBe(1);
+    expect(wwaResult.items[0].city).toBe('Warszawa');
+  });
 });

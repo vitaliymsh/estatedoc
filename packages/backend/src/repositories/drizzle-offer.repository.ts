@@ -5,6 +5,26 @@ import { offers, type Offer, type NewOffer } from '../db/schema.js';
 import type { IOfferRepository, ListOffersResult } from './offer.repository.js';
 import type { ListOffersQuery } from '../schemas/offer.js';
 
+const CITY_ALIASES: Record<string, string> = {
+  warsaw: 'Warszawa',
+  cracow: 'Kraków',
+  krakow: 'Kraków',
+  wroclaw: 'Wrocław',
+  gdansk: 'Gdańsk',
+  poznan: 'Poznań',
+  lodz: 'Łódź',
+  wwa: 'Warszawa',
+  krk: 'Kraków',
+  wroc: 'Wrocław',
+};
+
+// ponytail: normalize English/short city names to canonical Polish in SQL filter
+export function normalizeCityQuery(city?: string): string | undefined {
+  if (!city?.trim()) return undefined;
+  const trimmed = city.trim();
+  return CITY_ALIASES[trimmed.toLowerCase()] ?? trimmed;
+}
+
 export class DrizzleOfferRepository implements IOfferRepository {
   constructor(private readonly db: MySql2Database<typeof schema>) {}
 
@@ -21,7 +41,10 @@ export class DrizzleOfferRepository implements IOfferRepository {
       );
     }
     if (query.city) {
-      conditions.push(like(offers.city, `%${query.city}%`));
+      const city = normalizeCityQuery(query.city);
+      if (city) {
+        conditions.push(like(offers.city, `%${city}%`));
+      }
     }
     if (query.district) {
       conditions.push(like(offers.district, `%${query.district}%`));

@@ -1,6 +1,7 @@
 import type { Offer, NewOffer } from '../db/schema.js';
 import type { IOfferRepository, ListOffersResult } from './offer.repository.js';
 import type { ListOffersQuery } from '../schemas/offer.js';
+import { normalizeCityQuery } from './drizzle-offer.repository.js';
 
 function toStoredOffer(id: number, item: NewOffer, now: Date): Offer {
   return {
@@ -46,7 +47,8 @@ export class InMemoryOfferRepository implements IOfferRepository {
       );
     }
     if (query.city) {
-      const cityLower = query.city.toLowerCase();
+      const normalized = normalizeCityQuery(query.city) || query.city;
+      const cityLower = normalized.toLowerCase();
       filtered = filtered.filter((o) => o.city.toLowerCase().includes(cityLower));
     }
     if (query.district) {
