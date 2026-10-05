@@ -12,6 +12,11 @@ import {
   formatTransactionType,
   normalizeOfferImages,
   formatDescriptionText,
+  sanitizeTitle,
+  formatArea,
+  formatPortal,
+  formatStreet,
+  formatRooms,
 } from '../formatters'
 
 describe('Frontend Formatters', () => {
@@ -137,5 +142,90 @@ describe('Frontend Formatters', () => {
     expect(formatted).toContain('BUDYNEK/OSIEDLE')
     expect(formatted).toContain('• Salon z kuchnią')
     expect(formatted).toContain('• Dwa pokoje')
+  })
+
+  it('sanitizes noisy titles by stripping pipes, HTML entities, and redundant specs', () => {
+    expect(
+      sanitizeTitle('70 m² | 3 pokoje | Śródmieście | STUDENCI | 0 zł prowizji')
+    ).toBe('Śródmieście, STUDENCI, 0 zł prowizji')
+
+    expect(
+      sanitizeTitle('NOWOCZESNY DOM JEDNORODZINNY - 140 M2')
+    ).toBe('Nowoczesny dom jednorodzinny')
+
+    expect(
+      sanitizeTitle('Mieszkanie na sprzedaż, 105 m² &amp; balkon')
+    ).toBe('Mieszkanie na sprzedaż & balkon')
+
+    expect(sanitizeTitle(null)).toBe('')
+  })
+
+  it('formats area by stripping trailing zeroes and handling invalid values', () => {
+    expect(formatArea('70.00')).toBe('70 m²')
+    expect(formatArea('147.50')).toBe('147.5 m²')
+    expect(formatArea(28.05)).toBe('28.05 m²')
+    expect(formatArea('0')).toBeNull()
+    expect(formatArea(null)).toBeNull()
+  })
+
+  it('formats rent prices with monthly suffix and handles non-positive prices', () => {
+    expect(formatPrice('3000', 'pl', 'rent')).toBe('3000 zł/mc')
+    expect(formatPrice('30000', 'pl', 'rent')).toBe('30\u00A0000 zł/mc')
+    expect(formatPrice('3000', 'en', 'rent')).toBe('3,000 PLN/mo')
+    expect(formatPrice('0', 'pl')).toBe('Cena do negocjacji')
+    expect(formatPrice('-500', 'pl')).toBe('Cena do negocjacji')
+  })
+
+  it('formats portal names with clean labels and white text on tinted badges', () => {
+    expect(formatPortal('sprzedajemy').name).toBe('Sprzedajemy.pl')
+    expect(formatPortal('sprzedajemy').badgeClassName).toContain('bg-amber-600')
+    expect(formatPortal('sprzedajemy').badgeClassName).toContain('text-white')
+
+    expect(formatPortal('morizon').name).toBe('Morizon.pl')
+    expect(formatPortal('morizon').badgeClassName).toContain('bg-sky-600')
+    expect(formatPortal('morizon').badgeClassName).toContain('text-white')
+
+    expect(formatPortal('otodom').name).toBe('Otodom')
+    expect(formatPortal('otodom').badgeClassName).toContain('bg-emerald-600')
+    expect(formatPortal('otodom').badgeClassName).toContain('text-white')
+
+    expect(formatPortal(null).name).toBe('Portal')
+    expect(formatPortal(null).badgeClassName).toContain('text-white')
+  })
+
+  it('formats street names properly without stuttering ul. prefixes', () => {
+    expect(formatStreet('Adama Mickiewicza')).toBe('ul. Adama Mickiewicza')
+    expect(formatStreet('ul. Adama Mickiewicza')).toBe('ul. Adama Mickiewicza')
+    expect(formatStreet('ulica Adama Mickiewicza')).toBe('ul. Adama Mickiewicza')
+    expect(formatStreet('al. Jerozolimskie')).toBe('al. Jerozolimskie')
+    expect(formatStreet('aleja Powstańców')).toBe('al. Powstańców')
+    expect(formatStreet('pl. Zbawiciela')).toBe('pl. Zbawiciela')
+    expect(formatStreet('os. Tysiąclecia')).toBe('os. Tysiąclecia')
+    expect(formatStreet(null)).toBeNull()
+  })
+
+  it('ensures title sanitizer capitalizes first letter of lowercase titles', () => {
+    expect(
+      sanitizeTitle('mieszkanie w centrum z garażem wolnostojącym')
+    ).toBe('Mieszkanie w centrum z garażem wolnostojącym')
+  })
+
+  it('filters gps coordinates and administrative regions from badge rendering', () => {
+    expect(IGNORED_METADATA_KEYS.has('latitude')).toBe(true)
+    expect(IGNORED_METADATA_KEYS.has('longitude')).toBe(true)
+    expect(IGNORED_METADATA_KEYS.has('coordinates')).toBe(true)
+    expect(IGNORED_METADATA_KEYS.has('province')).toBe(true)
+    expect(IGNORED_METADATA_KEYS.has('voivodeship')).toBe(true)
+  })
+
+  it('formats room counts in PL and EN including studio handling', () => {
+    expect(formatRooms(1, 'pl')).toBe('1 pokój')
+    expect(formatRooms(3, 'pl')).toBe('3 pokoje')
+    expect(formatRooms(5, 'pl')).toBe('5 pokoi')
+    expect(formatRooms(0, 'pl')).toBe('Kawalerka')
+    expect(formatRooms(1, 'en')).toBe('1 room')
+    expect(formatRooms(3, 'en')).toBe('3 rooms')
+    expect(formatRooms(0, 'en')).toBe('Studio')
+    expect(formatRooms(null, 'pl')).toBeNull()
   })
 })

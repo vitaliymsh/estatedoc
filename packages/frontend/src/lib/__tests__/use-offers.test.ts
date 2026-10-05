@@ -10,7 +10,6 @@ describe('parseUrlFilters & syncUrlFilters', () => {
     let pathname = '/'
     let state: unknown = null
 
-    // @ts-expect-error mocking window for test environment
     globalThis.window = {
       location: {
         get search() {
@@ -31,7 +30,7 @@ describe('parseUrlFilters & syncUrlFilters', () => {
           search = s ? `?${s}` : ''
         },
       },
-    }
+    } as unknown as Window & typeof globalThis
   })
 
   afterEach(() => {

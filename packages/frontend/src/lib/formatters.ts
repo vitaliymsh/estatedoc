@@ -1,11 +1,142 @@
 import type { Language } from './i18n'
 
-export function formatPrice(price: string | null, lang: Language = 'pl'): string {
-  if (!price) return lang === 'en' ? 'Price negotiable' : 'Cena do negocjacji'
+export function formatPrice(
+  price: string | number | null | undefined,
+  lang: Language = 'pl',
+  transactionType?: string | null
+): string {
+  if (price === null || price === undefined || price === '') {
+    return lang === 'en' ? 'Price negotiable' : 'Cena do negocjacji'
+  }
   const num = Number(price)
-  const currency = lang === 'en' ? 'PLN' : 'zł'
+  if (isNaN(num) || num <= 0) {
+    return lang === 'en' ? 'Price negotiable' : 'Cena do negocjacji'
+  }
+  const isRent = transactionType?.toLowerCase() === 'rent'
+  const currency = lang === 'en' ? (isRent ? 'PLN/mo' : 'PLN') : (isRent ? 'zł/mc' : 'zł')
   const locale = lang === 'en' ? 'en-US' : 'pl-PL'
-  return isNaN(num) ? price : `${num.toLocaleString(locale)} ${currency}`
+  const formattedNum = num.toLocaleString(locale)
+  return `${formattedNum} ${currency}`
+}
+
+export function formatArea(areaSqm: string | number | null | undefined): string | null {
+  if (areaSqm === null || areaSqm === undefined || areaSqm === '') return null
+  const num = Number(areaSqm)
+  if (isNaN(num) || num <= 0) return null
+  const formatted = num % 1 === 0 ? String(num) : String(parseFloat(num.toFixed(2)))
+  return `${formatted} m²`
+}
+
+export interface FormattedPortal {
+  name: string
+  badgeClassName: string
+  dotColor: string
+}
+
+export function formatPortal(portal: string | null | undefined): FormattedPortal {
+  if (!portal) {
+    return {
+      name: 'Portal',
+      badgeClassName: 'bg-neutral-800/90 text-white border-neutral-700/50 shadow-xs backdrop-blur-md',
+      dotColor: 'bg-neutral-400',
+    }
+  }
+  const lower = portal.toLowerCase().trim()
+  if (lower.includes('sprzedajemy')) {
+    return {
+      name: 'Sprzedajemy.pl',
+      badgeClassName: 'bg-amber-600/90 text-white border-amber-500/40 shadow-xs backdrop-blur-md',
+      dotColor: 'bg-amber-500',
+    }
+  }
+  if (lower.includes('morizon')) {
+    return {
+      name: 'Morizon.pl',
+      badgeClassName: 'bg-sky-600/90 text-white border-sky-500/40 shadow-xs backdrop-blur-md',
+      dotColor: 'bg-sky-500',
+    }
+  }
+  if (lower.includes('otodom')) {
+    return {
+      name: 'Otodom',
+      badgeClassName: 'bg-emerald-600/90 text-white border-emerald-500/40 shadow-xs backdrop-blur-md',
+      dotColor: 'bg-emerald-500',
+    }
+  }
+  if (lower.includes('olx')) {
+    return {
+      name: 'OLX',
+      badgeClassName: 'bg-indigo-600/90 text-white border-indigo-500/40 shadow-xs backdrop-blur-md',
+      dotColor: 'bg-indigo-500',
+    }
+  }
+  return {
+    name: portal.charAt(0).toUpperCase() + portal.slice(1),
+    badgeClassName: 'bg-primary/90 text-white border-primary/50 shadow-xs backdrop-blur-md',
+    dotColor: 'bg-primary',
+  }
+}
+
+export function formatStreet(street: string | null | undefined): string | null {
+  if (!street) return null
+  const trimmed = street.trim()
+  if (!trimmed) return null
+  if (/^(al\.|aleja|aleje)\s+/i.test(trimmed)) {
+    return `al. ${trimmed.replace(/^(al\.|aleja|aleje)\s+/i, '')}`
+  }
+  if (/^(pl\.|plac)\s+/i.test(trimmed)) {
+    return `pl. ${trimmed.replace(/^(pl\.|plac)\s+/i, '')}`
+  }
+  if (/^(os\.|osiedle)\s+/i.test(trimmed)) {
+    return `os. ${trimmed.replace(/^(os\.|osiedle)\s+/i, '')}`
+  }
+  if (/^(ul\.|ulica)\s+/i.test(trimmed)) {
+    return `ul. ${trimmed.replace(/^(ul\.|ulica)\s+/i, '')}`
+  }
+  return `ul. ${trimmed}`
+}
+
+const HTML_ENTITIES: Record<string, string> = {
+  '&amp;': '&',
+  '&quot;': '"',
+  '&#39;': "'",
+  '&lt;': '<',
+  '&gt;': '>',
+  '&oacute;': 'ó',
+  '&Oacute;': 'Ó',
+  '&nbsp;': ' ',
+}
+
+export function sanitizeTitle(title: string | null | undefined): string {
+  if (!title) return ''
+  let text = title
+  for (const [entity, replacement] of Object.entries(HTML_ENTITIES)) {
+    text = text.replaceAll(entity, replacement)
+  }
+
+  // Strip specs like 70 m², 70m2, 3 pokoje, 140 M2
+  text = text.replace(/(?:^|[\s,|•-])\d+(?:[.,]\d+)?\s*(?:m2|m²|pokoje|pokoi|pokój|pok\.)(?=$|[\s,|•-])/gi, '')
+
+  text = text
+    .split(/[|•]/)
+    .map((s) => s.trim().replace(/^[-–—]\s*|\s*[-–—]$/g, '').trim())
+    .filter(Boolean)
+    .join(', ')
+
+  text = text
+    .replace(/\s*,\s*,+/g, ',')
+    .replace(/\s*,\s*(&|\b(?:i|oraz|and)\b)/gi, ' $1')
+    .replace(/^[, -]+|[, -]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (text.length > 5 && text === text.toUpperCase() && /[A-ZĄĆĘŁŃÓŚŹŻ]/.test(text)) {
+    text = text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
+  } else if (text.length > 0) {
+    text = text.charAt(0).toUpperCase() + text.slice(1)
+  }
+
+  return text
 }
 
 export function calculatePricePerSqm(
@@ -20,6 +151,26 @@ export function calculatePricePerSqm(
   const unit = lang === 'en' ? 'PLN/m²' : 'zł/m²'
   const locale = lang === 'en' ? 'en-US' : 'pl-PL'
   return `${Math.round(p / a).toLocaleString(locale)} ${unit}`
+}
+
+export function formatRooms(
+  roomsCount: number | null | undefined,
+  lang: Language = 'pl'
+): string | null {
+  if (roomsCount === null || roomsCount === undefined || isNaN(roomsCount)) return null
+  if (roomsCount === 0) {
+    return lang === 'en' ? 'Studio' : 'Kawalerka'
+  }
+  if (roomsCount === 1) {
+    return lang === 'en' ? '1 room' : '1 pokój'
+  }
+  if (lang === 'en') {
+    return `${roomsCount} rooms`
+  }
+  if (roomsCount >= 2 && roomsCount <= 4) {
+    return `${roomsCount} pokoje`
+  }
+  return `${roomsCount} pokoi`
 }
 
 export function formatFloor(
@@ -92,6 +243,26 @@ export const IGNORED_METADATA_KEYS = new Set([
   'category',
   'viewCount',
   'sourceId',
+  'latitude',
+  'longitude',
+  'lat',
+  'lng',
+  'lon',
+  'coordinates',
+  'province',
+  'voivodeship',
+  'region',
+  'state',
+  'country',
+  'county',
+  'postalCode',
+  'zipCode',
+  'id',
+  'externalId',
+  'url',
+  'title',
+  'description',
+  'city',
 ])
 
 export function formatMetadataValue(key: string, val: unknown, lang: Language = 'pl'): string {
