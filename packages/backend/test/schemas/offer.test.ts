@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { listOffersQuerySchema, getOfferParamsSchema, batchIngestOffersSchema } from '../../src/schemas/offer.js';
+import {
+  listOffersQuerySchema,
+  getOfferParamsSchema,
+  batchIngestOffersSchema,
+  checkExistingOffersSchema,
+} from '../../src/schemas/offer.js';
 
 describe('Offer Schemas', () => {
   it('parses valid list query params with defaults', () => {
@@ -47,5 +52,15 @@ describe('Offer Schemas', () => {
     const result = batchIngestOffersSchema.parse(payload);
     expect(result).toHaveLength(1);
     expect(result[0].portal).toBe('sprzedajemy');
+  });
+
+  it('validates checkExistingOffersSchema', () => {
+    const payload = {
+      portal: 'sprzedajemy',
+      externalIds: ['ext-1', 'ext-2'],
+    };
+    const result = checkExistingOffersSchema.parse(payload);
+    expect(result.portal).toBe('sprzedajemy');
+    expect(result.externalIds).toEqual(['ext-1', 'ext-2']);
   });
 });

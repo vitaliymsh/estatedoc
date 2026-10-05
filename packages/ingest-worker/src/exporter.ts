@@ -21,19 +21,15 @@ export interface PushBatchResult {
 export function mapListingToBatchDto(listing: StandardListing): BatchOfferDto {
   const metadata: Record<string, unknown> = {
     ...(listing.metadata || {}),
+    ...(listing.district && { district: listing.district }),
+    ...(listing.sellerType && { sellerType: listing.sellerType }),
+    ...(listing.images?.length ? { imageUrl: listing.images[0], images: listing.images } : {}),
+    ...(listing.postedAt && { postedAt: listing.postedAt }),
+    ...(listing.floor !== null && listing.floor !== undefined && { floor: listing.floor }),
+    ...(listing.totalFloors !== null && listing.totalFloors !== undefined && { totalFloors: listing.totalFloors }),
+    ...(listing.propertyType && { propertyType: listing.propertyType }),
+    ...(listing.transactionType && { transactionType: listing.transactionType }),
   };
-
-  if (listing.district) metadata.district = listing.district;
-  if (listing.sellerType) metadata.sellerType = listing.sellerType;
-  if (listing.images && listing.images.length > 0) {
-    metadata.imageUrl = listing.images[0];
-    metadata.images = listing.images;
-  }
-  if (listing.postedAt) metadata.postedAt = listing.postedAt;
-  if (listing.floor !== null && listing.floor !== undefined) metadata.floor = listing.floor;
-  if (listing.totalFloors !== null && listing.totalFloors !== undefined) metadata.totalFloors = listing.totalFloors;
-  if (listing.propertyType) metadata.propertyType = listing.propertyType;
-  if (listing.transactionType) metadata.transactionType = listing.transactionType;
 
   return {
     portal: listing.portal,
@@ -66,4 +62,27 @@ export async function pushOffersBatch(
   }
 
   return response.json() as Promise<PushBatchResult>;
+}
+
+export async function checkExistingOfferIds(
+  portal: string,
+  externalIds: string[],
+  backendUrl: string = process.env.BACKEND_URL || 'http://localhost:4000',
+  fetchFn: typeof fetch = fetch
+): Promise<Set<string>> {
+  if (externalIds.length === 0) return new Set();
+  const url = `${backendUrl.replace(/\/$/, '')}/api/offers/check-existing`;
+  try {
+    const response = await fetchFn(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ portal, externalIds }),
+    });
+    if (!response.ok) return new Set();
+    const data = (await response.json()) as { existingIds: string[] };
+    return new Set(data.existingIds);
+  } catch {
+    // ponytail: fallback to empty set if backend is down or unreachable
+    return new Set();
+  }
 }

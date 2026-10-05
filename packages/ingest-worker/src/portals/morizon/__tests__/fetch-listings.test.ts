@@ -73,7 +73,7 @@ describe('Morizon fetch-listings', () => {
     });
 
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://www.morizon.pl/mieszkania/warszawa?page=1',
+      'https://www.morizon.pl/mieszkania/warszawa/',
       expect.objectContaining({ headers: expect.any(Object) })
     );
     expect(listings).toHaveLength(1);
@@ -125,5 +125,35 @@ describe('Morizon fetch-listings', () => {
     expect(listings[0].description).toBe('Pełny opis lokalu Piętro: 3/5');
     expect(listings[0].sellerType).toBe('agency');
     expect(listings[0].floor).toBe(3);
+  });
+
+  it('skips detail fetch for known existing IDs when enrichDetails is true', async () => {
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () => mockListHtml,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ existingIds: ['mzn111'] }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        text: async () => '<html></html>',
+      });
+
+    const listings = await fetchAllListings({
+      categoryPath: '/mieszkania/warszawa',
+      maxPages: 2,
+      delayMs: 0,
+      enrichDetails: true,
+      backendUrl: 'http://localhost:4000',
+      fetchFn: mockFetch as unknown as typeof fetch,
+    });
+
+    expect(listings).toHaveLength(1);
+    expect(listings[0].externalId).toBe('mzn111');
+    expect(listings[0].description).toBeNull();
+    expect(mockFetch).toHaveBeenCalledTimes(3);
   });
 });

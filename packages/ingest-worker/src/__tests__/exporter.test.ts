@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { mapListingToBatchDto, pushOffersBatch } from '../exporter.js';
+import { mapListingToBatchDto, pushOffersBatch, checkExistingOfferIds } from '../exporter.js';
 import type { StandardListing } from '../portals/sprzedajemy/types.js';
 
 describe('Exporter & Backend Client', () => {
@@ -69,6 +69,22 @@ describe('Exporter & Backend Client', () => {
     await expect(
       pushOffersBatch([mapListingToBatchDto(sampleListing)], 'http://localhost:4000')
     ).rejects.toThrow('Failed to push batch to backend (400): Bad Request');
+  });
+
+  it('checks existing offer IDs from backend', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ existingIds: ['ext-42'] }),
+    });
+
+    const existing = await checkExistingOfferIds('sprzedajemy', ['ext-42', 'ext-99'], 'http://localhost:4000', fetchMock as unknown as typeof fetch);
+    expect(existing.has('ext-42')).toBe(true);
+    expect(existing.has('ext-99')).toBe(false);
+    expect(fetchMock).toHaveBeenCalledWith('http://localhost:4000/api/offers/check-existing', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ portal: 'sprzedajemy', externalIds: ['ext-42', 'ext-99'] }),
+    });
   });
 
   afterEach(() => {

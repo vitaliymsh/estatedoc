@@ -3,8 +3,9 @@ import { z } from 'zod';
 import type { IIngestRunner } from '../services/ingest-runner.js';
 
 const devIngestBodySchema = z.object({
+  portal: z.enum(['sprzedajemy', 'morizon', 'all']).default('all'),
   maxPages: z.coerce.number().min(1).max(5).default(1),
-  categoryPath: z.string().default('/nieruchomosci'),
+  categoryPath: z.string().optional(),
 });
 
 export interface DevRoutesOptions {

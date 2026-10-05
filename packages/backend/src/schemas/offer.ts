@@ -30,7 +30,13 @@ export const batchOfferItemSchema = z.object({
 
 export const batchIngestOffersSchema = z.array(batchOfferItemSchema).min(1).max(500);
 
+export const checkExistingOffersSchema = z.object({
+  portal: z.string().min(1).max(32),
+  externalIds: z.array(z.string().min(1).max(128)).max(1000),
+});
+
 export type ListOffersQuery = z.infer<typeof listOffersQuerySchema>;
 export type GetOfferParams = z.infer<typeof getOfferParamsSchema>;
 export type BatchOfferItem = z.infer<typeof batchOfferItemSchema>;
 export type BatchIngestOffersInput = z.infer<typeof batchIngestOffersSchema>;
+export type CheckExistingOffersInput = z.infer<typeof checkExistingOffersSchema>;

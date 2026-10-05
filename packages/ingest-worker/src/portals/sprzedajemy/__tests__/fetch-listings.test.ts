@@ -94,4 +94,23 @@ describe('fetchListings', () => {
       'https://thumbs.img-sprzedajemy.pl/photo2.jpg',
     ]);
   });
+
+  it('skips detail fetch for known existing IDs when enrichDetails is true', async () => {
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, text: async () => mockHtmlPage1 } as Response)
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ existingIds: ['101'] }) } as Response);
+
+    const listings = await fetchAllListings({
+      maxPages: 1,
+      enrichDetails: true,
+      backendUrl: 'http://localhost:4000',
+      delayMs: 0,
+      fetchFn: mockFetch,
+    });
+
+    expect(listings).toHaveLength(1);
+    expect(listings[0].externalId).toBe('101');
+    expect(listings[0].description).toBeNull();
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
 });

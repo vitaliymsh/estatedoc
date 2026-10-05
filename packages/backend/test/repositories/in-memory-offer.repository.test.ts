@@ -85,4 +85,15 @@ describe('InMemoryOfferRepository', () => {
     const notFound = await repo.findById(999);
     expect(notFound).toBeNull();
   });
+
+  it('finds existing external IDs for portal', async () => {
+    await repo.upsertBatch([
+      { portal: 'sprzedajemy', externalId: 'a1', url: 'https://sprzedajemy.pl/a1', title: 'A1', city: 'Waw' },
+      { portal: 'sprzedajemy', externalId: 'a2', url: 'https://sprzedajemy.pl/a2', title: 'A2', city: 'Waw' },
+      { portal: 'morizon', externalId: 'm1', url: 'https://morizon.pl/m1', title: 'M1', city: 'Waw' },
+    ]);
+
+    const existing = await repo.findExistingExternalIds('sprzedajemy', ['a1', 'a3', 'm1']);
+    expect(existing).toEqual(['a1']);
+  });
 });

@@ -9,5 +9,6 @@ export interface ListOffersResult {
 export interface IOfferRepository {
   findAll(query: ListOffersQuery): Promise<ListOffersResult>;
   findById(id: number): Promise<Offer | null>;
+  findExistingExternalIds(portal: string, externalIds: string[]): Promise<string[]>;
   upsertBatch(offers: NewOffer[]): Promise<{ inserted: number; updated: number }>;
 }

@@ -50,6 +50,14 @@ export class InMemoryOfferRepository implements IOfferRepository {
     return this.offers.find((o) => o.id === id) ?? null;
   }
 
+  async findExistingExternalIds(portal: string, externalIds: string[]): Promise<string[]> {
+    if (externalIds.length === 0) return [];
+    const idSet = new Set(externalIds);
+    return this.offers
+      .filter((o) => o.portal === portal && idSet.has(o.externalId))
+      .map((o) => o.externalId);
+  }
+
   async upsertBatch(offersToUpsert: NewOffer[]): Promise<{ inserted: number; updated: number }> {
     let inserted = 0;
     let updated = 0;

@@ -1,28 +1,6 @@
-export function parsePrice(text: string): number | null {
-  if (!text) return null;
-  const cleaned = text.replace(/\s+/g, '').replace(/zł|pln/gi, '').replace(',', '.');
-  const match = cleaned.match(/^(\d+(?:\.\d+)?)/);
-  if (!match) return null;
-  const num = parseFloat(match[1]);
-  return isNaN(num) ? null : num;
-}
-
-export function parseArea(text: string): number | null {
-  if (!text) return null;
-  const cleaned = text.replace(/\s+/g, '').replace(',', '.');
-  const match = cleaned.match(/(\d+(?:\.\d+)?)(?=m²|m2|$)/i);
-  if (!match) return null;
-  const num = parseFloat(match[1]);
-  return isNaN(num) ? null : num;
-}
-
-export function parseRooms(text: string): number | null {
-  if (!text) return null;
-  const match = text.match(/\b(\d+)\b/);
-  if (!match) return null;
-  const num = parseInt(match[1], 10);
-  return isNaN(num) ? null : num;
-}
+import { parseRooms as sharedParseRooms } from '../../utils/parsers.js';
+export { parsePrice, parseArea } from '../../utils/parsers.js';
+export const parseRooms = (text: string) => sharedParseRooms(text, false);
 
 export function parseOfferId(input: string): string | null {
   if (!input) return null;

@@ -25,7 +25,7 @@ export interface IngestResult {
 }
 
 export async function runIngest(options: IngestOptions = {}): Promise<IngestResult> {
-  const portal = (options.portal || process.env.SCRAPE_PORTAL || 'sprzedajemy') as SupportedPortal | 'all';
+  const portal = (options.portal || process.env.SCRAPE_PORTAL || 'all') as SupportedPortal | 'all';
   const maxPages = options.maxPages ?? (Number(process.env.SCRAPE_PAGES) || 1);
   const delayMs = options.delayMs ?? 1000;
   const backendUrl = options.backendUrl || process.env.BACKEND_URL || 'http://localhost:4000';
@@ -36,24 +36,36 @@ export async function runIngest(options: IngestOptions = {}): Promise<IngestResu
 
   if (portal === 'sprzedajemy' || portal === 'all') {
     const categoryPath =
-      options.categoryPath || process.env.SCRAPE_CATEGORY || '/nieruchomosci';
-    console.log(
-      `[Ingest-Sprzedajemy] Starting crawl for "${categoryPath}" (maxPages: ${maxPages}, enrichDetails: ${enrichDetails})...`
-    );
-    const portalListings = await fetchSprzedajemy({ categoryPath, maxPages, delayMs, enrichDetails });
-    console.log(`[Ingest-Sprzedajemy] Scraped ${portalListings.length} listings.`);
-    listings.push(...portalListings);
+      (portal === 'sprzedajemy' ? options.categoryPath : undefined) ||
+      process.env.SCRAPE_CATEGORY ||
+      '/nieruchomosci';
+    try {
+      console.log(
+        `[Ingest-Sprzedajemy] Starting crawl for "${categoryPath}" (maxPages: ${maxPages}, enrichDetails: ${enrichDetails})...`
+      );
+      const portalListings = await fetchSprzedajemy({ categoryPath, maxPages, delayMs, enrichDetails, backendUrl });
+      console.log(`[Ingest-Sprzedajemy] Scraped ${portalListings.length} listings.`);
+      listings.push(...portalListings);
+    } catch (err) {
+      console.error('[Ingest-Sprzedajemy] Failed to crawl Sprzedajemy:', err);
+    }
   }
 
   if (portal === 'morizon' || portal === 'all') {
     const categoryPath =
-      options.categoryPath || process.env.SCRAPE_CATEGORY || '/mieszkania/warszawa';
-    console.log(
-      `[Ingest-Morizon] Starting crawl for "${categoryPath}" (maxPages: ${maxPages}, enrichDetails: ${enrichDetails})...`
-    );
-    const portalListings = await fetchMorizon({ categoryPath, maxPages, delayMs, enrichDetails });
-    console.log(`[Ingest-Morizon] Scraped ${portalListings.length} listings.`);
-    listings.push(...portalListings);
+      (portal === 'morizon' ? options.categoryPath : undefined) ||
+      (portal === 'morizon' ? process.env.SCRAPE_CATEGORY : undefined) ||
+      '/mieszkania/warszawa';
+    try {
+      console.log(
+        `[Ingest-Morizon] Starting crawl for "${categoryPath}" (maxPages: ${maxPages}, enrichDetails: ${enrichDetails})...`
+      );
+      const portalListings = await fetchMorizon({ categoryPath, maxPages, delayMs, enrichDetails, backendUrl });
+      console.log(`[Ingest-Morizon] Scraped ${portalListings.length} listings.`);
+      listings.push(...portalListings);
+    } catch (err) {
+      console.error('[Ingest-Morizon] Failed to crawl Morizon:', err);
+    }
   }
 
   console.log(`[Ingest] Total scraped ${listings.length} listings across portals. Exporting to backend...`);

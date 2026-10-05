@@ -5,6 +5,7 @@ import { resolve } from 'path';
 const execAsync = promisify(exec);
 
 export interface IngestRunOptions {
+  portal?: 'sprzedajemy' | 'morizon' | 'all';
   maxPages?: number;
   categoryPath?: string;
 }
@@ -20,19 +21,24 @@ export interface IIngestRunner {
 
 export class ProcessIngestRunner implements IIngestRunner {
   async trigger(options: IngestRunOptions): Promise<IngestRunResult> {
+    const portal = options.portal ?? 'all';
     const maxPages = options.maxPages ?? 1;
-    const categoryPath = options.categoryPath ?? '/nieruchomosci';
     const rootDir = resolve(process.cwd(), '../..');
 
     try {
+      const env: NodeJS.ProcessEnv = {
+        ...process.env,
+        SCRAPE_PORTAL: portal,
+        SCRAPE_PAGES: String(maxPages),
+      };
+      if (options.categoryPath) {
+        env.SCRAPE_CATEGORY = options.categoryPath;
+      }
+
       const { stdout } = await execAsync('npm run ingest --workspace=packages/ingest-worker', {
         cwd: rootDir,
-        env: {
-          ...process.env,
-          SCRAPE_PAGES: String(maxPages),
-          SCRAPE_CATEGORY: categoryPath,
-        },
-        timeout: 30000,
+        env,
+        timeout: 60000,
       });
 
       return {

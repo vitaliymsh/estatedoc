@@ -20,14 +20,15 @@ describe('Dev Routes', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/dev/ingest',
-      payload: { maxPages: 2, categoryPath: '/nieruchomosci/mieszkania' },
+      payload: { portal: 'morizon', maxPages: 2, categoryPath: '/mieszkania/warszawa' },
     });
 
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual({ status: 'ok', message: 'Ingestion completed' });
     expect(mockRunner.trigger).toHaveBeenCalledWith({
+      portal: 'morizon',
       maxPages: 2,
-      categoryPath: '/nieruchomosci/mieszkania',
+      categoryPath: '/mieszkania/warszawa',
     });
   });
 
@@ -40,8 +41,8 @@ describe('Dev Routes', () => {
 
     expect(res.statusCode).toBe(200);
     expect(mockRunner.trigger).toHaveBeenCalledWith({
+      portal: 'all',
       maxPages: 1,
-      categoryPath: '/nieruchomosci',
     });
   });
 });

@@ -1,6 +1,7 @@
 import type { StandardListing } from './types.js';
 import { parseListPage } from './parse-list-page.js';
 import { parseDetailPage } from './parse-detail-page.js';
+import { checkExistingOfferIds } from '../../exporter.js';
 
 const BASE_URL = 'https://www.morizon.pl';
 
@@ -22,14 +23,17 @@ export interface MorizonFetchAllOptions {
   maxPages?: number;
   delayMs?: number;
   enrichDetails?: boolean;
+  backendUrl?: string;
+  knownIds?: Set<string>;
   fetchFn?: typeof fetch;
 }
 
 export async function fetchListingsPage(options: MorizonFetchOptions = {}): Promise<StandardListing[]> {
   const { categoryPath = '/mieszkania/warszawa', page = 1, fetchFn = fetch } = options;
   const path = categoryPath.startsWith('/') ? categoryPath : `/${categoryPath}`;
-  const separator = path.includes('?') ? '&' : '?';
-  const url = `${BASE_URL}${path}${separator}page=${page}`;
+  const normalizedPath = path.endsWith('/') ? path : `${path}/`;
+  const queryString = page > 1 ? `?page=${page}` : '';
+  const url = `${BASE_URL}${normalizedPath}${queryString}`;
 
   const res = await fetchFn(url, { headers: DEFAULT_HEADERS });
   if (!res.ok) {
@@ -58,6 +62,8 @@ export async function fetchAllListings(options: MorizonFetchAllOptions = {}): Pr
     maxPages = 5,
     delayMs = 1000,
     enrichDetails = false,
+    backendUrl,
+    knownIds,
     fetchFn = fetch,
   } = options;
 
@@ -69,12 +75,18 @@ export async function fetchAllListings(options: MorizonFetchAllOptions = {}): Pr
     const listings = await fetchListingsPage({ categoryPath, page, fetchFn });
     if (listings.length === 0) break;
 
+    let pageKnownIds = knownIds;
+    if (enrichDetails && !pageKnownIds && backendUrl) {
+      const pageIds = listings.map((l) => l.externalId);
+      pageKnownIds = await checkExistingOfferIds('morizon', pageIds, backendUrl, fetchFn);
+    }
+
     let addedCount = 0;
     for (const listing of listings) {
       if (!seenIds.has(listing.externalId)) {
         seenIds.add(listing.externalId);
 
-        if (enrichDetails) {
+        if (enrichDetails && (!pageKnownIds || !pageKnownIds.has(listing.externalId))) {
           try {
             const details = await fetchListingDetails(listing.url, fetchFn);
             if (details.description) listing.description = details.description;

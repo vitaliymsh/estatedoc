@@ -1,9 +1,6 @@
 import type { TransactionType, PropertyType } from './types.js';
 
-export function calculatePricePerSqm(price: number | null, areaSqm: number | null): number | null {
-  if (!price || !areaSqm || areaSqm <= 0) return null;
-  return Math.round(price / areaSqm);
-}
+export { calculatePricePerSqm } from '../../utils/parsers.js';
 
 export function parseTransactionType(input: string): TransactionType | null {
   if (!input) return null;

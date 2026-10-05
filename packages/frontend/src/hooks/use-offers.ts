@@ -96,7 +96,7 @@ export function useOffers() {
       const res = await fetch('/api/dev/ingest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ maxPages }),
+        body: JSON.stringify({ portal: 'all', maxPages }),
       })
       if (!res.ok) {
         throw new Error('Ingestion failed')

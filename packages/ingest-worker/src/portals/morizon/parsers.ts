@@ -1,54 +1,13 @@
 import type { SellerType } from './types.js';
+import { parseRooms as sharedParseRooms } from '../../utils/parsers.js';
 
-export function parsePrice(input: string | number | null | undefined): number | null {
-  if (input === null || input === undefined) return null;
-  if (typeof input === 'number') {
-    return isNaN(input) || input < 0 ? null : input;
-  }
-  const str = String(input).trim();
-  if (!str) return null;
-  const cleaned = str.replace(/\s+/g, '').replace(/zł|pln/gi, '').replace(',', '.');
-  const match = cleaned.match(/^(\d+(?:\.\d+)?)/);
-  if (!match) return null;
-  const num = parseFloat(match[1]);
-  return isNaN(num) ? null : num;
-}
-
-export function parseArea(input: string | number | null | undefined): number | null {
-  if (input === null || input === undefined) return null;
-  if (typeof input === 'number') {
-    return isNaN(input) || input <= 0 ? null : input;
-  }
-  const str = String(input).trim();
-  if (!str) return null;
-  const cleaned = str.replace(/\s+/g, '').replace(',', '.');
-  const match = cleaned.match(/(\d+(?:\.\d+)?)(?:\s*(?:m²|m2|mkw|$))/i);
-  if (!match) return null;
-  const num = parseFloat(match[1]);
-  return isNaN(num) ? null : num;
-}
-
-export function parseRooms(input: string | number | null | undefined): number | null {
-  if (input === null || input === undefined) return null;
-  if (typeof input === 'number') {
-    return isNaN(input) || input <= 0 ? null : input;
-  }
-  const str = String(input).trim().toLowerCase();
-  if (!str) return null;
-  if (str.includes('kawalerka')) return 1;
-  const match = str.match(/\b(\d+)\b/);
-  if (!match) return null;
-  const num = parseInt(match[1], 10);
-  return isNaN(num) ? null : num;
-}
+export { parsePrice, parseArea } from '../../utils/parsers.js';
+export const parseRooms = (input: string | number | null | undefined) => sharedParseRooms(input, true);
 
 export function parseFloor(
   input: string | number | null | undefined
 ): { floor: number | null; totalFloors: number | null } {
   if (input === null || input === undefined) return { floor: null, totalFloors: null };
-  if (typeof input === 'number') {
-    return { floor: isNaN(input) ? null : input, totalFloors: null };
-  }
   const str = String(input).trim().toLowerCase();
   if (!str) return { floor: null, totalFloors: null };
 
@@ -62,10 +21,9 @@ export function parseFloor(
     };
   }
 
-  if (str === 'parter') return { floor: 0, totalFloors: null };
-  const num = parseInt(str, 10);
+  const floor = str === 'parter' ? 0 : parseInt(str, 10);
   return {
-    floor: isNaN(num) ? null : num,
+    floor: isNaN(floor) ? null : floor,
     totalFloors: null,
   };
 }

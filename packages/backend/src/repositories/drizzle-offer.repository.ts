@@ -1,4 +1,4 @@
-import { eq, and, or, gte, lte, like, count, asc, desc, sql } from 'drizzle-orm';
+import { eq, and, or, gte, lte, like, count, asc, desc, sql, inArray } from 'drizzle-orm';
 import type { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '../db/schema.js';
 import { offers, type Offer, type NewOffer } from '../db/schema.js';
@@ -69,6 +69,16 @@ export class DrizzleOfferRepository implements IOfferRepository {
       .limit(1);
 
     return result ?? null;
+  }
+
+  async findExistingExternalIds(portal: string, externalIds: string[]): Promise<string[]> {
+    if (externalIds.length === 0) return [];
+    const results = await this.db
+      .select({ externalId: offers.externalId })
+      .from(offers)
+      .where(and(eq(offers.portal, portal), inArray(offers.externalId, externalIds)));
+
+    return results.map((r) => r.externalId);
   }
 
   async upsertBatch(offersToUpsert: NewOffer[]): Promise<{ inserted: number; updated: number }> {

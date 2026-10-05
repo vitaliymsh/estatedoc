@@ -4,6 +4,7 @@ import {
   listOffersQuerySchema,
   getOfferParamsSchema,
   batchIngestOffersSchema,
+  checkExistingOffersSchema,
 } from '../schemas/offer.js';
 
 export interface OffersRoutesOptions {
@@ -37,6 +38,15 @@ export const offersRoutes: FastifyPluginAsync<OffersRoutesOptions> = async (fast
       return reply.status(404).send({ error: 'Offer not found' });
     }
     return offer;
+  });
+
+  fastify.post('/check-existing', async (request, reply) => {
+    const parsed = checkExistingOffersSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'Invalid check payload', details: parsed.error.issues });
+    }
+    const existingIds = await repo.findExistingExternalIds(parsed.data.portal, parsed.data.externalIds);
+    return { existingIds };
   });
 
   fastify.post('/batch', async (request, reply) => {

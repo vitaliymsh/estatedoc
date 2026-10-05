@@ -100,4 +100,28 @@ describe('Offers Routes', () => {
     });
     expect(invalidRes.statusCode).toBe(400);
   });
+
+  it('POST /api/offers/check-existing returns existing IDs', async () => {
+    await repo.upsertBatch([
+      {
+        portal: 'sprzedajemy',
+        externalId: 'ext-exist-1',
+        url: 'https://sprzedajemy.pl/ext-exist-1',
+        title: 'Offer 1',
+        city: 'Warszawa',
+      },
+    ]);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/offers/check-existing',
+      payload: {
+        portal: 'sprzedajemy',
+        externalIds: ['ext-exist-1', 'ext-new-2'],
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ existingIds: ['ext-exist-1'] });
+  });
 });
