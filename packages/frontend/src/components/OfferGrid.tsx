@@ -12,13 +12,15 @@ interface OfferGridProps {
   onSelectOffer?: (id: number) => void
 }
 
+const SKELETON_ITEMS = Array.from({ length: 8 })
+
 export function OfferGrid({ offers, loading, onResetFilters, onSelectOffer }: OfferGridProps) {
   const { t } = useTranslation()
 
   if (loading) {
     return (
       <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {Array.from({ length: 8 }).map((_, idx) => (
+        {SKELETON_ITEMS.map((_, idx) => (
           <div key={idx} className="flex flex-col gap-3">
             <Skeleton className="aspect-[4/3] w-full rounded-2xl" />
             <Skeleton className="h-4 w-3/4 rounded-md" />
@@ -32,7 +34,7 @@ export function OfferGrid({ offers, loading, onResetFilters, onSelectOffer }: Of
 
   if (offers.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 text-center">
+      <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
         <div className="rounded-full bg-muted p-4">
           <Search className="size-8 text-muted-foreground opacity-50" />
         </div>
@@ -50,7 +52,9 @@ export function OfferGrid({ offers, loading, onResetFilters, onSelectOffer }: Of
   return (
     <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {offers.map((offer) => (
-        <OfferCard key={offer.id} offer={offer} onSelect={onSelectOffer} />
+        <div key={offer.id} className="[content-visibility:auto] [contain-intrinsic-size:380px]">
+          <OfferCard offer={offer} onSelect={onSelectOffer} />
+        </div>
       ))}
     </div>
   )

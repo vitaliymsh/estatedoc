@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
@@ -46,13 +46,56 @@ import {
   formatPropertyType,
   formatTransactionType,
 } from '../lib/formatters'
-import { ListingMap } from './ListingMap'
+const ListingMap = lazy(() =>
+  import('./ListingMap').then((m) => ({ default: m.ListingMap }))
+)
 import { useTranslation } from '@/lib/i18n'
 
 interface OfferDetailPageProps {
   offerId: number
   onBack: () => void
 }
+
+const KNOWN_RENDERED_METADATA_KEYS = new Set([
+  'tags',
+  'airQuality',
+  'noiseLevel',
+  'hasParking',
+  'hasElevator',
+  'hasBalcony',
+  'hasGarden',
+  'hasTerrace',
+  'hasBasement',
+  'hasAirConditioning',
+  'isFurnished',
+  'isPetFriendly',
+  'heating',
+  'ownership',
+  'ownershipType',
+  'marketType',
+  'yearBuilt',
+  'buildingType',
+  'buildingMaterial',
+  'condition',
+  'rentExtra',
+  'deposit',
+  'plotSqm',
+  'agencyName',
+  'agencyPhone',
+  'phone',
+  'category',
+  'exclusiveOffer',
+  'latitude',
+  'longitude',
+  'province',
+  'city',
+  'district',
+  'street',
+  'currency',
+  'pricePerSqm',
+  'postedAt',
+  'building',
+])
 
 export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
   const { lang, t } = useTranslation()
@@ -137,7 +180,12 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
 
   const metadataEntries = offer.metadata
     ? Object.entries(offer.metadata).filter(
-        ([, val]) => val !== null && val !== undefined
+        ([key, val]) =>
+          !KNOWN_RENDERED_METADATA_KEYS.has(key) &&
+          val !== null &&
+          val !== undefined &&
+          val !== '' &&
+          !(Array.isArray(val) && val.length === 0)
       )
     : []
 
@@ -152,6 +200,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
       offer.metadata?.plotSqm
   )
 
+
   const hasBuildingParams = Boolean(
     offer.metadata?.yearBuilt ||
       offer.metadata?.buildingMaterial ||
@@ -165,6 +214,19 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
       offer.metadata?.deposit !== undefined ||
       offer.metadata?.ownership
   )
+
+  const hasSecondaryParams = Boolean(
+    floorText ||
+      offer.metadata?.condition ||
+      offer.metadata?.marketType ||
+      offer.metadata?.plotSqm ||
+      hasBuildingParams ||
+      hasFeeParams ||
+      metadataEntries.length > 0
+  )
+
+  const hasAnyParams = Boolean(hasApartmentParams || hasBuildingParams || hasFeeParams || metadataEntries.length > 0)
+
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-4 sm:py-6 sm:px-6 lg:px-8 space-y-5 sm:space-y-6 pb-20 md:pb-8 flex flex-col">
@@ -210,6 +272,14 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
           <span className={cn("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-bold border", portalInfo.badgeClassName)}>
             {portalInfo.name}
           </span>
+          {offer.metadata?.exclusiveOffer && (
+            <>
+              <span>•</span>
+              <span className="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                {t('exclusive_offer')}
+              </span>
+            </>
+          )}
           <span>•</span>
           <span>{sellerLabel || transactionTypeLabel}</span>
           {propertyTypeLabel && propertyTypeLabel !== 'Nieruchomość' && (
@@ -222,7 +292,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
           <span className="normal-case font-normal">{relativeTime}</span>
         </div>
 
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-foreground leading-snug">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-foreground leading-snug break-words">
           {offer.title}
         </h1>
 
@@ -251,12 +321,12 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
               {areaText}
             </span>
           )}
-          {offer.roomsCount && (
+          {offer.roomsCount ? (
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/80 px-2.5 py-1 text-xs sm:text-sm font-semibold text-foreground">
               <Layers className="size-3.5 text-primary" />
               {offer.roomsCount} {t('rooms')}
             </span>
-          )}
+          ) : null}
           {floorText && (
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/80 px-2.5 py-1 text-xs sm:text-sm font-semibold text-foreground">
               <Building className="size-3.5 text-primary" />
@@ -286,14 +356,15 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
       <div className="order-4 grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-start">
         {/* Left Column (2 Cols on Tablet & Desktop) */}
         <div className="space-y-6 md:col-span-2">
-          {/* "Parametry nieruchomości" Card */}
-          <Card className="rounded-2xl border bg-card shadow-xs">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-bold text-foreground">
-                {t('property_parameters')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
+          {/* "Parametry nieruchomości" Card (Omitted on mobile if basic stats already shown in top highlights) */}
+          {hasAnyParams && (
+            <Card className={cn("rounded-2xl border bg-card shadow-xs", !hasSecondaryParams && "hidden md:block")}>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-bold text-foreground">
+                  {t('property_parameters')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
               {/* 1. Mieszkanie */}
               {hasApartmentParams && (
                 <div className="space-y-2.5">
@@ -301,21 +372,21 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                     {t('unit')}
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                    {offer.areaSqm && (
+                    {offer.areaSqm ? (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
                         <Maximize2 className="size-4 text-primary shrink-0" />
                         <span className="text-muted-foreground">{t('area')}:</span>
                         <span className="font-medium text-foreground ml-auto">{offer.areaSqm} m²</span>
                       </div>
-                    )}
+                    ) : null}
 
-                    {offer.roomsCount && (
+                    {offer.roomsCount ? (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
                         <Layers className="size-4 text-primary shrink-0" />
                         <span className="text-muted-foreground">{t('number_of_rooms')}:</span>
                         <span className="font-medium text-foreground ml-auto">{offer.roomsCount}</span>
                       </div>
-                    )}
+                    ) : null}
 
                     {floorText && (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
@@ -365,13 +436,13 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                     {t('building')}
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                    {offer.metadata?.yearBuilt && (
+                    {offer.metadata?.yearBuilt ? (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
                         <Calendar className="size-4 text-primary shrink-0" />
                         <span className="text-muted-foreground">{t('year_built')}:</span>
                         <span className="font-medium text-foreground ml-auto">{String(offer.metadata.yearBuilt)}</span>
                       </div>
-                    )}
+                    ) : null}
 
                     {offer.metadata?.buildingMaterial && (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
@@ -423,13 +494,13 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                     {t('fees_and_legal')}
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                    {offer.metadata?.rentExtra && (
+                    {offer.metadata?.rentExtra ? (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
                         <Tag className="size-4 text-primary shrink-0" />
                         <span className="text-muted-foreground">{t('admin_fee')}:</span>
                         <span className="font-medium text-foreground ml-auto">{offer.metadata.rentExtra} {t('currency')}</span>
                       </div>
-                    )}
+                    ) : null}
 
                     {offer.metadata?.deposit !== undefined && (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
@@ -483,6 +554,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
               )}
             </CardContent>
           </Card>
+          )}
 
           {/* Amenities & Feature Pills */}
           {(offer.metadata?.hasElevator ||
@@ -784,13 +856,15 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
         </div>
 
         <div className="overflow-hidden rounded-2xl border bg-muted/20 shadow-xs">
-          <ListingMap offer={offer} className="h-[280px] sm:h-[380px] lg:h-[460px] w-full" />
+          <Suspense fallback={<div className="h-[280px] sm:h-[380px] lg:h-[460px] w-full bg-muted/40 animate-pulse" />}>
+            <ListingMap offer={offer} className="h-[280px] sm:h-[380px] lg:h-[460px] w-full" />
+          </Suspense>
         </div>
       </div>
 
       {/* Mobile Floating Bottom Action Bar */}
       <div className="fixed bottom-0 inset-x-0 md:hidden bg-background/95 backdrop-blur-md border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex items-center justify-between gap-3 shadow-lg">
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="text-base font-bold text-foreground truncate leading-none">
             {formatPrice(offer.price, lang, offer.transactionType)}
           </div>

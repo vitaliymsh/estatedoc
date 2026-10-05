@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react'
+import { useState, lazy, Suspense, memo } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { Building2, MapPin, Map } from 'lucide-react'
@@ -13,6 +13,7 @@ import {
   formatPortal,
   formatArea,
   formatRooms,
+  IGNORED_METADATA_KEYS,
 } from '../lib/formatters'
 import { prefetchOffer } from '../lib/offer-prefetch'
 import { useTranslation } from '@/lib/i18n'
@@ -26,7 +27,7 @@ interface OfferCardProps {
   onSelect?: (id: number) => void
 }
 
-export function OfferCard({ offer, onSelect }: OfferCardProps) {
+export const OfferCard = memo(function OfferCard({ offer, onSelect }: OfferCardProps) {
   const { t, lang } = useTranslation()
   const [imgError, setImgError] = useState(false)
   const [showMapPreview, setShowMapPreview] = useState(false)
@@ -41,22 +42,21 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
   const areaText = formatArea(offer.areaSqm)
   const roomsText = formatRooms(offer.roomsCount, lang)
 
-  const metadataEntries = offer.metadata
-    ? Object.entries(offer.metadata).filter(
-        ([, val]) => val !== null && val !== undefined
-      )
-    : []
 
   const badges: string[] = []
   if (offer.metadata?.buildingType) badges.push(String(offer.metadata.buildingType))
   if (offer.metadata?.hasElevator) badges.push(t('elevator'))
   if (offer.metadata?.hasBalcony) badges.push(t('balcony_terrace'))
   if (offer.metadata?.hasParking) badges.push(t('parking_garage'))
-  for (const [key, val] of metadataEntries) {
-    badges.push(formatMetadataValue(key, val, lang))
+  if (offer.metadata) {
+    for (const [key, val] of Object.entries(offer.metadata)) {
+      if (!IGNORED_METADATA_KEYS.has(key) && val !== null && val !== undefined) {
+        badges.push(formatMetadataValue(key, val, lang))
+      }
+    }
   }
   const visibleBadges = badges.slice(0, 3)
-  const overflowCount = badges.length - visibleBadges.length
+  const overflowCount = Math.max(0, badges.length - 3)
 
   const handleMouseEnter = () => {
     prefetchOffer(offer)
@@ -226,5 +226,5 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
       </div>
     </a>
   )
-}
+})
 
