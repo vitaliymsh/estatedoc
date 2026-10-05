@@ -13,6 +13,27 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
+  backend:
+    build:
+      context: .
+      dockerfile: packages/backend/Dockerfile
+    container_name: estateplanner-backend
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=production
+      - PORT=4000
+      - HOST=0.0.0.0
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=estateplanner
+      - DB_PASSWORD=estateplanner_secret
+      - DB_NAME=estateplanner
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      - mysql
+
   ingest-worker:
     build:
       context: .
@@ -20,12 +41,12 @@ services:
     container_name: estateplanner-ingest-worker
     restart: unless-stopped
     environment:
-      - BACKEND_URL=${BACKEND_URL:-http://host.docker.internal:4000}
+      - BACKEND_URL=http://backend:4000
       - SCRAPE_LIMIT=${SCRAPE_LIMIT:-10}
       - INGEST_INTERVAL_HOURS=${INGEST_INTERVAL_HOURS:-24}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    depends_on:
+      - backend
 
 volumes:
   mysql_data:
