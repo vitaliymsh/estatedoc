@@ -176,7 +176,7 @@ describe('Offers Routes', () => {
     expect(firstRes.statusCode).toBe(200);
     const etag = firstRes.headers['etag'];
     expect(etag).toBeDefined();
-    expect(firstRes.headers['cache-control']).toBe('public, max-age=60');
+    expect(firstRes.headers['cache-control']).toBe('no-cache');
 
     const conditionalRes = await app.inject({
       method: 'GET',
@@ -254,6 +254,63 @@ describe('Offers Routes', () => {
       },
     });
     expect(res.statusCode).toBe(400);
+  });
+
+  it('POST /api/offers/search validates temporaryKey when configured', async () => {
+    const mockParser = {
+      parse: async () => ({ city: 'Warszawa' }),
+    };
+
+    const protectedApp = Fastify();
+    await protectedApp.register(offersRoutes, {
+      prefix: '/api/offers',
+      repository: repo,
+      queryParser: mockParser,
+      temporaryKey: 'secret123',
+    });
+    await protectedApp.ready();
+
+    // 1. Missing header -> 401
+    const missingRes = await protectedApp.inject({
+      method: 'POST',
+      url: '/api/offers/search',
+      payload: { prompt: 'Warszawa' },
+    });
+    expect(missingRes.statusCode).toBe(401);
+
+    // 2. Invalid header -> 401
+    const invalidRes = await protectedApp.inject({
+      method: 'POST',
+      url: '/api/offers/search',
+      headers: { 'x-temporary-key': 'wrong' },
+      payload: { prompt: 'Warszawa' },
+    });
+    expect(invalidRes.statusCode).toBe(401);
+
+    // 3. Valid header -> 200
+    const validRes = await protectedApp.inject({
+      method: 'POST',
+      url: '/api/offers/search',
+      headers: { 'x-temporary-key': 'secret123' },
+      payload: { prompt: 'Warszawa' },
+    });
+    expect(validRes.statusCode).toBe(200);
+
+    // 4. Verify-key endpoint checks
+    const verifyFail = await protectedApp.inject({
+      method: 'POST',
+      url: '/api/offers/verify-key',
+      headers: { 'x-temporary-key': 'wrong' },
+    });
+    expect(verifyFail.statusCode).toBe(401);
+
+    const verifyOk = await protectedApp.inject({
+      method: 'POST',
+      url: '/api/offers/verify-key',
+      headers: { 'x-temporary-key': 'secret123' },
+    });
+    expect(verifyOk.statusCode).toBe(200);
+    expect(verifyOk.json()).toEqual({ ok: true });
   });
 });
 

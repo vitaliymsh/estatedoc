@@ -45,4 +45,51 @@ describe('Dev Routes', () => {
       maxPages: 1,
     });
   });
+
+  it('POST /api/dev/ingest accepts otodom and gratka portal options', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/dev/ingest',
+      payload: { portal: 'gratka', maxPages: 3 },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(mockRunner.trigger).toHaveBeenCalledWith({
+      portal: 'gratka',
+      maxPages: 3,
+    });
+  });
+
+  it('POST /api/dev/ingest validates temporaryKey when configured', async () => {
+    const secureApp = Fastify();
+    await secureApp.register(devRoutes, {
+      prefix: '/api/dev',
+      runner: mockRunner,
+      temporaryKey: 'secretKey123',
+    });
+    await secureApp.ready();
+
+    const missingRes = await secureApp.inject({
+      method: 'POST',
+      url: '/api/dev/ingest',
+      payload: {},
+    });
+    expect(missingRes.statusCode).toBe(401);
+
+    const wrongRes = await secureApp.inject({
+      method: 'POST',
+      url: '/api/dev/ingest',
+      headers: { 'x-temporary-key': 'wrong' },
+      payload: {},
+    });
+    expect(wrongRes.statusCode).toBe(401);
+
+    const okRes = await secureApp.inject({
+      method: 'POST',
+      url: '/api/dev/ingest',
+      headers: { 'x-temporary-key': 'secretKey123' },
+      payload: {},
+    });
+    expect(okRes.statusCode).toBe(200);
+  });
 });

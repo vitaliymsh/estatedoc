@@ -1,10 +1,10 @@
+import dotenv from 'dotenv';
+import { resolve } from 'node:path';
 import { buildApp } from './app.js';
 
-try {
-  process.loadEnvFile('../../.env');
-} catch {
-  // Ignore if already loaded or missing
-}
+dotenv.config();
+dotenv.config({ path: resolve(process.cwd(), '.env') });
+dotenv.config({ path: resolve(process.cwd(), '../../.env') });
 
 const port = Number(process.env.PORT) || 4000;
 const host = process.env.HOST || '0.0.0.0';
