@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useId } from 'react'
+import { useEffect, useRef, useState, useId, useMemo } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Navigation, RefreshCw } from 'lucide-react'
@@ -9,55 +9,22 @@ import {
   extractCoordinates,
   getEffectiveLocation,
   type Coordinates,
-  POLAND_CENTER_COORDINATES,
 } from '../lib/geocoding'
 import { Button } from '@/components/ui/button'
 import { useTranslation, type Language } from '@/lib/i18n'
 
 export interface ListingMapProps {
   offer?: Partial<Offer> | null
-  offers?: Partial<Offer>[]
-  coordinates?: Coordinates
   zoom?: number
   height?: string | number
   className?: string
   interactive?: boolean
   showControls?: boolean
   showPopup?: boolean
-  tileProvider?: 'osm' | 'voyager' | 'positron' | 'esri'
-  apiKey?: string
-  onMarkerClick?: (offer: Partial<Offer>) => void
 }
 
-const TILE_CONFIGS = {
-  osm: {
-    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
-    subdomains: 'abc',
-    maxZoom: 19,
-  },
-  esri: {
-    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
-    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ',
-    subdomains: '',
-    maxZoom: 19,
-  },
-  voyager: {
-    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
-    subdomains: 'abcd',
-    maxZoom: 19,
-  },
-  positron: {
-    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-    attribution:
-      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
-    subdomains: 'abcd',
-    maxZoom: 19,
-  },
-}
+const TILE_URL = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}'
+const TILE_ATTRIBUTION = 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ'
 
 function createMarkerIcon(priceText: string, isSelected = false): L.DivIcon {
   return L.divIcon({
@@ -88,17 +55,12 @@ function createMarkerIcon(priceText: string, isSelected = false): L.DivIcon {
 
 export function ListingMap({
   offer,
-  offers,
-  coordinates: customCoordinates,
   zoom = 14,
   height = '380px',
   className = '',
   interactive = true,
   showControls = true,
   showPopup = true,
-  tileProvider = 'esri',
-  apiKey,
-  onMarkerClick,
 }: ListingMapProps) {
   const { lang } = useTranslation()
   const containerRef = useRef<HTMLDivElement | null>(null)
@@ -106,21 +68,20 @@ export function ListingMap({
   const markersLayerRef = useRef<L.LayerGroup | null>(null)
   const mapId = useId()
 
-  const directCoords =
-    customCoordinates ||
-    (offer ? extractCoordinates(offer) : null) ||
-    (offers && offers.length > 0 ? POLAND_CENTER_COORDINATES : null)
-
+  const directCoords = useMemo(
+    () => (offer ? extractCoordinates(offer) : null),
+    [offer?.id, offer?.latitude, offer?.longitude, offer?.city, offer?.district, offer?.street]
+  )
   const [asyncCoords, setAsyncCoords] = useState<Coordinates | null>(null)
   const [isLoadingCoords, setIsLoadingCoords] = useState<boolean>(() => !directCoords && Boolean(offer))
 
   const resolvedCoords = directCoords || asyncCoords
+  const lat = resolvedCoords?.lat
+  const lng = resolvedCoords?.lng
 
   // 1. Resolve coordinates asynchronously when direct coordinates not present
   useEffect(() => {
-    if (directCoords || !offer) {
-      return
-    }
+    if (directCoords || !offer) return
 
     let isMounted = true
     setIsLoadingCoords(true)
@@ -139,15 +100,14 @@ export function ListingMap({
 
   // 2. Initialize and manage Leaflet Map lifecycle
   useEffect(() => {
-    if (!containerRef.current || !resolvedCoords) return
+    if (!containerRef.current || lat == null || lng == null) return
 
     let resizeTimer: ReturnType<typeof setTimeout> | null = null
 
-    // Create map instance once
     if (!mapInstanceRef.current) {
       const map = L.map(containerRef.current, {
-        center: [resolvedCoords.lat, resolvedCoords.lng],
-        zoom: zoom,
+        center: [lat, lng],
+        zoom,
         zoomControl: false,
         dragging: interactive,
         scrollWheelZoom: interactive ? 'center' : false,
@@ -155,113 +115,60 @@ export function ListingMap({
         doubleClickZoom: interactive,
       })
 
-      // Tile Layer configuration
-      const config = TILE_CONFIGS[tileProvider] || TILE_CONFIGS.osm
-      const cartoKey =
-        apiKey ||
-        (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CARTO_API_KEY)
-      const tileUrl =
-        cartoKey && (tileProvider === 'voyager' || tileProvider === 'positron')
-          ? `${config.url}?api_key=${cartoKey}`
-          : config.url
-
-      L.tileLayer(tileUrl, {
-        subdomains: config.subdomains,
-        maxZoom: config.maxZoom,
-        attribution: config.attribution,
+      L.tileLayer(TILE_URL, {
+        maxZoom: 19,
+        attribution: TILE_ATTRIBUTION,
       }).addTo(map)
 
-      const markersGroup = L.layerGroup().addTo(map)
-      markersLayerRef.current = markersGroup
+      markersLayerRef.current = L.layerGroup().addTo(map)
       mapInstanceRef.current = map
 
-      // Invalidate size to ensure clean tile rendering after layout
       resizeTimer = setTimeout(() => {
         map.invalidateSize()
       }, 150)
     } else {
-      // Map exists, pan to newly resolved coordinates
-      mapInstanceRef.current.setView([resolvedCoords.lat, resolvedCoords.lng], zoom, {
+      mapInstanceRef.current.setView([lat, lng], zoom, {
         animate: true,
       })
     }
 
     return () => {
       if (resizeTimer) clearTimeout(resizeTimer)
-      // Cleanup map on unmount
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove()
         mapInstanceRef.current = null
         markersLayerRef.current = null
       }
     }
-  }, [resolvedCoords, zoom, interactive, tileProvider, apiKey])
+  }, [lat, lng, zoom, interactive])
 
-  // 3. Render markers
+  // 3. Render marker
+  const offerId = offer?.id
+  const offerPrice = offer?.price
   useEffect(() => {
     const map = mapInstanceRef.current
     const markersGroup = markersLayerRef.current
-    if (!map || !markersGroup || !resolvedCoords) return
+    if (!map || !markersGroup || !offer || lat == null || lng == null || !resolvedCoords) return
 
     markersGroup.clearLayers()
 
-    // Multiple offers list
-    if (offers && offers.length > 0) {
-      const bounds = L.latLngBounds([])
+    const priceLabel = formatPrice(offerPrice ?? null, lang)
+    const marker = L.marker([lat, lng], {
+      icon: createMarkerIcon(priceLabel, true),
+    })
 
-      offers.forEach((item) => {
-        const itemCoords = resolveSyncCoordinates(item)
-        if (!itemCoords) return
-
-        bounds.extend([itemCoords.lat, itemCoords.lng])
-        const priceLabel = formatPrice(item.price ?? null, lang)
-        const marker = L.marker([itemCoords.lat, itemCoords.lng], {
-          icon: createMarkerIcon(priceLabel),
-        })
-
-        if (showPopup) {
-          marker.bindPopup(buildPopupHtml(item, itemCoords, lang), {
-            autoPan: true,
-            autoPanPadding: [28, 28],
-            maxWidth: 280,
-            minWidth: 240,
-            closeButton: false,
-          })
-        }
-
-        if (onMarkerClick) {
-          marker.on('click', () => onMarkerClick(item))
-        }
-
-        markersGroup.addLayer(marker)
+    if (showPopup) {
+      marker.bindPopup(buildPopupHtml(offer, resolvedCoords, lang), {
+        autoPan: true,
+        autoPanPadding: [28, 28],
+        maxWidth: 280,
+        minWidth: 240,
+        closeButton: false,
       })
-
-      if (bounds.isValid() && offers.length > 1) {
-        map.fitBounds(bounds, { padding: [30, 30] })
-      }
-      return
     }
 
-    // Single offer detail
-    if (offer) {
-      const priceLabel = formatPrice(offer.price ?? null, lang)
-      const marker = L.marker([resolvedCoords.lat, resolvedCoords.lng], {
-        icon: createMarkerIcon(priceLabel, true),
-      })
-
-      if (showPopup) {
-        marker.bindPopup(buildPopupHtml(offer, resolvedCoords, lang), {
-          autoPan: true,
-          autoPanPadding: [28, 28],
-          maxWidth: 280,
-          minWidth: 240,
-          closeButton: false,
-        })
-      }
-
-      markersGroup.addLayer(marker)
-    }
-  }, [offers, offer, resolvedCoords, showPopup, onMarkerClick, lang])
+    markersGroup.addLayer(marker)
+  }, [offerId, offerPrice, lat, lng, showPopup, lang])
 
   const handleRecenter = () => {
     if (mapInstanceRef.current && resolvedCoords) {
@@ -288,7 +195,9 @@ export function ListingMap({
       {isLoadingCoords && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-xs">
           <div className="flex items-center gap-2 rounded-xl bg-background/90 px-4 py-2 text-xs font-medium text-muted-foreground shadow-md border">
-            <RefreshCw className="size-3.5 animate-spin text-primary" />
+            <div className="animate-spin inline-flex shrink-0">
+              <RefreshCw className="size-3.5 text-primary" />
+            </div>
             <span>{lang === 'en' ? 'Loading location...' : 'Wczytywanie lokalizacji...'}</span>
           </div>
         </div>
@@ -313,9 +222,6 @@ export function ListingMap({
   )
 }
 
-function resolveSyncCoordinates(item: Partial<Offer>): Coordinates | null {
-  return extractCoordinates(item)
-}
 
 function buildPopupHtml(item: Partial<Offer>, coords: Coordinates, lang: Language = 'pl'): string {
   const price = formatPrice(item.price ?? null, lang)

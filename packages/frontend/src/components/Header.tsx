@@ -13,7 +13,7 @@ import { SlidersHorizontal, X, ArrowUpDown, Sparkles, Search, Globe } from 'luci
 import { DocplannerIcon } from './icons/DocplannerIcon'
 import { cn } from '@/lib/utils'
 import { useTranslation } from '@/lib/i18n'
-import type { ListOffersFilter, SortBy } from '../types/offer'
+import { SORT_OPTIONS, type ListOffersFilter, type SortBy } from '../types/offer'
 
 const QUICK_CITIES = [
   'Warszawa',
@@ -125,7 +125,7 @@ export function Header({
           <DocplannerIcon className="h-6 w-auto shrink-0" />
           <h1
             className={cn(
-              "text-xl font-black tracking-tight text-primary transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
+              "text-xl font-semibold tracking-tight text-primary transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
               isMobileSearchOpen ? "max-w-0 opacity-0 sm:max-w-none sm:opacity-100" : "max-w-40 opacity-100"
             )}
           >
@@ -164,7 +164,9 @@ export function Header({
               aria-label={t('search_aria')}
               className="flex items-center justify-center p-0 text-primary hover:opacity-80 transition-opacity cursor-pointer shrink-0"
             >
-              <Sparkles className="size-4 animate-pulse" />
+              <div className="animate-pulse flex items-center justify-center shrink-0">
+                <Sparkles className="size-4" />
+              </div>
             </button>
             <Input
               ref={inputRef}
@@ -214,45 +216,77 @@ export function Header({
           aria-label={lang === 'pl' ? 'Switch language to English' : 'Przełącz język na polski'}
         >
           <Globe className="size-3.5 text-muted-foreground" />
-          <span>{lang.toUpperCase()}</span>
+          <span>{(lang === 'en' ? 'pl' : 'en').toUpperCase()}</span>
         </Button>
       </div>
 
       {/* Quick Filter Bar */}
       {showFilters && (
         <div>
-          <div className="mx-auto max-w-7xl px-4 pb-3 pt-0.5 sm:px-6 lg:px-8 flex items-center gap-2">
-            {/* Filter Modal Trigger Pill */}
-            <Button
-              variant={activeFiltersCount > 0 ? 'default' : 'outline'}
-              size="sm"
-              onClick={onOpenFilterModal}
-              className={cn(
-                "shrink-0 rounded-full gap-2 text-xs h-9 px-4 border transition-all cursor-pointer shadow-2xs active:scale-[0.98]",
-                activeFiltersCount > 0
-                  ? "border-foreground bg-foreground text-background font-semibold hover:bg-foreground/90 hover:text-background"
-                  : "border-border/80 bg-background text-foreground hover:border-foreground"
-              )}
-            >
-              <SlidersHorizontal className="size-3.5" />
-              <span>{t('filters')}</span>
-              {activeFiltersCount > 0 && (
-                <span className="rounded-full px-1.5 py-0.2 text-[10px] font-bold bg-background text-foreground">
-                  {activeFiltersCount}
-                </span>
-              )}
-            </Button>
+          <div className="mx-auto max-w-7xl px-4 pb-3 pt-1 sm:px-6 lg:px-8 flex flex-col md:flex-row md:items-center gap-2">
+            {/* Top row on mobile (Filter + Sort). On desktop (>=md): rendered inline via md:contents */}
+            <div className="flex items-center justify-between gap-2 md:contents">
+              {/* Filter Modal Trigger Pill */}
+              <Button
+                variant={activeFiltersCount > 0 ? 'default' : 'outline'}
+                size="sm"
+                onClick={onOpenFilterModal}
+                className={cn(
+                  "order-1 shrink-0 rounded-full gap-2 text-xs h-9 px-4 border transition-all cursor-pointer shadow-2xs active:scale-[0.98]",
+                  activeFiltersCount > 0
+                    ? "border-foreground bg-foreground text-background font-semibold hover:bg-foreground/90 hover:text-background"
+                    : "border-border/80 bg-background text-foreground hover:border-foreground"
+                )}
+              >
+                <SlidersHorizontal className="size-3.5" />
+                <span>{t('filters')}</span>
+                {activeFiltersCount > 0 && (
+                  <span className="rounded-full px-1.5 py-0.2 text-[10px] font-bold bg-background text-foreground">
+                    {activeFiltersCount}
+                  </span>
+                )}
+              </Button>
 
-            <Separator orientation="vertical" className="h-5 shrink-0 mx-0.5" />
+              <Separator orientation="vertical" className="order-2 hidden md:block h-5 shrink-0 mx-0.5" />
 
-            {/* Quick Location Chips Carousel */}
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 flex-1 -mr-2 pr-2 sm:mr-0 sm:pr-0 scroll-smooth">
-              {/* All Cities Chip */}
+              {/* Quick Sort Options: right-aligned on mobile row 1, right-aligned on desktop */}
+              <div className="order-5 shrink-0 md:ml-auto flex items-center">
+                <Select
+                  value={filter.sortBy}
+                  onValueChange={(val) => {
+                    if (val) onSortChange(val as SortBy)
+                  }}
+                >
+                  <SelectTrigger
+                    size="sm"
+                    className="h-9 border-border/80 rounded-full px-3.5 text-xs font-medium text-foreground gap-1.5 hover:border-foreground cursor-pointer shadow-2xs active:scale-[0.98]"
+                  >
+                    <ArrowUpDown className="size-3 text-muted-foreground" />
+                    <SelectValue>
+                      {(val: SortBy) =>
+                        t(SORT_OPTIONS.find((o) => o.value === (val ?? filter.sortBy))?.labelKey ?? 'sort_newest')
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent align="end">
+                    {SORT_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value}>
+                        {t(opt.labelKey)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Second row on mobile (All Cities + Carousel). On desktop (>=md): rendered inline via md:contents */}
+            <div className="flex items-center gap-2 min-w-0 md:contents">
+              {/* All Cities Chip - Constant / Pinned */}
               <button
                 type="button"
                 onClick={() => onCitySelect(undefined)}
                 className={cn(
-                  "h-9 shrink-0 rounded-full px-4 text-xs transition-all duration-150 border cursor-pointer whitespace-nowrap shadow-2xs active:scale-[0.98] flex items-center justify-center",
+                  "order-3 h-9 shrink-0 rounded-full px-4 text-xs transition-all duration-150 border cursor-pointer whitespace-nowrap shadow-2xs active:scale-[0.98] flex items-center justify-center",
                   !filter.city
                     ? "border-foreground bg-foreground text-background font-semibold shadow-xs"
                     : "border-border/80 bg-background text-muted-foreground hover:border-foreground hover:text-foreground"
@@ -261,52 +295,27 @@ export function Header({
                 {t('all_cities')}
               </button>
 
-              {/* City Chips */}
-              {QUICK_CITIES.map((city) => {
-                const isActive = filter.city === city
-                return (
-                  <button
-                    key={city}
-                    type="button"
-                    onClick={() => onCitySelect(isActive ? undefined : city)}
-                    className={cn(
-                      "h-9 shrink-0 rounded-full px-4 text-xs transition-all duration-150 border cursor-pointer whitespace-nowrap shadow-2xs active:scale-[0.98] flex items-center justify-center",
-                      isActive
-                        ? "border-foreground bg-foreground text-background font-semibold shadow-xs"
-                        : "border-border/80 bg-background text-muted-foreground hover:border-foreground hover:text-foreground"
-                    )}
-                  >
-                    {city}
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Quick Sort Options on Desktop */}
-            <div className="hidden md:flex ml-auto shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
-              <ArrowUpDown className="size-3" />
-              <Select
-                value={filter.sortBy}
-                onValueChange={(val) => {
-                  if (val) onSortChange(val as SortBy)
-                }}
-              >
-                <SelectTrigger
-                  size="sm"
-                  className="h-9 border-border/80 rounded-full px-3.5 text-xs font-medium text-foreground gap-1.5 hover:border-foreground cursor-pointer shadow-2xs active:scale-[0.98]"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent align="end">
-                  <SelectItem value="newest">{t('sort_newest')}</SelectItem>
-                  <SelectItem value="price_asc">{t('sort_price_asc')}</SelectItem>
-                  <SelectItem value="price_desc">{t('sort_price_desc')}</SelectItem>
-                  <SelectItem value="price_sqm_asc">{t('sort_price_sqm_asc')}</SelectItem>
-                  <SelectItem value="price_sqm_desc">{t('sort_price_sqm_desc')}</SelectItem>
-                  <SelectItem value="area_asc">{t('sort_area_asc')}</SelectItem>
-                  <SelectItem value="area_desc">{t('sort_area_desc')}</SelectItem>
-                </SelectContent>
-              </Select>
+              {/* Quick Location Chips Carousel */}
+              <div className="order-4 flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5 flex-1 min-w-0 scroll-smooth overscroll-x-contain touch-pan-x">
+                {QUICK_CITIES.map((city) => {
+                  const isActive = filter.city === city
+                  return (
+                    <button
+                      key={city}
+                      type="button"
+                      onClick={() => onCitySelect(isActive ? undefined : city)}
+                      className={cn(
+                        "h-9 shrink-0 rounded-full px-4 text-xs transition-all duration-150 border cursor-pointer whitespace-nowrap shadow-2xs active:scale-[0.98] flex items-center justify-center",
+                        isActive
+                          ? "border-foreground bg-foreground text-background font-semibold shadow-xs"
+                          : "border-border/80 bg-background text-muted-foreground hover:border-foreground hover:text-foreground"
+                      )}
+                    >
+                      {city}
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           </div>
         </div>
