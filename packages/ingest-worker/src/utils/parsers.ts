@@ -30,3 +30,18 @@ export function parseRooms(input: string | number | null | undefined, allowStudi
 export function calculatePricePerSqm(price: number | null, areaSqm: number | null): number | null {
   return price && areaSqm && areaSqm > 0 ? Math.round(price / areaSqm) : null;
 }
+
+export function extractJsonLd<T = Record<string, unknown>>(html: string): T[] {
+  if (!html) return [];
+  const matches = html.matchAll(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
+  const result: T[] = [];
+  for (const match of matches) {
+    try {
+      result.push(JSON.parse(match[1]));
+    } catch {
+      // Ignore single malformed script tag
+    }
+  }
+  return result;
+}
+

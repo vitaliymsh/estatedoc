@@ -18,7 +18,7 @@ describe('Sanitizers', () => {
     });
 
     it('cleans dangling delimiters and repeated punctuation', () => {
-      const input = ' | Mieszkanie w centrum - - Mokotów / ';
+      const input = ' |; Mieszkanie w centrum - - Mokotów /: ';
       expect(sanitizeTitle(input)).toBe('Mieszkanie w centrum - Mokotów');
     });
 
@@ -30,6 +30,12 @@ describe('Sanitizers', () => {
     it('keeps mixed case titles intact except trailing punctuation fixes', () => {
       const input = 'Nowoczesne Mieszkanie z Balkonem na Woli';
       expect(sanitizeTitle(input)).toBe('Nowoczesne Mieszkanie z Balkonem na Woli');
+    });
+
+    it('does not mangle titles with natural conjunctions or hyphen-comma combos', () => {
+      expect(sanitizeTitle('2 pokoje lub 3, w parkowej części Ochoty')).toBe('2 pokoje lub 3, w parkowej części Ochoty');
+      expect(sanitizeTitle('Bez prowizji - 68 m - 3 pokoje, balkon, 1 miejsce parkingowe')).toBe('Bez prowizji - balkon, 1 miejsce parkingowe');
+      expect(sanitizeTitle('2 pokoje na - Warszawa Okęcie (ul. KOR) - Blisko Lotniska')).toBe('Warszawa Okęcie (ul. KOR) - Blisko Lotniska');
     });
   });
 

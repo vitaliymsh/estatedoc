@@ -1,6 +1,6 @@
 export type SupportedPortalImage = 'morizon' | 'sprzedajemy';
 
-const IGNORED_KEYWORDS = ['logo', 'avatar', 'facebook', 'sp.gif', 'icon', 'badge', 'agent', 'pixel'];
+const IGNORED_KEYWORDS = ['logo', 'avatar', 'facebook', 'sp.gif', 'icon', 'badge', 'agent', 'pixel', '/blog/', 'wp-content', 'advert', 'banner'];
 
 export function cleanAndDeduplicateImages(
   urls: (string | undefined | null)[],

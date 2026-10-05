@@ -15,19 +15,22 @@ export function sanitizeTitle(title: string): string {
 
   let cleaned = decodeHtmlEntities(title);
 
-  // Strip duplicate specs like 70m2, 70 m², 3 pokoje, 3-pokojowe
-  cleaned = cleaned.replace(/\b\d+(?:[.,]\d+)?\s*(?:m²|m2|mkw)\b/gi, '');
+  // Strip specs like 70m2, 70 m², 70 m, 3 pokoje (avoid stripping when followed by conjunctions like "lub", "czy", "i")
+  cleaned = cleaned.replace(/\b\d+(?:[.,]\d+)?\s*(?:m²|m2|mkw|\bm\b)/gi, '');
   cleaned = cleaned.replace(/\d+(?:[.,]\d+)?\s*(?:m²|m2|mkw)/gi, '');
   cleaned = cleaned.replace(/\b\d+\s*-\s*pokojow[a-z]*\b/gi, '');
-  cleaned = cleaned.replace(/\b\d+\s*pok(?:oje|oi|ojowy|ojowe|ojowa)?\b/gi, '');
+  cleaned = cleaned.replace(/\b\d+\s*pok(?:oje|oi|ojowy|ojowe|ojowa)?(?!\s+(?:lub|oraz|czy|z|w|do|i\b))\b/gi, '');
 
   // Normalize delimiters & whitespace
   cleaned = cleaned
     .replace(/(\s*[-|/–—]+\s*)+/g, ' - ')
-    .replace(/\s*([,;])\s*/g, '$1 ')
-    .replace(/(?:,\s*)+,/g, ',')
+    .replace(/\s*([,;:])\s*/g, '$1 ')
+    .replace(/(?:,\s*)+,/g, ', ')
+    .replace(/\s*-\s*,\s*/g, ' - ')
+    .replace(/\s*,\s*-\s*/g, ' - ')
     .replace(/\s+/g, ' ')
-    .replace(/^[\s,./|–—-]+|[\s,./|–—-]+$/g, '')
+    .replace(/^[\s,./|–—:;-]+|[\s,./|–—:;-]+$/g, '')
+    .replace(/^(?:na|w|z|do|przy|od|dla|lub|oraz|i)\s+[-–—]\s*/i, '')
     .trim();
 
   // If ALL-CAPS (more than 3 uppercase letters, no lowercase letters)
