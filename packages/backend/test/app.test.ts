@@ -81,6 +81,26 @@ describe('App Integration', () => {
 
     await rateLimitedApp.close();
   });
+
+  it('accepts payloads larger than 1MB with configured bodyLimit', async () => {
+    const largeBody = 'a'.repeat(2 * 1024 * 1024);
+    const largeBodyApp = await buildApp({
+      repository: new InMemoryOfferRepository(),
+      logger: false,
+    });
+    largeBodyApp.post('/test-body', async (req) => ({ size: (req.body as string).length }));
+    await largeBodyApp.ready();
+
+    const res = await largeBodyApp.inject({
+      method: 'POST',
+      url: '/test-body',
+      headers: { 'content-type': 'text/plain' },
+      payload: largeBody,
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ size: 2 * 1024 * 1024 });
+    await largeBodyApp.close();
+  });
 });
 
 

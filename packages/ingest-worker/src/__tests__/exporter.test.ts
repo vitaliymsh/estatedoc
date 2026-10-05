@@ -58,6 +58,30 @@ describe('Exporter & Backend Client', () => {
     });
   });
 
+  it('chunks large batches and aggregates result', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ inserted: 2, updated: 0 }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ inserted: 1, updated: 1 }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const dtos = [
+      mapListingToBatchDto({ ...sampleListing, externalId: '1' }),
+      mapListingToBatchDto({ ...sampleListing, externalId: '2' }),
+      mapListingToBatchDto({ ...sampleListing, externalId: '3' }),
+    ];
+
+    const result = await pushOffersBatch(dtos, 'http://localhost:4000', 2);
+    expect(result).toEqual({ inserted: 3, updated: 1 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it('throws error when backend API returns non-2xx', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false,

@@ -56,21 +56,36 @@ export function mapListingToBatchDto(listing: StandardListing): BatchOfferDto {
 
 export async function pushOffersBatch(
   dtos: BatchOfferDto[],
-  backendUrl: string = process.env.BACKEND_URL || 'http://localhost:4000'
+  backendUrl: string = process.env.BACKEND_URL || 'http://localhost:4000',
+  chunkSize: number = 50
 ): Promise<PushBatchResult> {
-  const url = `${backendUrl.replace(/\/$/, '')}/api/offers/batch`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(dtos),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to push batch to backend (${response.status}): ${errorText}`);
+  if (dtos.length === 0) {
+    return { inserted: 0, updated: 0 };
   }
 
-  return response.json() as Promise<PushBatchResult>;
+  const url = `${backendUrl.replace(/\/$/, '')}/api/offers/batch`;
+  let totalInserted = 0;
+  let totalUpdated = 0;
+
+  for (let i = 0; i < dtos.length; i += chunkSize) {
+    const chunk = dtos.slice(i, i + chunkSize);
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(chunk),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to push batch to backend (${response.status}): ${errorText}`);
+    }
+
+    const result = (await response.json()) as PushBatchResult;
+    totalInserted += result.inserted;
+    totalUpdated += result.updated;
+  }
+
+  return { inserted: totalInserted, updated: totalUpdated };
 }
 
 export async function checkExistingOfferIds(

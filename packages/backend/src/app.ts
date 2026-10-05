@@ -14,10 +14,14 @@ export interface BuildAppOptions {
   logger?: boolean;
   rateLimitMax?: number;
   rateLimitTimeWindow?: string | number;
+  bodyLimit?: number;
 }
 
 export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyInstance> {
-  const app = Fastify({ logger: options.logger ?? false });
+  const app = Fastify({
+    logger: options.logger ?? false,
+    bodyLimit: options.bodyLimit ?? 10 * 1024 * 1024,
+  });
   await app.register(cors);
   await app.register(rateLimit, {
     max: options.rateLimitMax ?? 100,
