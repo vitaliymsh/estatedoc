@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo, startTransition, lazy, Suspe
 import { Header } from '@/components/Header'
 import { OfferGrid } from '@/components/OfferGrid'
 import { Pagination } from '@/components/Pagination'
-import { FilterModal } from '@/components/FilterModal'
 import { IngestWorkerButton } from '@/components/IngestWorkerButton'
 import { TemporaryKeyOverlay } from '@/components/TemporaryKeyOverlay'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -11,16 +10,32 @@ import { useTranslation } from '@/lib/i18n'
 import { formatPrice } from '@/lib/formatters'
 import type { ListOffersFilter, SortBy } from '@/types/offer'
 
+const FilterModal = lazy(() =>
+  import('@/components/FilterModal').then((m) => ({ default: m.FilterModal }))
+)
+
 const OfferDetailPage = lazy(() =>
   import('@/components/OfferDetailPage').then((m) => ({ default: m.OfferDetailPage }))
 )
 
-function getInitialOfferId(): number | null {
-  if (typeof window === 'undefined') return null
-  const param = new URLSearchParams(window.location.search).get('offerId')
-  const num = Number(param)
-  return num > 0 ? num : null
+const pluralRulesCache = new Map<string, Intl.PluralRules>()
+function getPluralRules(lang: string): Intl.PluralRules {
+  let rules = pluralRulesCache.get(lang)
+  if (!rules) {
+    rules = new Intl.PluralRules(lang)
+    pluralRulesCache.set(lang, rules)
+  }
+  return rules
 }
+
+const AMENITY_TAGS = [
+  ['hasElevator', 'filter_amenity_elevator'],
+  ['hasBalcony', 'filter_amenity_balcony'],
+  ['hasParking', 'filter_amenity_parking'],
+  ['hasAirConditioning', 'filter_amenity_ac'],
+  ['isFurnished', 'filter_amenity_furnished'],
+  ['hasBasement', 'filter_amenity_basement'],
+] as const
 
 export default function App() {
   const { t, lang } = useTranslation()
@@ -44,7 +59,9 @@ export default function App() {
     handleSetTemporaryKey,
   } = useOffers()
 
-  const [selectedOfferId, setSelectedOfferId] = useState<number | null>(getInitialOfferId)
+  const [selectedOfferId, setSelectedOfferId] = useState<number | null>(
+    () => Number(new URLSearchParams(window.location.search).get('offerId')) || null
+  )
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
 
   // Listen to browser Back/Forward navigation
@@ -68,98 +85,57 @@ export default function App() {
   }, [])
 
   const handleBackToList = useCallback(() => {
-    setSelectedOfferId(null)
-    const url = new URL(window.location.href)
-    url.searchParams.delete('offerId')
-    window.history.pushState(null, '', url.toString())
+    setSelectedOfferId((prev) => {
+      if (prev === null) return null
+      const url = new URL(window.location.href)
+      url.searchParams.delete('offerId')
+      window.history.pushState(null, '', url.toString())
+      return null
+    })
   }, [])
 
   const handleHeaderSearchChange = useCallback(
     (val: string) => {
-      if (selectedOfferId !== null) {
-        setSelectedOfferId(null)
-        const url = new URL(window.location.href)
-        url.searchParams.delete('offerId')
-        window.history.pushState(null, '', url.toString())
-      }
+      handleBackToList()
       handleSearchChange(val)
     },
-    [selectedOfferId, handleSearchChange]
+    [handleBackToList, handleSearchChange]
   )
 
   const handleHeaderSearchSubmit = useCallback(
     (val?: string) => {
-      if (selectedOfferId !== null) {
-        setSelectedOfferId(null)
-        const url = new URL(window.location.href)
-        url.searchParams.delete('offerId')
-        window.history.pushState(null, '', url.toString())
-      }
-      startTransition(() => {
-        handleSearchSubmit(val)
-      })
+      handleBackToList()
+      startTransition(() => handleSearchSubmit(val))
     },
-    [selectedOfferId, handleSearchSubmit]
+    [handleBackToList, handleSearchSubmit]
   )
 
   const handleCitySelect = useCallback(
     (city: string | undefined) => {
-      setSelectedOfferId(null)
-      startTransition(() => {
-        setFilter((prev) => ({ ...prev, city, page: 1 }))
-      })
+      handleBackToList()
+      startTransition(() => setFilter((prev) => ({ ...prev, city, page: 1 })))
     },
-    [setFilter]
+    [handleBackToList, setFilter]
   )
 
   const handleSortChange = useCallback(
     (sortBy: SortBy) => {
-      startTransition(() => {
-        setFilter((prev) => ({ ...prev, sortBy, page: 1 }))
-      })
+      startTransition(() => setFilter((prev) => ({ ...prev, sortBy, page: 1 })))
     },
     [setFilter]
   )
 
   const handlePageChange = useCallback(
     (page: number) => {
-      startTransition(() => {
-        setFilter((prev) => ({ ...prev, page }))
-      })
+      startTransition(() => setFilter((prev) => ({ ...prev, page })))
     },
     [setFilter]
   )
 
-  const effectiveFilter = useMemo(() => {
-    if (filter.prompt && parsedFilters) {
-      return {
-        ...filter,
-        city: (parsedFilters.city as string) ?? filter.city,
-        district: (parsedFilters.district as string) ?? filter.district,
-        propertyType: (parsedFilters.propertyType as ListOffersFilter['propertyType']) ?? filter.propertyType,
-        transactionType: (parsedFilters.transactionType as ListOffersFilter['transactionType']) ?? filter.transactionType,
-        minPrice: (parsedFilters.minPrice as number) ?? filter.minPrice,
-        maxPrice: (parsedFilters.maxPrice as number) ?? filter.maxPrice,
-        minArea: (parsedFilters.minArea as number) ?? filter.minArea,
-        maxArea: (parsedFilters.maxArea as number) ?? filter.maxArea,
-        minRooms: (parsedFilters.minRooms as number) ?? filter.minRooms,
-        maxRooms: (parsedFilters.maxRooms as number) ?? filter.maxRooms,
-        minFloor: (parsedFilters.minFloor as number) ?? filter.minFloor,
-        maxFloor: (parsedFilters.maxFloor as number) ?? filter.maxFloor,
-        sellerType: (parsedFilters.sellerType as ListOffersFilter['sellerType']) ?? filter.sellerType,
-        marketType: (parsedFilters.marketType as ListOffersFilter['marketType']) ?? filter.marketType,
-        hasElevator: (parsedFilters.hasElevator as boolean) ?? filter.hasElevator,
-        hasBalcony: (parsedFilters.hasBalcony as boolean) ?? filter.hasBalcony,
-        hasParking: (parsedFilters.hasParking as boolean) ?? filter.hasParking,
-        hasAirConditioning: (parsedFilters.hasAirConditioning as boolean) ?? filter.hasAirConditioning,
-        isFurnished: (parsedFilters.isFurnished as boolean) ?? filter.isFurnished,
-        hasBasement: (parsedFilters.hasBasement as boolean) ?? filter.hasBasement,
-        sortBy: (parsedFilters.sortBy as SortBy) ?? filter.sortBy,
-        q: (parsedFilters.q as string) ?? filter.q,
-      } as ListOffersFilter
-    }
-    return filter
-  }, [filter, parsedFilters])
+  const effectiveFilter = useMemo(
+    () => (filter.prompt && parsedFilters ? ({ ...filter, ...parsedFilters } as ListOffersFilter) : filter),
+    [filter, parsedFilters]
+  )
 
   const handleFilterApply = useCallback(
     (draft: Partial<ListOffersFilter>) => {
@@ -175,43 +151,40 @@ export default function App() {
     [setFilter]
   )
 
-  const activeFiltersCount = useMemo(
-    () =>
-      (effectiveFilter.city ? 1 : 0) +
-      (effectiveFilter.district ? 1 : 0) +
-      (effectiveFilter.portal ? 1 : 0) +
-      (effectiveFilter.transactionType ? 1 : 0) +
-      (effectiveFilter.propertyType ? 1 : 0) +
-      (effectiveFilter.sellerType ? 1 : 0) +
-      (effectiveFilter.marketType ? 1 : 0) +
-      (effectiveFilter.minPrice !== undefined ? 1 : 0) +
-      (effectiveFilter.maxPrice !== undefined ? 1 : 0) +
-      (effectiveFilter.minArea !== undefined ? 1 : 0) +
-      (effectiveFilter.maxArea !== undefined ? 1 : 0) +
-      (effectiveFilter.minRooms !== undefined || effectiveFilter.maxRooms !== undefined ? 1 : 0) +
-      (effectiveFilter.minFloor !== undefined || effectiveFilter.maxFloor !== undefined ? 1 : 0) +
-      (effectiveFilter.hasElevator ? 1 : 0) +
-      (effectiveFilter.hasBalcony ? 1 : 0) +
-      (effectiveFilter.hasParking ? 1 : 0) +
-      (effectiveFilter.hasAirConditioning ? 1 : 0) +
-      (effectiveFilter.isFurnished ? 1 : 0) +
-      (effectiveFilter.hasBasement ? 1 : 0) +
-      (effectiveFilter.sortBy !== 'newest' ? 1 : 0) +
-      (!parsedFilters && effectiveFilter.prompt ? 1 : 0),
-    [effectiveFilter, parsedFilters]
-  )
+  const handleOpenFilterModal = useCallback(() => setIsFilterModalOpen(true), [])
+
+  const activeFiltersCount = useMemo(() => {
+    let count = 0
+    const f = effectiveFilter
+    if (f.city) count++
+    if (f.district) count++
+    if (f.portal) count++
+    if (f.transactionType) count++
+    if (f.propertyType) count++
+    if (f.sellerType) count++
+    if (f.marketType) count++
+    if (f.minPrice !== undefined) count++
+    if (f.maxPrice !== undefined) count++
+    if (f.minArea !== undefined) count++
+    if (f.maxArea !== undefined) count++
+    if (f.minRooms !== undefined || f.maxRooms !== undefined) count++
+    if (f.minFloor !== undefined || f.maxFloor !== undefined) count++
+    if (f.hasElevator) count++
+    if (f.hasBalcony) count++
+    if (f.hasParking) count++
+    if (f.hasAirConditioning) count++
+    if (f.isFurnished) count++
+    if (f.hasBasement) count++
+    if (f.sortBy && f.sortBy !== 'newest') count++
+    if (!parsedFilters && f.prompt) count++
+    return count
+  }, [effectiveFilter, parsedFilters])
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   const getOffersUnit = (count: number) => {
-    if (lang === 'en') return count === 1 ? t('unit_offers_1') : t('unit_offers_other')
-    if (count === 1) return t('unit_offers_1')
-    const lastDigit = count % 10
-    const lastTwo = count % 100
-    if (lastDigit >= 2 && lastDigit <= 4 && (lastTwo < 10 || lastTwo >= 20)) {
-      return t('unit_offers_2_4')
-    }
-    return t('unit_offers_other')
+    const rule = getPluralRules(lang).select(count)
+    return rule === 'one' ? t('unit_offers_1') : rule === 'few' ? t('unit_offers_2_4') : t('unit_offers_other')
   }
 
   return (
@@ -224,7 +197,7 @@ export default function App() {
         onClearSearch={handleClearSearch}
         onCitySelect={handleCitySelect}
         onSortChange={handleSortChange}
-        onOpenFilterModal={() => setIsFilterModalOpen(true)}
+        onOpenFilterModal={handleOpenFilterModal}
         activeFiltersCount={activeFiltersCount}
         showFilters={selectedOfferId === null}
       />
@@ -279,12 +252,13 @@ export default function App() {
               ) : null}
               {parsedFilters.maxPrice ? <span>{t('max_price')}: <strong>{formatPrice(Number(parsedFilters.maxPrice), lang)}</strong></span> : null}
               {parsedFilters.minPrice ? <span>{t('min_price')}: <strong>{formatPrice(Number(parsedFilters.minPrice), lang)}</strong></span> : null}
-              {parsedFilters.hasElevator ? <span className="rounded bg-primary/10 px-1.5 py-0.5">{t('filter_amenity_elevator')}</span> : null}
-              {parsedFilters.hasBalcony ? <span className="rounded bg-primary/10 px-1.5 py-0.5">{t('filter_amenity_balcony')}</span> : null}
-              {parsedFilters.hasParking ? <span className="rounded bg-primary/10 px-1.5 py-0.5">{t('filter_amenity_parking')}</span> : null}
-              {parsedFilters.hasAirConditioning ? <span className="rounded bg-primary/10 px-1.5 py-0.5">{t('filter_amenity_ac')}</span> : null}
-              {parsedFilters.isFurnished ? <span className="rounded bg-primary/10 px-1.5 py-0.5">{t('filter_amenity_furnished')}</span> : null}
-              {parsedFilters.hasBasement ? <span className="rounded bg-primary/10 px-1.5 py-0.5">{t('filter_amenity_basement')}</span> : null}
+              {AMENITY_TAGS.map(([key, labelKey]) =>
+                parsedFilters[key] ? (
+                  <span key={key} className="rounded bg-primary/10 px-1.5 py-0.5">
+                    {t(labelKey)}
+                  </span>
+                ) : null
+              )}
               {parsedFilters.sortBy && parsedFilters.sortBy !== 'newest' ? (
                 <span>{t('filter_sort_label')}: <strong>{t(`sort_${parsedFilters.sortBy}` as unknown as Parameters<typeof t>[0]) || String(parsedFilters.sortBy)}</strong></span>
               ) : null}
@@ -299,22 +273,13 @@ export default function App() {
                 t('searching_offers')
               ) : (
                 <>
-                  {lang === 'en' ? (
-                    <>
-                      Found <strong className="text-foreground">{total}</strong> {getOffersUnit(total)}
-                      {filter.city ? ` in: ${filter.city}` : ''}
-                    </>
-                  ) : (
-                    <>
-                      Znaleziono <strong className="text-foreground">{total}</strong> {getOffersUnit(total)}
-                      {filter.city ? ` w: ${filter.city}` : ''}
-                    </>
-                  )}
+                  <strong className="text-foreground">{total}</strong> {getOffersUnit(total)}
+                  {filter.city ? t('in_city', { city: filter.city }) : ''}
                 </>
               )}
             </p>
 
-            {activeFiltersCount > 0 && (
+            {activeFiltersCount > 0 ? (
               <button
                 type="button"
                 onClick={resetFilters}
@@ -322,7 +287,7 @@ export default function App() {
               >
                 {t('clear_filters')}
               </button>
-            )}
+            ) : null}
           </div>
 
           <OfferGrid
@@ -340,13 +305,17 @@ export default function App() {
         </main>
       )}
 
-      <FilterModal
-        open={isFilterModalOpen}
-        onOpenChange={setIsFilterModalOpen}
-        filter={filter}
-        parsedFilters={parsedFilters}
-        onApply={handleFilterApply}
-      />
+      {isFilterModalOpen ? (
+        <Suspense fallback={null}>
+          <FilterModal
+            open={isFilterModalOpen}
+            onOpenChange={setIsFilterModalOpen}
+            filter={filter}
+            parsedFilters={parsedFilters}
+            onApply={handleFilterApply}
+          />
+        </Suspense>
+      ) : null}
 
       <IngestWorkerButton isSyncing={isSyncing} onSync={triggerSync} />
 
