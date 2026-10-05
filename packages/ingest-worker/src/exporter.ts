@@ -1,4 +1,4 @@
-import type { SprzedajemyListing } from './portals/sprzedajemy/types.js';
+import type { StandardListing } from './portals/sprzedajemy/types.js';
 
 export interface BatchOfferDto {
   portal: string;
@@ -18,15 +18,22 @@ export interface PushBatchResult {
   updated: number;
 }
 
-export function mapListingToBatchDto(listing: SprzedajemyListing): BatchOfferDto {
+export function mapListingToBatchDto(listing: StandardListing): BatchOfferDto {
   const metadata: Record<string, unknown> = {
     ...(listing.metadata || {}),
   };
 
   if (listing.district) metadata.district = listing.district;
   if (listing.sellerType) metadata.sellerType = listing.sellerType;
-  if (listing.imageUrl) metadata.imageUrl = listing.imageUrl;
+  if (listing.images && listing.images.length > 0) {
+    metadata.imageUrl = listing.images[0];
+    metadata.images = listing.images;
+  }
   if (listing.postedAt) metadata.postedAt = listing.postedAt;
+  if (listing.floor !== null && listing.floor !== undefined) metadata.floor = listing.floor;
+  if (listing.totalFloors !== null && listing.totalFloors !== undefined) metadata.totalFloors = listing.totalFloors;
+  if (listing.propertyType) metadata.propertyType = listing.propertyType;
+  if (listing.transactionType) metadata.transactionType = listing.transactionType;
 
   return {
     portal: listing.portal,
@@ -37,7 +44,7 @@ export function mapListingToBatchDto(listing: SprzedajemyListing): BatchOfferDto
     areaSqm: listing.areaSqm ?? null,
     roomsCount: listing.roomsCount ?? null,
     city: listing.city,
-    description: null,
+    description: listing.description ?? null,
     metadata: Object.keys(metadata).length > 0 ? metadata : null,
   };
 }

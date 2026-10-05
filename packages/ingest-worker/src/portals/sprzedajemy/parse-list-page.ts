@@ -1,13 +1,14 @@
 import * as cheerio from 'cheerio';
-import type { SprzedajemyListing } from './types.js';
+import type { StandardListing } from './types.js';
 import { parsePrice, parseArea, parseRooms, parseOfferId, parseSellerType } from './parsers.js';
+import { calculatePricePerSqm, parseTransactionType, parsePropertyType } from './normalizers.js';
 
 const BASE_URL = 'https://sprzedajemy.pl';
 
-export function parseListPage(html: string): SprzedajemyListing[] {
+export function parseListPage(html: string): StandardListing[] {
   if (!html) return [];
   const $ = cheerio.load(html);
-  const listings: SprzedajemyListing[] = [];
+  const listings: StandardListing[] = [];
 
   $('li[id^="offer-"]').each((_, el) => {
     const $item = $(el);
@@ -49,7 +50,13 @@ export function parseListPage(html: string): SprzedajemyListing[] {
     const sellerTypeClass = $item.find('.seller-type-info').attr('class') || '';
     const sellerType = parseSellerType(sellerTypeClass);
 
-    const imageUrl = $item.find('span.listImgWrp img').attr('src') || undefined;
+    const locationHref = $item.find('a.location').attr('href') || '';
+    const transactionType = parseTransactionType(`${locationHref} ${title}`);
+    const propertyType = parsePropertyType(`${locationHref} ${title}`);
+    const pricePerSqm = calculatePricePerSqm(price, areaSqm);
+
+    const imageUrl = $item.find('span.listImgWrp img').attr('src');
+    const images = imageUrl ? [imageUrl] : [];
     const postedAt = $item.find('time.time').attr('datetime') || undefined;
 
     listings.push({
@@ -58,12 +65,18 @@ export function parseListPage(html: string): SprzedajemyListing[] {
       url,
       title,
       price,
+      pricePerSqm,
       areaSqm,
       roomsCount,
+      floor: null,
+      totalFloors: null,
+      transactionType,
+      propertyType,
       city,
       district,
       sellerType,
-      imageUrl,
+      description: null,
+      images,
       postedAt,
       metadata,
     });

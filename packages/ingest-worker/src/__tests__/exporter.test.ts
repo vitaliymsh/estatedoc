@@ -1,20 +1,26 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mapListingToBatchDto, pushOffersBatch } from '../exporter.js';
-import type { SprzedajemyListing } from '../portals/sprzedajemy/types.js';
+import type { StandardListing } from '../portals/sprzedajemy/types.js';
 
 describe('Exporter & Backend Client', () => {
-  const sampleListing: SprzedajemyListing = {
+  const sampleListing: StandardListing = {
     portal: 'sprzedajemy',
     externalId: 'ext-42',
     url: 'https://sprzedajemy.pl/oferta-42',
     title: 'Kawalerka w centrum',
     price: 350000,
+    pricePerSqm: 10769,
     areaSqm: 32.5,
     roomsCount: 1,
+    floor: 2,
+    totalFloors: 5,
+    transactionType: 'sale',
+    propertyType: 'apartment',
     city: 'Warszawa',
     district: 'Śródmieście',
     sellerType: 'private',
-    imageUrl: 'https://img.sprzedajemy.pl/42.jpg',
+    description: 'Świetna kawalerka po remoncie.',
+    images: ['https://img.sprzedajemy.pl/42.jpg'],
     postedAt: '2026-03-01T12:00:00Z',
   };
 
@@ -23,11 +29,17 @@ describe('Exporter & Backend Client', () => {
     expect(dto.portal).toBe('sprzedajemy');
     expect(dto.externalId).toBe('ext-42');
     expect(dto.price).toBe(350000);
+    expect(dto.description).toBe('Świetna kawalerka po remoncie.');
     expect(dto.metadata).toEqual({
       district: 'Śródmieście',
       sellerType: 'private',
       imageUrl: 'https://img.sprzedajemy.pl/42.jpg',
+      images: ['https://img.sprzedajemy.pl/42.jpg'],
       postedAt: '2026-03-01T12:00:00Z',
+      floor: 2,
+      totalFloors: 5,
+      propertyType: 'apartment',
+      transactionType: 'sale',
     });
   });
 

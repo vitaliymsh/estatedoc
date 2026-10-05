@@ -86,12 +86,18 @@ describe('parseListPage', () => {
       url: 'https://sprzedajemy.pl/lokal-134m2-warszawa-4-1b8e55-6fpbc4-nr73849568',
       title: 'Lokal 134m2 Warszawa',
       price: 10700,
+      pricePerSqm: 80,
       areaSqm: 134,
       roomsCount: null,
+      floor: null,
+      totalFloors: null,
+      transactionType: null,
+      propertyType: 'commercial',
       city: 'Warszawa',
       district: 'Wola',
       sellerType: 'company',
-      imageUrl: 'https://thumbs.img-sprzedajemy.pl/350x250c/b4/38/78/lokal-134m2-warszawa-605845591.jpg',
+      description: null,
+      images: ['https://thumbs.img-sprzedajemy.pl/350x250c/b4/38/78/lokal-134m2-warszawa-605845591.jpg'],
       postedAt: '2026-10-05 13:03:54',
       metadata: {},
     });
@@ -100,6 +106,8 @@ describe('parseListPage', () => {
     expect(listings[1].roomsCount).toBe(6);
     expect(listings[1].city).toBe('Marki');
     expect(listings[1].sellerType).toBe('verified');
+    expect(listings[1].propertyType).toBe('apartment');
+    expect(listings[1].pricePerSqm).toBe(6146);
   });
 
   it('returns empty array on empty or invalid html', () => {

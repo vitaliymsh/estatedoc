@@ -1,6 +1,6 @@
 export type TransactionType = 'sale' | 'rent';
 export type PropertyType = 'apartment' | 'house' | 'land' | 'commercial' | 'garage' | 'other';
-export type SellerType = 'private' | 'agency' | 'developer' | 'verified';
+export type SellerType = 'private' | 'company' | 'agency' | 'developer' | 'verified';
 
 export interface StandardListing {
   portal: string;

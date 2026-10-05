@@ -10,6 +10,7 @@ export interface IngestOptions {
   maxPages?: number;
   delayMs?: number;
   backendUrl?: string;
+  enrichDetails?: boolean;
 }
 
 export interface IngestResult {
@@ -23,9 +24,13 @@ export async function runIngest(options: IngestOptions = {}): Promise<IngestResu
   const maxPages = options.maxPages ?? (Number(process.env.SCRAPE_PAGES) || 1);
   const delayMs = options.delayMs ?? 1000;
   const backendUrl = options.backendUrl || process.env.BACKEND_URL || 'http://localhost:4000';
+  const enrichDetails =
+    options.enrichDetails ?? (process.env.SCRAPE_ENRICH === 'true' || process.argv.includes('--enrich'));
 
-  console.log(`[Ingest] Starting crawl for "${categoryPath}" (maxPages: ${maxPages})...`);
-  const listings = await fetchAllListings({ categoryPath, maxPages, delayMs });
+  console.log(
+    `[Ingest] Starting crawl for "${categoryPath}" (maxPages: ${maxPages}, enrichDetails: ${enrichDetails})...`
+  );
+  const listings = await fetchAllListings({ categoryPath, maxPages, delayMs, enrichDetails });
   console.log(`[Ingest] Scraped ${listings.length} listings. Exporting to backend...`);
 
   if (listings.length === 0) {
