@@ -87,6 +87,47 @@ describe('InMemoryOfferRepository', () => {
     const roomsList = await repo.findAll({ minRooms: 3, limit: 10, offset: 0, sortBy: 'newest' });
     expect(roomsList.total).toBe(1);
     expect(roomsList.items[0].roomsCount).toBe(3);
+
+    await repo.upsertBatch([
+      {
+        portal: 'morizon',
+        externalId: '4',
+        url: 'https://morizon.pl/4',
+        title: 'Studio with elevator',
+        city: 'Warszawa',
+        price: '400000.00',
+        areaSqm: '30.00',
+        floor: 4,
+        sellerType: 'private',
+        metadata: { hasElevator: true, marketType: 'secondary', hasBalcony: true },
+      },
+      {
+        portal: 'morizon',
+        externalId: '5',
+        url: 'https://morizon.pl/5',
+        title: 'Big Developer House',
+        city: 'Warszawa',
+        price: '1200000.00',
+        areaSqm: '150.00',
+        sellerType: 'developer',
+        metadata: { hasElevator: false, marketType: 'primary', hasParking: true },
+      },
+    ]);
+
+    const areaFiltered = await repo.findAll({ minArea: 25, maxArea: 50, limit: 10, offset: 0, sortBy: 'newest' });
+    expect(areaFiltered.items.some((i) => i.externalId === '4')).toBe(true);
+    expect(areaFiltered.items.some((i) => i.externalId === '5')).toBe(false);
+
+    const elevatorFiltered = await repo.findAll({ hasElevator: true, limit: 10, offset: 0, sortBy: 'newest' });
+    expect(elevatorFiltered.items.some((i) => i.externalId === '4')).toBe(true);
+    expect(elevatorFiltered.items.some((i) => i.externalId === '5')).toBe(false);
+
+    const privateFiltered = await repo.findAll({ sellerType: 'private', limit: 10, offset: 0, sortBy: 'newest' });
+    expect(privateFiltered.items.some((i) => i.externalId === '4')).toBe(true);
+    expect(privateFiltered.items.some((i) => i.externalId === '5')).toBe(false);
+
+    const sortedByArea = await repo.findAll({ limit: 10, offset: 0, sortBy: 'area_asc' });
+    expect(sortedByArea.items[0].externalId).toBe('4');
   });
 
   it('finds offer by id', async () => {

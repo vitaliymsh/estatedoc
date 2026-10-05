@@ -65,7 +65,7 @@ export class DrizzleOfferRepository implements IOfferRepository {
     if (query.marketType) {
       conditions.push(sql`JSON_UNQUOTE(JSON_EXTRACT(${offers.metadata}, '$.marketType')) = ${query.marketType}`);
     }
-    const metaBools = ['hasElevator', 'hasBalcony', 'hasParking', 'hasAirConditioning', 'isFurnished', 'hasBasement'] as const;
+    const metaBools = ['hasElevator', 'hasBalcony', 'hasGarden', 'hasTerrace', 'hasParking', 'hasAirConditioning', 'isFurnished', 'hasBasement'] as const;
     for (const key of metaBools) {
       if (query[key] !== undefined) {
         conditions.push(sql`JSON_EXTRACT(${offers.metadata}, '$.${sql.raw(key)}') = ${query[key]}`);

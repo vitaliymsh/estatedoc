@@ -2,6 +2,33 @@ import type { Offer, NewOffer } from '../db/schema.js';
 import type { IOfferRepository, ListOffersResult } from './offer.repository.js';
 import type { ListOffersQuery } from '../schemas/offer.js';
 
+function toStoredOffer(id: number, item: NewOffer, now: Date): Offer {
+  return {
+    id,
+    portal: item.portal,
+    externalId: item.externalId,
+    url: item.url,
+    title: item.title,
+    city: item.city,
+    price: item.price ?? null,
+    areaSqm: item.areaSqm ?? null,
+    roomsCount: item.roomsCount ?? null,
+    floor: item.floor ?? null,
+    totalFloors: item.totalFloors ?? null,
+    propertyType: item.propertyType ?? null,
+    transactionType: item.transactionType ?? null,
+    district: item.district ?? null,
+    street: item.street ?? null,
+    sellerType: item.sellerType ?? null,
+    pricePerSqm: item.pricePerSqm ?? null,
+    images: item.images ?? null,
+    description: item.description ?? null,
+    metadata: (item.metadata as Record<string, unknown>) ?? null,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 export class InMemoryOfferRepository implements IOfferRepository {
   private offers: Offer[] = [];
   private nextId = 1;
@@ -47,11 +74,49 @@ export class InMemoryOfferRepository implements IOfferRepository {
     if (query.maxPrice !== undefined) {
       filtered = filtered.filter((o) => o.price !== null && Number(o.price) <= query.maxPrice!);
     }
+    if (query.minArea !== undefined) {
+      filtered = filtered.filter((o) => o.areaSqm !== null && Number(o.areaSqm) >= query.minArea!);
+    }
+    if (query.maxArea !== undefined) {
+      filtered = filtered.filter((o) => o.areaSqm !== null && Number(o.areaSqm) <= query.maxArea!);
+    }
+    if (query.minFloor !== undefined) {
+      filtered = filtered.filter((o) => o.floor !== null && o.floor !== undefined && o.floor >= query.minFloor!);
+    }
+    if (query.maxFloor !== undefined) {
+      filtered = filtered.filter((o) => o.floor !== null && o.floor !== undefined && o.floor <= query.maxFloor!);
+    }
+    if (query.sellerType) {
+      filtered = filtered.filter((o) => o.sellerType === query.sellerType);
+    }
+    if (query.marketType) {
+      filtered = filtered.filter((o) => (o.metadata as Record<string, unknown> | null)?.marketType === query.marketType);
+    }
+    const metaBools = ['hasElevator', 'hasBalcony', 'hasGarden', 'hasTerrace', 'hasParking', 'hasAirConditioning', 'isFurnished', 'hasBasement'] as const;
+    for (const key of metaBools) {
+      if (query[key] !== undefined) {
+        filtered = filtered.filter((o) => Boolean((o.metadata as Record<string, unknown> | null)?.[key]) === query[key]);
+      }
+    }
 
-    if (query.sortBy === 'price_asc') {
-      filtered.sort((a, b) => Number(a.price ?? 0) - Number(b.price ?? 0));
-    } else if (query.sortBy === 'price_desc') {
-      filtered.sort((a, b) => Number(b.price ?? 0) - Number(a.price ?? 0));
+    const getPrice = (o: Offer) => (o.price != null ? Number(o.price) : null);
+    const getArea = (o: Offer) => (o.areaSqm != null ? Number(o.areaSqm) : null);
+    const getPricePerSqm = (o: Offer) => {
+      const p = getPrice(o), a = getArea(o);
+      return a && p != null ? p / a : null;
+    };
+
+    const sortComparators: Record<string, (a: Offer, b: Offer) => number> = {
+      price_asc: (a, b) => (getPrice(a) ?? Infinity) - (getPrice(b) ?? Infinity),
+      price_desc: (a, b) => (getPrice(b) ?? -Infinity) - (getPrice(a) ?? -Infinity),
+      area_asc: (a, b) => (getArea(a) ?? Infinity) - (getArea(b) ?? Infinity),
+      area_desc: (a, b) => (getArea(b) ?? -Infinity) - (getArea(a) ?? -Infinity),
+      price_sqm_asc: (a, b) => (getPricePerSqm(a) ?? Infinity) - (getPricePerSqm(b) ?? Infinity),
+      price_sqm_desc: (a, b) => (getPricePerSqm(b) ?? -Infinity) - (getPricePerSqm(a) ?? -Infinity),
+    };
+
+    if (query.sortBy && sortComparators[query.sortBy]) {
+      filtered.sort(sortComparators[query.sortBy]);
     } else {
       filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     }
@@ -85,38 +150,10 @@ export class InMemoryOfferRepository implements IOfferRepository {
 
       const now = new Date();
       if (existingIdx >= 0) {
-        this.offers[existingIdx] = {
-          ...this.offers[existingIdx],
-          ...item,
-          updatedAt: now,
-        } as Offer;
+        this.offers[existingIdx] = { ...this.offers[existingIdx], ...item, updatedAt: now };
         updated++;
       } else {
-        const newRecord: Offer = {
-          id: this.nextId++,
-          portal: item.portal,
-          externalId: item.externalId,
-          url: item.url,
-          title: item.title,
-          price: item.price ?? null,
-          areaSqm: item.areaSqm ?? null,
-          roomsCount: item.roomsCount ?? null,
-          floor: item.floor ?? null,
-          totalFloors: item.totalFloors ?? null,
-          propertyType: item.propertyType ?? null,
-          transactionType: item.transactionType ?? null,
-          city: item.city,
-          district: item.district ?? null,
-          street: item.street ?? null,
-          sellerType: item.sellerType ?? null,
-          pricePerSqm: item.pricePerSqm ?? null,
-          images: item.images ?? null,
-          description: item.description ?? null,
-          metadata: (item.metadata as Record<string, unknown>) ?? null,
-          createdAt: now,
-          updatedAt: now,
-        };
-        this.offers.push(newRecord);
+        this.offers.push(toStoredOffer(this.nextId++, item, now));
         inserted++;
       }
     }

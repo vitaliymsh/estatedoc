@@ -62,4 +62,30 @@ describe('LLMQueryParser', () => {
 
     expect(result).toEqual({ q: 'mieszkanie Poznań' });
   });
+
+  it('parses structured JSON with area range, sort and property type without subjective q keywords', async () => {
+    const mockProvider: LLMProvider = {
+      generate: vi.fn().mockResolvedValue(
+        JSON.stringify({
+          city: 'Kraków',
+          propertyType: 'apartment',
+          minArea: 35,
+          maxArea: 45,
+          sortBy: 'price_asc',
+          q: null,
+        })
+      ),
+    };
+
+    const parser = new LLMQueryParser(mockProvider);
+    const result = await parser.parse('I want a nice, cheap flat around 40m in Kraków');
+
+    expect(result).toEqual({
+      city: 'Kraków',
+      propertyType: 'apartment',
+      minArea: 35,
+      maxArea: 45,
+      sortBy: 'price_asc',
+    });
+  });
 });

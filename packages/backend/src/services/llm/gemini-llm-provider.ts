@@ -13,7 +13,7 @@ export class GeminiLLMProvider implements LLMProvider {
 
   constructor(options: GeminiLLMProviderOptions = {}) {
     this.apiKey = options.apiKey ?? process.env.GEMINI_API_KEY ?? '';
-    this.model = options.model ?? 'gemini-3.5-flash-lite';
+    this.model = options.model ?? process.env.GEMINI_MODEL ?? 'gemini-3.5-flash-lite';
     this.fetch = options.fetchFn ?? globalThis.fetch;
   }
 
