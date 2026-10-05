@@ -5,18 +5,31 @@ import type { Offer } from '../types/offer'
 import {
   formatPrice,
   calculatePricePerSqm,
+  formatFloor,
+  formatSellerType,
   formatMetadataValue,
   IGNORED_METADATA_KEYS,
 } from '../lib/formatters'
+import { prefetchOffer } from '../lib/offer-prefetch'
 
 interface OfferCardProps {
   offer: Offer
+  onSelect?: (id: number) => void
 }
 
-export function OfferCard({ offer }: OfferCardProps) {
+export function OfferCard({ offer, onSelect }: OfferCardProps) {
   const [imgError, setImgError] = useState(false)
   const pricePerSqm = calculatePricePerSqm(offer.price, offer.areaSqm)
-  const imageUrl = !imgError ? offer.metadata?.imageUrl : undefined
+  const imageUrl = !imgError
+    ? offer.images?.[0] || offer.metadata?.imageUrl
+    : undefined
+
+  const district = offer.district || offer.metadata?.district
+  const street = offer.street || (offer.metadata?.street as string | undefined)
+  const sellerLabel = formatSellerType(
+    offer.sellerType || (offer.metadata?.sellerType as string | undefined)
+  )
+  const floorText = formatFloor(offer.floor, offer.totalFloors)
 
   const metadataEntries = offer.metadata
     ? Object.entries(offer.metadata).filter(
@@ -24,11 +37,24 @@ export function OfferCard({ offer }: OfferCardProps) {
       )
     : []
 
+  const handleMouseEnter = () => {
+    prefetchOffer(offer)
+  }
+
+  const handleClick = (e: React.MouseEvent) => {
+    if (onSelect && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.button === 0) {
+      e.preventDefault()
+      onSelect(offer.id)
+    }
+  }
+
   return (
     <a
-      href={offer.url}
-      target="_blank"
-      rel="noreferrer"
+      href={`?offerId=${offer.id}`}
+      onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
+      onFocus={handleMouseEnter}
+      onTouchStart={handleMouseEnter}
       className="group flex flex-col cursor-pointer no-underline text-inherit"
     >
       {/* Visual Card Image Banner */}
@@ -56,13 +82,13 @@ export function OfferCard({ offer }: OfferCardProps) {
         </div>
 
         {/* Seller Type Badge Top Right */}
-        {offer.metadata?.sellerType && (
+        {sellerLabel && (
           <div className="absolute top-3 right-3">
             <Badge
               variant="outline"
               className="rounded-full border-none bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white shadow-xs backdrop-blur-md"
             >
-              {offer.metadata.sellerType === 'private' ? 'Prywatne' : 'Biuro'}
+              {sellerLabel}
             </Badge>
           </div>
         )}
@@ -70,13 +96,14 @@ export function OfferCard({ offer }: OfferCardProps) {
 
       {/* Details Body */}
       <div className="mt-3 flex flex-col gap-1 text-sm">
-        {/* City & District + Room Count */}
+        {/* City, District, Street + Room Count */}
         <div className="flex items-center justify-between font-semibold">
           <span className="truncate text-foreground flex items-center gap-1">
             <MapPin className="size-3.5 text-muted-foreground shrink-0" />
             <span className="truncate">
               {offer.city}
-              {offer.metadata?.district ? `, ${offer.metadata.district}` : ''}
+              {district ? `, ${district}` : ''}
+              {street ? `, ul. ${street}` : ''}
             </span>
           </span>
           {offer.roomsCount && (
@@ -91,10 +118,12 @@ export function OfferCard({ offer }: OfferCardProps) {
           {offer.title}
         </p>
 
-        {/* Area */}
-        {offer.areaSqm && (
-          <div className="text-xs text-muted-foreground">
-            <span>{offer.areaSqm} m²</span>
+        {/* Area & Floor */}
+        {(offer.areaSqm || floorText) && (
+          <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+            {offer.areaSqm && <span>{offer.areaSqm} m²</span>}
+            {offer.areaSqm && floorText && <span>•</span>}
+            {floorText && <span>{floorText}</span>}
           </div>
         )}
 

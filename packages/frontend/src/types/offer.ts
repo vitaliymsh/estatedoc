@@ -1,10 +1,15 @@
 export interface OfferMetadata {
-  imageUrl?: string
-  district?: string
-  sellerType?: 'company' | 'private' | 'verified' | string
   postedAt?: string
   plotSqm?: number
   buildingType?: string
+  marketType?: string
+  yearBuilt?: number
+  condition?: string
+  heating?: string
+  ownership?: string
+  agencyName?: string
+  agencyPhone?: string
+  imageUrl?: string
   [key: string]: unknown
 }
 
@@ -17,7 +22,15 @@ export interface Offer {
   price: string | null
   areaSqm: string | null
   roomsCount: number | null
+  floor?: number | null
+  totalFloors?: number | null
+  propertyType?: 'apartment' | 'house' | 'land' | 'commercial' | 'garage' | 'other' | null
+  transactionType?: 'sale' | 'rent' | null
   city: string
+  district?: string | null
+  street?: string | null
+  sellerType?: 'company' | 'private' | 'agency' | 'developer' | 'verified' | string | null
+  images?: string[] | null
   description: string | null
   metadata: OfferMetadata | null
   createdAt: string
