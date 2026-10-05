@@ -13,6 +13,7 @@ import {
   IGNORED_METADATA_KEYS,
 } from '../lib/formatters'
 import { prefetchOffer } from '../lib/offer-prefetch'
+import { useTranslation } from '@/lib/i18n'
 
 const ListingMap = lazy(() =>
   import('./ListingMap').then((m) => ({ default: m.ListingMap }))
@@ -24,18 +25,20 @@ interface OfferCardProps {
 }
 
 export function OfferCard({ offer, onSelect }: OfferCardProps) {
+  const { t, lang } = useTranslation()
   const [imgError, setImgError] = useState(false)
   const [showMapPreview, setShowMapPreview] = useState(false)
-  const pricePerSqm = calculatePricePerSqm(offer.price, offer.areaSqm)
+  const pricePerSqm = calculatePricePerSqm(offer.price, offer.areaSqm, lang)
   const normalizedImages = normalizeOfferImages(offer.images, offer.metadata?.imageUrl)
   const imageUrl = !imgError && normalizedImages.length > 0 ? normalizedImages[0] : undefined
 
   const district = offer.district || offer.metadata?.district
   const street = offer.street || (offer.metadata?.street as string | undefined)
   const sellerLabel = formatSellerType(
-    offer.sellerType || (offer.metadata?.sellerType as string | undefined)
+    offer.sellerType || (offer.metadata?.sellerType as string | undefined),
+    lang
   )
-  const floorText = formatFloor(offer.floor, offer.totalFloors)
+  const floorText = formatFloor(offer.floor, offer.totalFloors, lang)
 
   const metadataEntries = offer.metadata
     ? Object.entries(offer.metadata).filter(
@@ -122,7 +125,7 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
                     e.stopPropagation()
                     setShowMapPreview((prev) => !prev)
                   }}
-                  aria-label={showMapPreview ? 'Pokaż zdjęcia' : 'Podgląd na mapie'}
+                  aria-label={showMapPreview ? t('show_photos') : t('map_preview')}
                   className="rounded-full bg-background/90 p-1.5 text-foreground shadow-xs backdrop-blur-md transition hover:scale-110 hover:bg-background cursor-pointer"
                 />
               }
@@ -130,7 +133,7 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
               {showMapPreview ? <Building2 className="size-3.5" /> : <Map className="size-3.5" />}
             </TooltipTrigger>
             <TooltipContent>
-              {showMapPreview ? 'Pokaż zdjęcia' : 'Podgląd na mapie'}
+              {showMapPreview ? t('show_photos') : t('map_preview')}
             </TooltipContent>
           </Tooltip>
         </div>
@@ -150,7 +153,7 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
           </span>
           {offer.roomsCount != null && offer.roomsCount > 0 ? (
             <span className="shrink-0 text-xs font-medium text-muted-foreground ml-2">
-              {offer.roomsCount} pok.
+              {offer.roomsCount} {t('rooms')}
             </span>
           ) : null}
         </div>
@@ -172,7 +175,7 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
         {/* Price */}
         <div className="mt-1 flex items-baseline gap-1.5">
           <span className="font-semibold text-foreground underline decoration-1 underline-offset-2">
-            {formatPrice(offer.price)}
+            {formatPrice(offer.price, lang)}
           </span>
           {pricePerSqm ? (
             <span className="text-xs text-muted-foreground">({pricePerSqm})</span>
@@ -188,17 +191,17 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
           )}
           {offer.metadata?.hasElevator && (
             <Badge variant="secondary" className="rounded-md font-normal text-[11px] px-2 py-0.5 bg-muted text-muted-foreground">
-              Winda
+              {t('elevator')}
             </Badge>
           )}
           {offer.metadata?.hasBalcony && (
             <Badge variant="secondary" className="rounded-md font-normal text-[11px] px-2 py-0.5 bg-muted text-muted-foreground">
-              Balkon
+              {t('balcony_terrace')}
             </Badge>
           )}
           {offer.metadata?.hasParking && (
             <Badge variant="secondary" className="rounded-md font-normal text-[11px] px-2 py-0.5 bg-muted text-muted-foreground">
-              Parking
+              {t('parking_garage')}
             </Badge>
           )}
           {metadataEntries.slice(0, 2).map(([key, val]) => (
@@ -207,7 +210,7 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
               variant="secondary"
               className="rounded-md font-normal text-[11px] px-2 py-0.5 bg-muted text-muted-foreground"
             >
-              {formatMetadataValue(key, val)}
+              {formatMetadataValue(key, val, lang)}
             </Badge>
           ))}
         </div>

@@ -1,33 +1,50 @@
-export function formatPrice(price: string | null): string {
-  if (!price) return 'Cena do negocjacji'
+import type { Language } from './i18n'
+
+export function formatPrice(price: string | null, lang: Language = 'pl'): string {
+  if (!price) return lang === 'en' ? 'Price negotiable' : 'Cena do negocjacji'
   const num = Number(price)
-  return isNaN(num) ? price : `${num.toLocaleString('pl-PL')} zł`
+  const currency = lang === 'en' ? 'PLN' : 'zł'
+  const locale = lang === 'en' ? 'en-US' : 'pl-PL'
+  return isNaN(num) ? price : `${num.toLocaleString(locale)} ${currency}`
 }
 
-export function calculatePricePerSqm(price: string | null, areaSqm: string | null): string | null {
+export function calculatePricePerSqm(
+  price: string | null,
+  areaSqm: string | null,
+  lang: Language = 'pl'
+): string | null {
   if (!price || !areaSqm) return null
   const p = Number(price)
   const a = Number(areaSqm)
   if (isNaN(p) || isNaN(a) || a <= 0) return null
-  return `${Math.round(p / a).toLocaleString('pl-PL')} zł/m²`
+  const unit = lang === 'en' ? 'PLN/m²' : 'zł/m²'
+  const locale = lang === 'en' ? 'en-US' : 'pl-PL'
+  return `${Math.round(p / a).toLocaleString(locale)} ${unit}`
 }
 
-export function formatFloor(floor: number | null | undefined, totalFloors: number | null | undefined): string | null {
+export function formatFloor(
+  floor: number | null | undefined,
+  totalFloors: number | null | undefined,
+  lang: Language = 'pl'
+): string | null {
   if (floor === null || floor === undefined) {
-    return totalFloors ? `${totalFloors} pięter` : null
+    if (!totalFloors) return null
+    return lang === 'en' ? `${totalFloors} floors` : `${totalFloors} pięter`
   }
   if (floor === 0) {
-    return totalFloors ? `Parter/${totalFloors}` : 'Parter'
+    const ground = lang === 'en' ? 'Ground floor' : 'Parter'
+    return totalFloors ? `${ground}/${totalFloors}` : ground
   }
-  return totalFloors ? `Piętro ${floor}/${totalFloors}` : `Piętro ${floor}`
+  const prefix = lang === 'en' ? 'Floor' : 'Piętro'
+  return totalFloors ? `${prefix} ${floor}/${totalFloors}` : `${prefix} ${floor}`
 }
 
-export function formatSellerType(sellerType: string | null | undefined): string | null {
+export function formatSellerType(sellerType: string | null | undefined, lang: Language = 'pl'): string | null {
   if (!sellerType) return null
-  if (sellerType === 'private') return 'Prywatne'
-  if (sellerType === 'agency' || sellerType === 'company') return 'Biuro'
-  if (sellerType === 'developer') return 'Deweloper'
-  if (sellerType === 'verified') return 'Zweryfikowany'
+  if (sellerType === 'private') return lang === 'en' ? 'Private' : 'Prywatne'
+  if (sellerType === 'agency' || sellerType === 'company') return lang === 'en' ? 'Agency' : 'Biuro'
+  if (sellerType === 'developer') return lang === 'en' ? 'Developer' : 'Deweloper'
+  if (sellerType === 'verified') return lang === 'en' ? 'Verified' : 'Zweryfikowany'
   return sellerType
 }
 
@@ -77,26 +94,35 @@ export const IGNORED_METADATA_KEYS = new Set([
   'sourceId',
 ])
 
-export function formatMetadataValue(key: string, val: unknown): string {
-  if (key === 'plotSqm') return `Działka: ${val} m²`
-  if (key === 'buildingType') return `Zabudowa: ${val}`
-  if (key === 'marketType') return `Rynek: ${val}`
-  if (key === 'yearBuilt') return `Rok budowy: ${val}`
-  if (key === 'condition') return `Stan: ${val}`
-  if (key === 'heating') return `Ogrzewanie: ${val}`
-  if (key === 'ownership') return `Własność: ${val}`
-  if (key === 'agencyName') return `Agencja: ${val}`
+export function formatMetadataValue(key: string, val: unknown, lang: Language = 'pl'): string {
+  if (key === 'plotSqm') return lang === 'en' ? `Plot: ${val} m²` : `Działka: ${val} m²`
+  if (key === 'buildingType') return lang === 'en' ? `Building: ${val}` : `Zabudowa: ${val}`
+  if (key === 'marketType') return lang === 'en' ? `Market: ${val}` : `Rynek: ${val}`
+  if (key === 'yearBuilt') return lang === 'en' ? `Year built: ${val}` : `Rok budowy: ${val}`
+  if (key === 'condition') return lang === 'en' ? `Condition: ${val}` : `Stan: ${val}`
+  if (key === 'heating') return lang === 'en' ? `Heating: ${val}` : `Ogrzewanie: ${val}`
+  if (key === 'ownership') return lang === 'en' ? `Ownership: ${val}` : `Własność: ${val}`
+  if (key === 'agencyName') return lang === 'en' ? `Agency: ${val}` : `Agencja: ${val}`
   return `${key}: ${String(val)}`
 }
 
-export function formatRelativeTime(dateString: string | null | undefined): string {
-  if (!dateString) return 'Niedawno dodane'
+export function formatRelativeTime(dateString: string | null | undefined, lang: Language = 'pl'): string {
+  if (!dateString) return lang === 'en' ? 'Recently added' : 'Niedawno dodane'
   const date = new Date(dateString)
-  if (isNaN(date.getTime())) return 'Niedawno dodane'
+  if (isNaN(date.getTime())) return lang === 'en' ? 'Recently added' : 'Niedawno dodane'
 
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+  if (lang === 'en') {
+    if (diffDays <= 0) return 'Added today'
+    if (diffDays === 1) return 'Added yesterday'
+    if (diffDays < 7) return `Added ${diffDays} days ago`
+    if (diffDays < 14) return 'Added 1 week ago'
+    if (diffDays < 30) return `Added ${Math.floor(diffDays / 7)} weeks ago`
+    return `Added ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+  }
 
   if (diffDays <= 0) return 'Dodano dzisiaj'
   if (diffDays === 1) return 'Dodano wczoraj'
@@ -116,31 +142,31 @@ export function buildGoogleMapsUrl(
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
 }
 
-export function formatPropertyType(type: string | null | undefined): string {
-  if (!type) return 'Nieruchomość'
+export function formatPropertyType(type: string | null | undefined, lang: Language = 'pl'): string {
+  if (!type) return lang === 'en' ? 'Property' : 'Nieruchomość'
   switch (type.toLowerCase()) {
     case 'apartment':
-      return 'Mieszkanie'
+      return lang === 'en' ? 'Apartment' : 'Mieszkanie'
     case 'house':
-      return 'Dom'
+      return lang === 'en' ? 'House' : 'Dom'
     case 'land':
-      return 'Działka'
+      return lang === 'en' ? 'Land' : 'Działka'
     case 'commercial':
-      return 'Lokal użytkowy'
+      return lang === 'en' ? 'Commercial' : 'Lokal użytkowy'
     case 'garage':
-      return 'Garaż'
+      return lang === 'en' ? 'Garage' : 'Garaż'
     default:
       return type
   }
 }
 
-export function formatTransactionType(type: string | null | undefined): string {
-  if (!type) return 'na sprzedaż'
+export function formatTransactionType(type: string | null | undefined, lang: Language = 'pl'): string {
+  if (!type) return lang === 'en' ? 'for sale' : 'na sprzedaż'
   switch (type.toLowerCase()) {
     case 'rent':
-      return 'na wynajem'
+      return lang === 'en' ? 'for rent' : 'na wynajem'
     case 'sale':
-      return 'na sprzedaż'
+      return lang === 'en' ? 'for sale' : 'na sprzedaż'
     default:
       return type
   }

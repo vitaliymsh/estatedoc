@@ -5,6 +5,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination'
+import { useTranslation } from '@/lib/i18n'
 
 interface PaginationProps {
   page: number
@@ -13,6 +14,7 @@ interface PaginationProps {
 }
 
 export function Pagination({ page, totalPages, onPageChange }: PaginationProps) {
+  const { t } = useTranslation()
   if (totalPages <= 1) return null
 
   return (
@@ -20,7 +22,7 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
       <PaginationContent className="gap-3">
         <PaginationItem>
           <PaginationPrevious
-            text="Poprzednia"
+            text={t('pagination_previous')}
             size="sm"
             className={`gap-1 rounded-full text-xs cursor-pointer ${
               page <= 1 ? 'pointer-events-none opacity-50' : ''
@@ -32,14 +34,13 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
           />
         </PaginationItem>
         <PaginationItem>
-          <span className="px-2 text-xs text-muted-foreground">
-            Strona <strong className="text-foreground">{page}</strong> z{' '}
-            <strong className="text-foreground">{totalPages}</strong>
+          <span className="px-2 text-xs text-muted-foreground font-medium">
+            {t('page_of', { page, totalPages })}
           </span>
         </PaginationItem>
         <PaginationItem>
           <PaginationNext
-            text="Następna"
+            text={t('pagination_next')}
             size="sm"
             className={`gap-1 rounded-full text-xs cursor-pointer ${
               page >= totalPages ? 'pointer-events-none opacity-50' : ''

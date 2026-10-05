@@ -3,6 +3,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Search } from 'lucide-react'
 import type { Offer } from '../types/offer'
 import { OfferCard } from './OfferCard'
+import { useTranslation } from '@/lib/i18n'
 
 interface OfferGridProps {
   offers: Offer[]
@@ -12,6 +13,8 @@ interface OfferGridProps {
 }
 
 export function OfferGrid({ offers, loading, onResetFilters, onSelectOffer }: OfferGridProps) {
+  const { t } = useTranslation()
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -33,12 +36,12 @@ export function OfferGrid({ offers, loading, onResetFilters, onSelectOffer }: Of
         <div className="rounded-full bg-muted p-4">
           <Search className="size-8 text-muted-foreground opacity-50" />
         </div>
-        <h3 className="mt-4 text-base font-semibold">Brak ofert</h3>
+        <h3 className="mt-4 text-base font-semibold">{t('no_offers_title')}</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Nie znaleziono ofert spełniających wybrane kryteria wyszukiwania.
+          {t('no_offers_desc')}
         </p>
         <Button variant="outline" size="sm" onClick={onResetFilters} className="mt-4">
-          Wyczyść wszystkie filtry
+          {t('clear_filters')}
         </Button>
       </div>
     )

@@ -12,6 +12,7 @@ import {
   POLAND_CENTER_COORDINATES,
 } from '../lib/geocoding'
 import { Button } from '@/components/ui/button'
+import { useTranslation, type Language } from '@/lib/i18n'
 
 export interface ListingMapProps {
   offer?: Partial<Offer> | null
@@ -99,6 +100,7 @@ export function ListingMap({
   apiKey,
   onMarkerClick,
 }: ListingMapProps) {
+  const { lang } = useTranslation()
   const containerRef = useRef<HTMLDivElement | null>(null)
   const mapInstanceRef = useRef<L.Map | null>(null)
   const markersLayerRef = useRef<L.LayerGroup | null>(null)
@@ -212,13 +214,13 @@ export function ListingMap({
         if (!itemCoords) return
 
         bounds.extend([itemCoords.lat, itemCoords.lng])
-        const priceLabel = formatPrice(item.price ?? null)
+        const priceLabel = formatPrice(item.price ?? null, lang)
         const marker = L.marker([itemCoords.lat, itemCoords.lng], {
           icon: createMarkerIcon(priceLabel),
         })
 
         if (showPopup) {
-          marker.bindPopup(buildPopupHtml(item, itemCoords), {
+          marker.bindPopup(buildPopupHtml(item, itemCoords, lang), {
             autoPan: true,
             autoPanPadding: [28, 28],
             maxWidth: 280,
@@ -242,13 +244,13 @@ export function ListingMap({
 
     // Single offer detail
     if (offer) {
-      const priceLabel = formatPrice(offer.price ?? null)
+      const priceLabel = formatPrice(offer.price ?? null, lang)
       const marker = L.marker([resolvedCoords.lat, resolvedCoords.lng], {
         icon: createMarkerIcon(priceLabel, true),
       })
 
       if (showPopup) {
-        marker.bindPopup(buildPopupHtml(offer, resolvedCoords), {
+        marker.bindPopup(buildPopupHtml(offer, resolvedCoords, lang), {
           autoPan: true,
           autoPanPadding: [28, 28],
           maxWidth: 280,
@@ -259,7 +261,7 @@ export function ListingMap({
 
       markersGroup.addLayer(marker)
     }
-  }, [offers, offer, resolvedCoords, showPopup, onMarkerClick])
+  }, [offers, offer, resolvedCoords, showPopup, onMarkerClick, lang])
 
   const handleRecenter = () => {
     if (mapInstanceRef.current && resolvedCoords) {
@@ -272,14 +274,14 @@ export function ListingMap({
   return (
     <div
       className={`relative overflow-hidden rounded-2xl border border-border bg-muted/40 shadow-xs group/map ${className}`}
-      style={{ height }}
+      style={height ? { height } : undefined}
     >
       {/* Map Container */}
       <div
         id={`map-${mapId}`}
         ref={containerRef}
         className="h-full w-full z-0 font-sans"
-        aria-label="Interaktywna mapa lokalizacji"
+        aria-label={lang === 'en' ? 'Interactive location map' : 'Interaktywna mapa lokalizacji'}
       />
 
       {/* Loading Overlay */}
@@ -287,7 +289,7 @@ export function ListingMap({
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-xs">
           <div className="flex items-center gap-2 rounded-xl bg-background/90 px-4 py-2 text-xs font-medium text-muted-foreground shadow-md border">
             <RefreshCw className="size-3.5 animate-spin text-primary" />
-            <span>Wczytywanie lokalizacji...</span>
+            <span>{lang === 'en' ? 'Loading location...' : 'Wczytywanie lokalizacji...'}</span>
           </div>
         </div>
       )}
@@ -300,7 +302,7 @@ export function ListingMap({
             variant="secondary"
             size="sm"
             onClick={handleRecenter}
-            title="Wycentruj mapę"
+            title={lang === 'en' ? 'Center map' : 'Wycentruj mapę'}
             className="size-8 p-0 rounded-xl bg-background/90 shadow-md backdrop-blur-md hover:bg-background cursor-pointer"
           >
             <Navigation className="size-3.5 text-foreground" />
@@ -315,9 +317,9 @@ function resolveSyncCoordinates(item: Partial<Offer>): Coordinates | null {
   return extractCoordinates(item)
 }
 
-function buildPopupHtml(item: Partial<Offer>, coords: Coordinates): string {
-  const price = formatPrice(item.price ?? null)
-  const priceSqm = calculatePricePerSqm(item.price ?? null, item.areaSqm ?? null)
+function buildPopupHtml(item: Partial<Offer>, coords: Coordinates, lang: Language = 'pl'): string {
+  const price = formatPrice(item.price ?? null, lang)
+  const priceSqm = calculatePricePerSqm(item.price ?? null, item.areaSqm ?? null, lang)
   const effectiveLoc = getEffectiveLocation(item)
   const district = effectiveLoc.district
   const street = effectiveLoc.street
@@ -362,7 +364,7 @@ function buildPopupHtml(item: Partial<Offer>, coords: Coordinates): string {
           rel="noreferrer"
           class="leaflet-popup-btn flex items-center justify-center gap-1.5 w-full rounded-xl px-3 py-2 text-xs font-semibold shadow-xs transition mt-2.5 cursor-pointer"
         >
-          <span style="color: inherit;">Nawiguj w Google Maps</span>
+          <span style="color: inherit;">${lang === 'en' ? 'Navigate in Google Maps' : 'Nawiguj w Google Maps'}</span>
           <svg class="size-3.5 shrink-0 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M7 7h10v10"/>
             <path d="M7 17 17 7"/>

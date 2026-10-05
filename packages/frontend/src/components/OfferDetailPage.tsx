@@ -47,6 +47,7 @@ import {
   IGNORED_METADATA_KEYS,
 } from '../lib/formatters'
 import { ListingMap } from './ListingMap'
+import { useTranslation } from '@/lib/i18n'
 
 interface OfferDetailPageProps {
   offerId: number
@@ -54,6 +55,7 @@ interface OfferDetailPageProps {
 }
 
 export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
+  const { lang, t } = useTranslation()
   const { offer, loading, error } = useOfferDetail(offerId)
   const [isCopied, setIsCopied] = useState(false)
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
@@ -107,30 +109,33 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
     return (
       <div className="mx-auto max-w-lg px-4 py-16 text-center space-y-6">
         <Alert variant="destructive" className="text-left">
-          <AlertTitle className="font-semibold text-base">Nie znaleziono oferty</AlertTitle>
+          <AlertTitle className="font-semibold text-base">
+            {t('listing_not_found')}
+          </AlertTitle>
           <AlertDescription className="mt-1">
-            {error || 'Wybrana oferta nie istnieje lub została usunięta.'}
+            {error || t('listing_not_found_desc')}
           </AlertDescription>
         </Alert>
         <Button onClick={onBack} variant="outline" className="gap-2 rounded-xl">
           <ArrowLeft className="size-4" />
-          Wróć do listy ofert
+          {t('back_to_list')}
         </Button>
       </div>
     )
   }
 
-  const pricePerSqm = calculatePricePerSqm(offer.price, offer.areaSqm)
+  const pricePerSqm = calculatePricePerSqm(offer.price, offer.areaSqm, lang)
   const district = offer.district || (offer.metadata?.district as string | undefined)
   const street = offer.street || (offer.metadata?.street as string | undefined)
   const sellerLabel = formatSellerType(
-    offer.sellerType || (offer.metadata?.sellerType as string | undefined)
+    offer.sellerType || (offer.metadata?.sellerType as string | undefined),
+    lang
   )
-  const floorText = formatFloor(offer.floor, offer.totalFloors)
-  const relativeTime = formatRelativeTime(offer.createdAt)
+  const floorText = formatFloor(offer.floor, offer.totalFloors, lang)
+  const relativeTime = formatRelativeTime(offer.createdAt, lang)
   const googleMapsUrl = buildGoogleMapsUrl(offer.city, district, street)
-  const propertyTypeLabel = formatPropertyType(offer.propertyType)
-  const transactionTypeLabel = formatTransactionType(offer.transactionType)
+  const propertyTypeLabel = formatPropertyType(offer.propertyType, lang)
+  const transactionTypeLabel = formatTransactionType(offer.transactionType, lang)
   const phone = (offer.metadata?.agencyPhone as string | undefined) || (offer.metadata?.phone as string | undefined)
 
   const metadataEntries = offer.metadata
@@ -175,7 +180,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
           className="gap-2 rounded-xl text-sm font-medium hover:bg-accent cursor-pointer shadow-2xs"
         >
           <ArrowLeft className="size-4" />
-          Wróć do wyników
+          {t('back_to_results')}
         </Button>
 
         <Button
@@ -185,7 +190,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
           className="gap-1.5 rounded-xl text-xs font-medium cursor-pointer shadow-2xs hover:bg-accent"
         >
           {isCopied ? <Check className="size-3.5 text-emerald-500" /> : <Share2 className="size-3.5" />}
-          {isCopied ? 'Skopiowano link' : 'Udostępnij'}
+          {isCopied ? t('link_copied') : t('share')}
         </Button>
       </div>
 
@@ -239,97 +244,54 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
           </a>
         </div>
 
-        {/* Clean Mobile 1-Line Key Stats Strip */}
-        <div className="flex md:hidden flex-wrap items-center gap-1.5 pt-1">
+        {/* Universal Key Highlights Badge Strip (Mobile, Tablet, Desktop) */}
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-1">
           {offer.areaSqm && (
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/80 px-2.5 py-1 text-xs font-semibold text-foreground">
-              <Maximize2 className="size-3 text-primary" />
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/80 px-2.5 py-1 text-xs sm:text-sm font-semibold text-foreground">
+              <Maximize2 className="size-3.5 text-primary" />
               {offer.areaSqm} m²
             </span>
           )}
           {offer.roomsCount && (
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/80 px-2.5 py-1 text-xs font-semibold text-foreground">
-              <Layers className="size-3 text-primary" />
-              {offer.roomsCount} {offer.roomsCount === 1 ? 'pokój' : offer.roomsCount < 5 ? 'pokoje' : 'pokoi'}
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/80 px-2.5 py-1 text-xs sm:text-sm font-semibold text-foreground">
+              <Layers className="size-3.5 text-primary" />
+              {offer.roomsCount} {t('rooms')}
             </span>
           )}
           {floorText && (
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/80 px-2.5 py-1 text-xs font-semibold text-foreground">
-              <Building className="size-3 text-primary" />
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/80 px-2.5 py-1 text-xs sm:text-sm font-semibold text-foreground">
+              <Building className="size-3.5 text-primary" />
               {floorText}
             </span>
           )}
           {offer.metadata?.marketType && (
-            <span className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/80 px-2.5 py-1 text-xs font-semibold text-foreground">
-              <Tag className="size-3 text-primary" />
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/80 px-2.5 py-1 text-xs sm:text-sm font-semibold text-foreground">
+              <Tag className="size-3.5 text-primary" />
               {offer.metadata.marketType === 'primary'
-                ? 'Rynek pierwotny'
+                ? t('market_primary_full')
                 : offer.metadata.marketType === 'secondary'
-                  ? 'Rynek wtórny'
+                  ? t('market_secondary_full')
                   : String(offer.metadata.marketType)}
+            </span>
+          )}
+          {offer.metadata?.plotSqm && (
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/80 px-2.5 py-1 text-xs sm:text-sm font-semibold text-foreground">
+              <TreePine className="size-3.5 text-primary" />
+              {String(offer.metadata.plotSqm)} m²
             </span>
           )}
         </div>
       </div>
 
-      {/* Quick Key Metrics Bar (Desktop / Tablet only — avoids 3x duplication on Mobile) */}
-      <div className="hidden md:grid order-4 grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
-        <div className="rounded-xl border bg-card/60 p-3 shadow-2xs">
-          <div className="text-[11px] font-medium text-muted-foreground">Cena całkowita</div>
-          <div className="text-base sm:text-lg font-bold text-foreground truncate mt-0.5">
-            {formatPrice(offer.price)}
-          </div>
-        </div>
-        {pricePerSqm && (
-          <div className="rounded-xl border bg-card/60 p-3 shadow-2xs">
-            <div className="text-[11px] font-medium text-muted-foreground">Cena za m²</div>
-            <div className="text-base sm:text-lg font-bold text-foreground truncate mt-0.5">
-              {pricePerSqm}
-            </div>
-          </div>
-        )}
-        {offer.areaSqm && (
-          <div className="rounded-xl border bg-card/60 p-3 shadow-2xs">
-            <div className="text-[11px] font-medium text-muted-foreground">Powierzchnia</div>
-            <div className="text-base sm:text-lg font-bold text-foreground truncate mt-0.5">
-              {offer.areaSqm} m²
-            </div>
-          </div>
-        )}
-        {offer.roomsCount && (
-          <div className="rounded-xl border bg-card/60 p-3 shadow-2xs">
-            <div className="text-[11px] font-medium text-muted-foreground">Liczba pokoi</div>
-            <div className="text-base sm:text-lg font-bold text-foreground truncate mt-0.5">
-              {offer.roomsCount}
-            </div>
-          </div>
-        )}
-        {offer.metadata?.plotSqm ? (
-          <div className="rounded-xl border bg-card/60 p-3 shadow-2xs">
-            <div className="text-[11px] font-medium text-muted-foreground">Działka</div>
-            <div className="text-base sm:text-lg font-bold text-foreground truncate mt-0.5">
-              {String(offer.metadata.plotSqm)} m²
-            </div>
-          </div>
-        ) : floorText ? (
-          <div className="rounded-xl border bg-card/60 p-3 shadow-2xs">
-            <div className="text-[11px] font-medium text-muted-foreground">Piętro</div>
-            <div className="text-base sm:text-lg font-bold text-foreground truncate mt-0.5">
-              {floorText}
-            </div>
-          </div>
-        ) : null}
-      </div>
-
-      {/* Main Content & Sidebar Layout */}
-      <div className="order-5 grid grid-cols-1 gap-8 lg:grid-cols-3 items-start">
-        {/* Left Column (2 Cols) */}
-        <div className="space-y-6 lg:col-span-2">
+      {/* Main Content & Sidebar Layout (2-Column from Tablet md: upwards) */}
+      <div className="order-4 grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8 items-start">
+        {/* Left Column (2 Cols on Tablet & Desktop) */}
+        <div className="space-y-6 md:col-span-2">
           {/* "Parametry nieruchomości" Card */}
           <Card className="rounded-2xl border bg-card shadow-xs">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg font-bold text-foreground">
-                Parametry nieruchomości
+                {t('property_parameters')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -337,13 +299,13 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
               {hasApartmentParams && (
                 <div className="space-y-2.5">
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Mieszkanie
+                    {t('unit')}
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                     {offer.areaSqm && (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
                         <Maximize2 className="size-4 text-primary shrink-0" />
-                        <span className="text-muted-foreground">Powierzchnia:</span>
+                        <span className="text-muted-foreground">{t('area')}:</span>
                         <span className="font-medium text-foreground ml-auto">{offer.areaSqm} m²</span>
                       </div>
                     )}
@@ -351,7 +313,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                     {offer.roomsCount && (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
                         <Layers className="size-4 text-primary shrink-0" />
-                        <span className="text-muted-foreground">Liczba pokoi:</span>
+                        <span className="text-muted-foreground">{t('number_of_rooms')}:</span>
                         <span className="font-medium text-foreground ml-auto">{offer.roomsCount}</span>
                       </div>
                     )}
@@ -359,7 +321,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                     {floorText && (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
                         <Building className="size-4 text-primary shrink-0" />
-                        <span className="text-muted-foreground">Piętro:</span>
+                        <span className="text-muted-foreground">{t('floor')}:</span>
                         <span className="font-medium text-foreground ml-auto">{floorText}</span>
                       </div>
                     )}
@@ -367,7 +329,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                     {offer.metadata?.condition && (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
                         <Sparkles className="size-4 text-primary shrink-0" />
-                        <span className="text-muted-foreground">Stan wykończenia:</span>
+                        <span className="text-muted-foreground">{t('condition')}:</span>
                         <span className="font-medium text-foreground ml-auto">{String(offer.metadata.condition)}</span>
                       </div>
                     )}
@@ -375,12 +337,12 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                     {offer.metadata?.marketType && (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
                         <Tag className="size-4 text-primary shrink-0" />
-                        <span className="text-muted-foreground">Rynek:</span>
+                        <span className="text-muted-foreground">{t('market')}:</span>
                         <span className="font-medium text-foreground ml-auto">
                           {offer.metadata.marketType === 'primary'
-                            ? 'Pierwotny'
+                            ? t('market_primary')
                             : offer.metadata.marketType === 'secondary'
-                              ? 'Wtórny'
+                              ? t('market_secondary')
                               : String(offer.metadata.marketType)}
                         </span>
                       </div>
@@ -389,7 +351,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                     {offer.metadata?.plotSqm && (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
                         <TreePine className="size-4 text-primary shrink-0" />
-                        <span className="text-muted-foreground">Działka:</span>
+                        <span className="text-muted-foreground">{t('plot')}:</span>
                         <span className="font-medium text-foreground ml-auto">{String(offer.metadata.plotSqm)} m²</span>
                       </div>
                     )}
@@ -401,13 +363,13 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
               {hasBuildingParams && (
                 <div className="space-y-2.5">
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Budynek
+                    {t('building')}
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                     {offer.metadata?.yearBuilt && (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
                         <Calendar className="size-4 text-primary shrink-0" />
-                        <span className="text-muted-foreground">Rok budowy:</span>
+                        <span className="text-muted-foreground">{t('year_built')}:</span>
                         <span className="font-medium text-foreground ml-auto">{String(offer.metadata.yearBuilt)}</span>
                       </div>
                     )}
@@ -415,7 +377,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                     {offer.metadata?.buildingMaterial && (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
                         <Layers className="size-4 text-primary shrink-0" />
-                        <span className="text-muted-foreground">Materiał:</span>
+                        <span className="text-muted-foreground">{t('material')}:</span>
                         <span className="font-medium text-foreground ml-auto capitalize truncate max-w-[160px] text-right">
                           {String(offer.metadata.buildingMaterial)}
                         </span>
@@ -425,7 +387,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                     {offer.metadata?.buildingType && (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
                         <Building2 className="size-4 text-primary shrink-0" />
-                        <span className="text-muted-foreground">Rodzaj zabudowy:</span>
+                        <span className="text-muted-foreground">{t('building_type')}:</span>
                         <span className="font-medium text-foreground ml-auto truncate max-w-[160px] text-right">
                           {String(offer.metadata.buildingType)}
                         </span>
@@ -435,9 +397,9 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                     {offer.metadata?.hasElevator !== undefined && (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
                         <Building className="size-4 text-primary shrink-0" />
-                        <span className="text-muted-foreground">Winda:</span>
+                        <span className="text-muted-foreground">{t('elevator')}:</span>
                         <span className="font-medium text-foreground ml-auto">
-                          {offer.metadata.hasElevator ? 'Tak' : 'Brak'}
+                          {offer.metadata.hasElevator ? t('yes') : t('no')}
                         </span>
                       </div>
                     )}
@@ -445,7 +407,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                     {offer.metadata?.heating && (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
                         <Flame className="size-4 text-primary shrink-0" />
-                        <span className="text-muted-foreground">Ogrzewanie:</span>
+                        <span className="text-muted-foreground">{t('heating')}:</span>
                         <span className="font-medium text-foreground ml-auto truncate max-w-[160px] text-right capitalize">
                           {String(offer.metadata.heating)}
                         </span>
@@ -459,23 +421,25 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
               {hasFeeParams && (
                 <div className="space-y-2.5">
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Opłaty i formalności
+                    {t('fees_and_legal')}
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
                     {offer.metadata?.rentExtra && (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
                         <Tag className="size-4 text-primary shrink-0" />
-                        <span className="text-muted-foreground">Czynsz administracyjny:</span>
-                        <span className="font-medium text-foreground ml-auto">{offer.metadata.rentExtra} zł</span>
+                        <span className="text-muted-foreground">{t('admin_fee')}:</span>
+                        <span className="font-medium text-foreground ml-auto">{offer.metadata.rentExtra} {t('currency')}</span>
                       </div>
                     )}
 
                     {offer.metadata?.deposit !== undefined && (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
                         <ShieldCheck className="size-4 text-primary shrink-0" />
-                        <span className="text-muted-foreground">Kaucja:</span>
+                        <span className="text-muted-foreground">{t('deposit_term')}:</span>
                         <span className="font-medium text-foreground ml-auto">
-                          {offer.metadata.deposit === 0 ? '0 zł (brak kaucji)' : `${offer.metadata.deposit} zł`}
+                          {offer.metadata.deposit === 0
+                            ? t('deposit_none')
+                            : `${offer.metadata.deposit} ${t('currency')}`}
                         </span>
                       </div>
                     )}
@@ -483,7 +447,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                     {offer.metadata?.ownership && (
                       <div className="flex items-center gap-3 py-2 border-b border-border/50">
                         <FileText className="size-4 text-primary shrink-0" />
-                        <span className="text-muted-foreground">Forma własności:</span>
+                        <span className="text-muted-foreground">{t('ownership')}:</span>
                         <span className="font-medium text-foreground ml-auto truncate max-w-[160px] text-right capitalize">
                           {String(offer.metadata.ownership)}
                         </span>
@@ -499,7 +463,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                   <Accordion defaultValue={['metadata']} className="w-full">
                     <AccordionItem value="metadata" className="border-none">
                       <AccordionTrigger className="py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:no-underline cursor-pointer">
-                        Inne informacje ze źródła ({metadataEntries.length})
+                        {t('other_source_info', { count: metadataEntries.length })}
                       </AccordionTrigger>
                       <AccordionContent className="pt-2">
                         <div className="flex flex-wrap gap-2">
@@ -509,7 +473,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                               variant="secondary"
                               className="rounded-lg px-3 py-1 font-normal text-xs bg-muted text-muted-foreground"
                             >
-                              {formatMetadataValue(key, val)}
+                              {formatMetadataValue(key, val, lang)}
                             </Badge>
                           ))}
                         </div>
@@ -535,44 +499,44 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
             <Card className="rounded-2xl border bg-card shadow-xs">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg font-bold text-foreground">
-                  Udogodnienia i atuty
+                  {t('amenities_and_highlights')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-wrap gap-2">
                   {offer.metadata?.hasElevator ? (
                     <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium">
-                      <Building className="size-3.5 text-primary" /> Winda w budynku
+                      <Building className="size-3.5 text-primary" /> {t('elevator_in_building')}
                     </Badge>
                   ) : null}
                   {offer.metadata?.hasBalcony ? (
                     <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium">
-                      <Check className="size-3.5 text-primary" /> Balkon / Taras
+                      <Check className="size-3.5 text-primary" /> {t('balcony_terrace')}
                     </Badge>
                   ) : null}
                   {offer.metadata?.hasParking ? (
                     <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium">
-                      <Check className="size-3.5 text-primary" /> Parking / Garaż
+                      <Check className="size-3.5 text-primary" /> {t('parking_garage')}
                     </Badge>
                   ) : null}
                   {offer.metadata?.hasBasement ? (
                     <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium">
-                      <Check className="size-3.5 text-primary" /> Piwnica / Komórka
+                      <Check className="size-3.5 text-primary" /> {t('basement_storage')}
                     </Badge>
                   ) : null}
                   {offer.metadata?.hasAirConditioning ? (
                     <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium">
-                      <Sparkles className="size-3.5 text-primary" /> Klimatyzacja
+                      <Sparkles className="size-3.5 text-primary" /> {t('air_conditioning')}
                     </Badge>
                   ) : null}
                   {offer.metadata?.isFurnished ? (
                     <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium">
-                      <Check className="size-3.5 text-primary" /> Umeblowane
+                      <Check className="size-3.5 text-primary" /> {t('furnished')}
                     </Badge>
                   ) : null}
                   {offer.metadata?.isPetFriendly ? (
                     <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium">
-                      <Check className="size-3.5 text-primary" /> Przyjazne zwierzętom
+                      <Check className="size-3.5 text-primary" /> {t('pet_friendly')}
                     </Badge>
                   ) : null}
                 </div>
@@ -582,13 +546,13 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                   offer.metadata?.noiseLevel) && (
                   <div className="pt-3 border-t border-border/40 flex flex-wrap gap-2 items-center">
                     {Array.isArray(offer.metadata?.tags) &&
-                      offer.metadata.tags.map((t, idx) => (
+                      offer.metadata.tags.map((tag, idx) => (
                         <Badge
                           key={idx}
                           variant="outline"
                           className="rounded-lg px-2.5 py-1 text-xs text-muted-foreground border-primary/20 bg-primary/5"
                         >
-                          #{String(t)}
+                          #{String(tag)}
                         </Badge>
                       ))}
                     {offer.metadata?.airQuality && (
@@ -596,7 +560,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                         variant="outline"
                         className="rounded-lg px-2.5 py-1 text-xs text-emerald-600 dark:text-emerald-400 border-emerald-500/20 bg-emerald-500/5"
                       >
-                        Jakość powietrza: {String(offer.metadata.airQuality)}
+                        {t('air_quality')}: {String(offer.metadata.airQuality)}
                       </Badge>
                     )}
                     {offer.metadata?.noiseLevel && (
@@ -604,7 +568,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                         variant="outline"
                         className="rounded-lg px-2.5 py-1 text-xs text-sky-600 dark:text-sky-400 border-sky-500/20 bg-sky-500/5"
                       >
-                        Poziom hałasu: {String(offer.metadata.noiseLevel)}
+                        {t('noise_level')}: {String(offer.metadata.noiseLevel)}
                       </Badge>
                     )}
                   </div>
@@ -618,7 +582,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
             <Card className="rounded-2xl border bg-card shadow-xs">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg font-bold text-foreground">
-                  O tej nieruchomości
+                  {t('about_property')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 pb-4">
@@ -642,7 +606,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                     onClick={() => setIsDescriptionExpanded((prev) => !prev)}
                     className="mt-1 rounded-xl text-xs font-semibold cursor-pointer"
                   >
-                    {isDescriptionExpanded ? 'Zwiń opis' : 'Pokaż więcej opisu'}
+                    {isDescriptionExpanded ? t('show_less_description') : t('read_full_description')}
                   </Button>
                 )}
               </CardContent>
@@ -655,7 +619,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                 <ShieldCheck className="size-4 text-primary shrink-0" />
                 <div className="min-w-0">
                   <div className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground">
-                    Kontakt z biurem
+                    {t('agency_contact')}
                   </div>
                   <p className="text-xs font-semibold text-foreground truncate">
                     {String(offer.metadata.agencyName)}
@@ -673,7 +637,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                 onClick={handleCopyLink}
                 className="hover:text-foreground underline underline-offset-2 cursor-pointer"
               >
-                Kopiuj link
+                {t('copy_link')}
               </button>
               <a
                 href={offer.url}
@@ -681,27 +645,27 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                 rel="noreferrer"
                 className="hover:text-foreground underline underline-offset-2"
               >
-                Zgłoś ogłoszenie
+                {t('report_listing')}
               </a>
             </div>
           </div>
         </div>
 
-        {/* Right Column (1 Col Sticky Sidebar Card - Desktop & Tablet only) */}
-        <div className="hidden md:block lg:col-span-1">
-          <div className="sticky top-24 space-y-4">
-            <Card className="rounded-2xl border bg-card p-4 sm:p-6 shadow-md space-y-3 sm:space-y-4">
+        {/* Right Column (1 Col Sticky Sidebar Card - Desktop & Tablet) */}
+        <div className="hidden md:block md:col-span-1">
+          <div className="sticky top-20 lg:top-24 space-y-4">
+            <Card className="rounded-2xl border bg-card p-4 sm:p-5 lg:p-6 shadow-md space-y-3 sm:space-y-4">
               {/* Tablet & Desktop Price & Actions */}
               <div className="space-y-4">
                 {/* Price Row */}
                 <div className="space-y-1">
-                  <span className="text-xs font-medium text-muted-foreground">Cena całkowita</span>
+                  <span className="text-xs font-medium text-muted-foreground">{t('total_price')}</span>
                   <div className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-                    {formatPrice(offer.price)}
+                    {formatPrice(offer.price, lang)}
                   </div>
                   {pricePerSqm && (
                     <div className="text-xs font-medium text-muted-foreground">
-                      Cena za metr kwadratowy: <span className="font-semibold text-foreground">{pricePerSqm}</span>
+                      {t('price_per_sqm_label')} <span className="font-semibold text-foreground">{pricePerSqm}</span>
                     </div>
                   )}
                 </div>
@@ -717,7 +681,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                       })}
                     >
                       <Phone className="size-4" />
-                      Zadzwoń: {phone}
+                      {t('call_with_phone', { phone })}
                     </a>
                     <a
                       href={offer.url}
@@ -729,7 +693,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                         className: 'w-full gap-2 rounded-xl font-medium shadow-2xs cursor-pointer hover:bg-accent',
                       })}
                     >
-                      Przejdź do oferty na {offer.portal}
+                      {t('view_on_portal', { portal: offer.portal })}
                       <ExternalLink className="size-3.5 opacity-70" />
                     </a>
                   </div>
@@ -744,11 +708,11 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                         className: 'w-full gap-2 rounded-xl font-semibold shadow-xs cursor-pointer',
                       })}
                     >
-                      Przejdź do oferty na {offer.portal}
+                      {t('view_on_portal', { portal: offer.portal })}
                       <ExternalLink className="size-4" />
                     </a>
                     <p className="text-center text-[11px] text-muted-foreground">
-                      Przejdź do portalu źródłowego, aby skontaktować się ze sprzedającym.
+                      {t('visit_source_portal_hint')}
                     </p>
                   </div>
                 )}
@@ -760,7 +724,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                   <ShieldCheck className="size-4 text-primary shrink-0" />
                   <div className="min-w-0">
                     <div className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground">
-                      Kontakt z biurem
+                      {t('agency_contact')}
                     </div>
                     <p className="text-xs font-semibold text-foreground truncate">
                       {String(offer.metadata.agencyName)}
@@ -781,7 +745,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                     onClick={handleCopyLink}
                     className="hover:text-foreground underline underline-offset-2 cursor-pointer"
                   >
-                    Kopiuj link
+                    {t('copy_link')}
                   </button>
                   <a
                     href={offer.url}
@@ -789,7 +753,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                     rel="noreferrer"
                     className="hover:text-foreground underline underline-offset-2"
                   >
-                    Zgłoś ogłoszenie
+                    {t('report_listing')}
                   </a>
                 </div>
               </div>
@@ -798,12 +762,12 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
         </div>
       </div>
 
-      <Separator className="order-6" />
+      <Separator className="order-5" />
 
       {/* Full-Width Interactive Map Section */}
-      <div className="order-7 space-y-4 pt-1">
+      <div className="order-6 space-y-4 pt-1">
         <div className="flex items-center justify-between gap-3">
-          <h3 className="text-xl font-bold tracking-tight text-foreground">Lokalizacja</h3>
+          <h3 className="text-xl font-bold tracking-tight text-foreground">{t('location')}</h3>
           <a
             href={googleMapsUrl}
             target="_blank"
@@ -815,7 +779,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
             })}
           >
             <MapPin className="size-3.5 text-primary" />
-            Otwórz w Google Maps
+            {t('open_in_gmaps')}
             <ExternalLink className="size-3 opacity-70" />
           </a>
         </div>
@@ -829,7 +793,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
       <div className="fixed bottom-0 inset-x-0 md:hidden bg-background/95 backdrop-blur-md border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex items-center justify-between gap-3 shadow-lg">
         <div className="min-w-0">
           <div className="text-base font-bold text-foreground truncate leading-none">
-            {formatPrice(offer.price)}
+            {formatPrice(offer.price, lang)}
           </div>
           {pricePerSqm && (
             <div className="text-[11px] font-medium text-muted-foreground truncate mt-0.5">
@@ -847,7 +811,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
               })}
             >
               <Phone className="size-3.5" />
-              Zadzwoń
+              {t('call')}
             </a>
           ) : null}
           <a
@@ -860,7 +824,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
               className: 'gap-1.5 rounded-xl text-xs font-semibold shrink-0 cursor-pointer h-10 px-3.5 shadow-2xs',
             })}
           >
-            Oferta
+            {t('listing_btn')}
             <ExternalLink className="size-3.5" />
           </a>
         </div>
