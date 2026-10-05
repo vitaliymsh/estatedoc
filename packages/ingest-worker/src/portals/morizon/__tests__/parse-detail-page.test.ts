@@ -61,9 +61,9 @@ describe('Morizon parseDetailPage', () => {
     expect(details.floor).toBe(6);
     expect(details.totalFloors).toBe(7);
     expect(details.price).toBe(599000);
-    expect(details.images).toContain('https://img1.staticmorizon.com.pl/thumb/thumb-main.jpg');
-    expect(details.images).toContain('https://img1.staticmorizon.com.pl/thumb/photo1.jpg');
-    expect(details.images).toContain('https://img1.staticmorizon.com.pl/thumb/photo2.jpg');
+    expect(details.images).toContain('https://img1.staticmorizon.com.pl/big/thumb-main.jpg');
+    expect(details.images).toContain('https://img1.staticmorizon.com.pl/big/photo1.jpg');
+    expect(details.images).toContain('https://img1.staticmorizon.com.pl/big/photo2.jpg');
     expect(details.metadata?.agencyName).toBe('HOMEMADE NIERUCHOMOŚCI');
     expect(details.metadata?.agencyPhone).toBe('665 565 622');
   });

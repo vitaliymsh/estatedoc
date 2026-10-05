@@ -2,6 +2,7 @@ import * as cheerio from 'cheerio';
 import type { StandardListing, MorizonJsonLdOffer } from './types.js';
 import { parsePrice, parseFloor, parseSellerType } from './parsers.js';
 import { extractCityAndDistrict, cleanDescriptionHtml } from './normalizers.js';
+import { cleanAndDeduplicateImages } from '../../utils/gallery.js';
 
 export function parseDetailPage(html: string): Partial<StandardListing> {
   if (!html) {
@@ -37,7 +38,7 @@ export function parseDetailPage(html: string): Partial<StandardListing> {
   let floor: number | null = null;
   let totalFloors: number | null = null;
   let sellerType: StandardListing['sellerType'] = undefined;
-  const imagesSet = new Set<string>();
+  const rawImages: string[] = [];
 
   if (offerJsonLd) {
     const offer: MorizonJsonLdOffer = offerJsonLd;
@@ -47,8 +48,10 @@ export function parseDetailPage(html: string): Partial<StandardListing> {
     if (offer.price !== undefined) {
       price = parsePrice(offer.price);
     }
-    if (offer.image) {
-      imagesSet.add(offer.image);
+    if (Array.isArray(offer.image)) {
+      rawImages.push(...offer.image);
+    } else if (typeof offer.image === 'string') {
+      rawImages.push(offer.image);
     }
     if (offer.seller) {
       sellerType = parseSellerType(offer.seller);
@@ -77,19 +80,24 @@ export function parseDetailPage(html: string): Partial<StandardListing> {
   }
 
   // Extract gallery images
-  $('img').each((_, el) => {
-    const src = $(el).attr('src') || $(el).attr('data-src');
-    if (src && (src.includes('staticmorizon') || src.includes('cdngr')) && !src.includes('logo') && !src.includes('avatar')) {
-      imagesSet.add(src);
+  $('img, a[data-fancybox], a.gallery__item, picture source').each((_, el) => {
+    const src =
+      $(el).attr('src') ||
+      $(el).attr('data-src') ||
+      $(el).attr('href') ||
+      $(el).attr('srcset');
+    if (src && (src.includes('staticmorizon') || src.includes('cdngr'))) {
+      rawImages.push(src);
     }
   });
 
+  const images = cleanAndDeduplicateImages(rawImages, 'morizon');
   const location = extractCityAndDistrict(undefined, breadcrumbNames);
 
   return {
     description,
     price: price ?? undefined,
-    images: Array.from(imagesSet),
+    images,
     floor,
     totalFloors,
     sellerType,

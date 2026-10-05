@@ -34,8 +34,8 @@ describe('parseDetailPage', () => {
     expect(details.floor).toBe(3);
     expect(details.totalFloors).toBe(5);
     expect(details.images).toEqual([
-      'https://thumbs.img-sprzedajemy.pl/1000x901c/b4/38/78/img1.jpg',
-      'https://thumbs.img-sprzedajemy.pl/1000x901c/b4/38/78/img2.jpg',
+      'https://thumbs.img-sprzedajemy.pl/thumb/1024x768_0/b4/38/78/img1.jpg',
+      'https://thumbs.img-sprzedajemy.pl/thumb/1024x768_0/b4/38/78/img2.jpg',
     ]);
     expect(details.metadata).toMatchObject({
       marketType: 'wtórny',

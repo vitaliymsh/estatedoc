@@ -30,7 +30,7 @@ export interface MorizonJsonLdOffer {
   price?: number | string;
   priceCurrency?: string;
   url?: string;
-  image?: string;
+  image?: string | string[];
   category?: string;
   description?: string;
   seller?: {

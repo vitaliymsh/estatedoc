@@ -63,7 +63,11 @@ export function parseListPage(html: string): StandardListing[] {
       const pricePerSqm = calculatePricePerSqm(price, areaSqm);
 
       const location = extractCityAndDistrict(offer.itemOffered?.address, breadcrumbNames, title);
-      const images = offer.image ? [offer.image] : [];
+      const images: string[] = Array.isArray(offer.image)
+        ? offer.image
+        : offer.image
+          ? [offer.image]
+          : [];
       const description = cleanDescriptionHtml(offer.itemOffered?.description);
 
       listings.push({

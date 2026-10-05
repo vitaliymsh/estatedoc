@@ -1,6 +1,7 @@
 import * as cheerio from 'cheerio';
 import type { StandardListing } from './types.js';
 import { parseFloor } from './normalizers.js';
+import { cleanAndDeduplicateImages } from '../../utils/gallery.js';
 
 export function parseDetailPage(html: string): Partial<StandardListing> {
   if (!html) {
@@ -39,17 +40,23 @@ export function parseDetailPage(html: string): Partial<StandardListing> {
     }
   });
 
-  const imagesSet = new Set<string>();
-  $('img').each((_, el) => {
-    const src = $(el).attr('src') || $(el).attr('data-src');
-    if (src && src.includes('thumbs.img-sprzedajemy.pl') && !src.includes('facebook') && !src.includes('sp.gif')) {
-      imagesSet.add(src);
+  const rawImages: string[] = [];
+  $('img, a.element, a[data-original], .gallery-thumbs a, .gallery-slider a').each((_, el) => {
+    const src =
+      $(el).attr('data-original') ||
+      $(el).attr('data-src') ||
+      $(el).attr('href') ||
+      $(el).attr('src');
+    if (src && src.includes('img-sprzedajemy.pl')) {
+      rawImages.push(src);
     }
   });
 
+  const images = cleanAndDeduplicateImages(rawImages, 'sprzedajemy');
+
   return {
     description,
-    images: Array.from(imagesSet),
+    images,
     floor,
     totalFloors,
     metadata,
