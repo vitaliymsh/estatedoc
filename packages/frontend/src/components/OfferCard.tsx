@@ -47,17 +47,23 @@ export function OfferCard({ offer }: OfferCardProps) {
 
         {/* Portal Badge Top Left */}
         <div className="absolute top-3 left-3">
-          <span className="inline-flex items-center rounded-full bg-white/90 px-2.5 py-0.5 text-xs font-semibold text-neutral-900 shadow-xs backdrop-blur-md dark:bg-black/80 dark:text-neutral-100">
+          <Badge
+            variant="outline"
+            className="rounded-full border-none bg-white/90 px-2.5 py-0.5 text-xs font-semibold text-neutral-900 shadow-xs backdrop-blur-md dark:bg-black/80 dark:text-neutral-100"
+          >
             {offer.portal}
-          </span>
+          </Badge>
         </div>
 
         {/* Seller Type Badge Top Right */}
         {offer.metadata?.sellerType && (
           <div className="absolute top-3 right-3">
-            <span className="inline-flex items-center rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white shadow-xs backdrop-blur-md">
+            <Badge
+              variant="outline"
+              className="rounded-full border-none bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white shadow-xs backdrop-blur-md"
+            >
               {offer.metadata.sellerType === 'private' ? 'Prywatne' : 'Biuro'}
-            </span>
+            </Badge>
           </div>
         )}
       </div>
