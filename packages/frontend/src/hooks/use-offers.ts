@@ -63,32 +63,23 @@ export function syncUrlFilters(filter: ListOffersFilter) {
 }
 
 export function getStoredTemporaryKey(): string | null {
-  if (typeof window === 'undefined') return null
   try {
-    return window.sessionStorage?.getItem('temporaryKey') || window.localStorage?.getItem('temporaryKey') || null
+    return window.localStorage?.getItem('temporaryKey') ?? null
   } catch {
     return null
   }
 }
 
 export function setStoredTemporaryKey(key: string) {
-  if (typeof window === 'undefined') return
   try {
-    window.sessionStorage?.setItem('temporaryKey', key)
     window.localStorage?.setItem('temporaryKey', key)
-  } catch {
-    // ignore storage errors
-  }
+  } catch {}
 }
 
 export function removeStoredTemporaryKey() {
-  if (typeof window === 'undefined') return
   try {
-    window.sessionStorage?.removeItem('temporaryKey')
     window.localStorage?.removeItem('temporaryKey')
-  } catch {
-    // ignore storage errors
-  }
+  } catch {}
 }
 
 export interface IngestOptions {
@@ -143,30 +134,6 @@ export function useOffers() {
     }
   }
 
-  // Verify stored key validity on mount
-  useEffect(() => {
-    const existing = getStoredTemporaryKey()
-    if (!existing) return
-
-    fetch(apiUrl('/api/offers/verify-key'), {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-temporary-key': existing,
-      },
-      body: JSON.stringify({ key: existing }),
-    })
-      .then((res) => {
-        if (!res.ok) {
-          removeStoredTemporaryKey()
-          setTemporaryKeyState(null)
-          setIsKeyRequired(true)
-          setKeyError('Invalid access key. Please try again.')
-        }
-      })
-      .catch(() => {})
-  }, [])
-
   const triggerSync = async (options?: IngestOptions) => {
     setIsSyncing(true)
     try {
@@ -214,24 +181,13 @@ export function useOffers() {
 
   const handleSearchSubmit = (value?: string) => {
     const text = (value ?? searchInput).trim() || undefined
-    setFilter((prev) => {
-      if (prev.prompt === text) return prev
-      return {
-        ...prev,
-        prompt: text,
-        q: undefined,
-        page: 1,
-      }
-    })
+    setFilter((prev) => (prev.prompt === text ? prev : { ...prev, prompt: text, q: undefined, page: 1 }))
   }
 
   const handleClearSearch = () => {
     setSearchInput('')
     setParsedFilters(null)
-    setFilter((prev) => {
-      if (!prev.prompt && !prev.q && prev.page === 1) return prev
-      return { ...prev, prompt: undefined, q: undefined, page: 1 }
-    })
+    setFilter((prev) => (!prev.prompt && !prev.q && prev.page === 1 ? prev : { ...prev, prompt: undefined, q: undefined, page: 1 }))
   }
 
   // Fetch from backend API
@@ -257,15 +213,14 @@ export function useOffers() {
           signal: controller.signal,
         })
       : (() => {
-          const params = new URLSearchParams()
-          for (const [key, value] of Object.entries(filter)) {
-            if (value !== undefined && key !== 'prompt' && key !== 'page') {
-              params.set(key, String(value))
-            }
-          }
+          const params = new URLSearchParams(
+            Object.entries(filter)
+              .filter(([k, v]) => v !== undefined && k !== 'prompt' && k !== 'page')
+              .map(([k, v]) => [k, String(v)])
+          )
           params.set('limit', String(PAGE_SIZE))
           params.set('offset', String(offset))
-          return fetch(apiUrl(`/api/offers?${params.toString()}`), {
+          return fetch(apiUrl(`/api/offers?${params}`), {
             headers: authHeaders,
             signal: controller.signal,
           })

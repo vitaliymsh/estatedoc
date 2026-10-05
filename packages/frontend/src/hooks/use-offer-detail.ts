@@ -4,41 +4,34 @@ import { getCachedOffer, cacheOffers, prefetchImages } from '../lib/offer-prefet
 import { apiUrl } from '../lib/api-config'
 
 export function useOfferDetail(id: number | null) {
-  const [remoteOffer, setRemoteOffer] = useState<Offer | null>(null)
-  const [loading, setLoading] = useState<boolean>(() => Boolean(id && !getCachedOffer(id)))
-  const [error, setError] = useState<string | null>(null)
-
   const cached = id ? getCachedOffer(id) : undefined
-  const offer = (remoteOffer?.id === id ? remoteOffer : cached) ?? null
+  const [offer, setOffer] = useState<Offer | null>(cached ?? null)
+  const [loading, setLoading] = useState(!cached && Boolean(id))
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) {
-      setRemoteOffer(null)
+      setOffer(null)
       setLoading(false)
       setError(null)
       return
     }
 
     const currentCached = getCachedOffer(id)
-    if (currentCached) {
-      setLoading(false)
-      prefetchImages(currentCached.images || [])
-    } else {
-      setLoading(true)
-    }
+    setOffer(currentCached ?? null)
+    setLoading(!currentCached)
+    if (currentCached?.images) prefetchImages(currentCached.images)
 
     const controller = new AbortController()
     fetch(apiUrl(`/api/offers/${id}`), { signal: controller.signal })
       .then((res) => {
-        if (!res.ok) {
-          throw new Error(`Offer fetch failed: ${res.statusText}`)
-        }
+        if (!res.ok) throw new Error(`Offer fetch failed: ${res.statusText}`)
         return res.json()
       })
       .then((fresh: Offer) => {
-        setRemoteOffer(fresh)
+        setOffer(fresh)
         cacheOffers([fresh])
-        prefetchImages(fresh.images || [])
+        if (fresh.images) prefetchImages(fresh.images)
         setError(null)
       })
       .catch((err) => {
@@ -47,14 +40,10 @@ export function useOfferDetail(id: number | null) {
         }
       })
       .finally(() => {
-        if (!controller.signal.aborted) {
-          setLoading(false)
-        }
+        if (!controller.signal.aborted) setLoading(false)
       })
 
-    return () => {
-      controller.abort()
-    }
+    return () => controller.abort()
   }, [id])
 
   return { offer, loading, error }
