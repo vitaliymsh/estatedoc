@@ -53,6 +53,7 @@ export function mapListingToBatchDto(listing: StandardListing): BatchOfferDto {
   const rawMetadata: Record<string, unknown> = {
     ...(listing.metadata || {}),
     ...(listing.postedAt && { postedAt: listing.postedAt }),
+    ...(listing.pricePerSqm && { pricePerSqm: listing.pricePerSqm }),
   };
 
   const metadata: Record<string, unknown> = {};
@@ -67,10 +68,11 @@ export function mapListingToBatchDto(listing: StandardListing): BatchOfferDto {
     .filter((img) => img.length > 0);
 
   const pricePerSqm =
-    listing.pricePerSqm ??
-    (listing.price && listing.areaSqm && listing.areaSqm > 0
-      ? Math.round(listing.price / listing.areaSqm)
-      : null);
+    listing.pricePerSqm != null
+      ? Math.round(listing.pricePerSqm)
+      : listing.price && listing.areaSqm && listing.areaSqm > 0
+        ? Math.round(listing.price / listing.areaSqm)
+        : null;
 
   return {
     portal: listing.portal,

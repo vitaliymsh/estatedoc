@@ -70,11 +70,21 @@ export function parseDetailPage(html: string): Partial<StandardListing> {
     }
     const lowerDesc = description.toLowerCase();
     if (lowerDesc.includes('winda')) metadata.hasElevator = true;
-    if (lowerDesc.includes('balkon') || lowerDesc.includes('taras') || lowerDesc.includes('loggi')) metadata.hasBalcony = true;
+    if (lowerDesc.includes('balkon') || lowerDesc.includes('loggi')) metadata.hasBalcony = true;
+    if (lowerDesc.includes('taras')) metadata.hasTerrace = true;
+    if (lowerDesc.includes('ogród') || lowerDesc.includes('ogródek')) metadata.hasGarden = true;
     if (lowerDesc.includes('parking') || lowerDesc.includes('garaż') || lowerDesc.includes('postojow')) metadata.hasParking = true;
     if (lowerDesc.includes('piwnica') || lowerDesc.includes('komórk')) metadata.hasBasement = true;
     if (lowerDesc.includes('klimatyzacj')) metadata.hasAirConditioning = true;
     if (lowerDesc.includes('umeblowan')) metadata.isFurnished = true;
+  }
+
+  const dateMatch =
+    html.match(/Dodane:\s*<strong>([^<]+)<\/strong>/i) ||
+    html.match(/(?:dodano|dodane|data dodania):\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/i) ||
+    html.match(/"datePosted":\s*"([^"]+)"/i);
+  if (dateMatch) {
+    metadata.postedAt = dateMatch[1].trim();
   }
 
   const rawImages: string[] = [];
@@ -89,6 +99,24 @@ export function parseDetailPage(html: string): Partial<StandardListing> {
     }
   });
 
+  let transactionType: StandardListing['transactionType'] = null;
+  if (description) {
+    const lowerDesc = description.toLowerCase();
+    if (lowerDesc.includes('do wynajęcia') || lowerDesc.includes('na wynajem') || metadata.deposit !== undefined) {
+      transactionType = 'rent';
+    }
+  }
+
+  let district: string | undefined;
+  let street: string | undefined;
+  if (description) {
+    const districtMatch = description.match(/\b(Mokotów|Śródmieście|Wola|Ursynów|Praga-Południe|Praga-Północ|Praga|Białołęka|Bemowo|Bielany|Targówek|Włochy|Ochota|Wawer|Wesoła|Ursus|Żoliborz|Rembertów|Wilanów)\b/i);
+    if (districtMatch) district = districtMatch[1];
+
+    const streetMatch = description.match(/\b(?:ul\.|ulica)\s+([A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+(?:\s+[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+)?)/i);
+    if (streetMatch) street = `ul. ${streetMatch[1]}`;
+  }
+
   const images = cleanAndDeduplicateImages(rawImages, 'sprzedajemy');
 
   return {
@@ -96,6 +124,9 @@ export function parseDetailPage(html: string): Partial<StandardListing> {
     images,
     floor,
     totalFloors,
+    district,
+    street,
+    transactionType,
     metadata,
   };
 }

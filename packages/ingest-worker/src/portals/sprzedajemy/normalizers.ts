@@ -5,9 +5,13 @@ export { sanitizeTitle, sanitizeStreet, sanitizeDescription } from '../../utils/
 
 export function parseTransactionType(input: string): TransactionType | null {
   if (!input) return null;
-  const lower = input.toLowerCase();
-  if (lower.includes('sprzeda') || lower.includes('sprzedam')) return 'sale';
-  if (lower.includes('wynaje') || lower.includes('wynajm') || lower.includes('najem')) return 'rent';
+  const clean = input
+    .replace(/https?:\/\/[^\s/]+/gi, '')
+    .replace(/\bsprzedajemy(?:\.pl)?\b/gi, '')
+    .trim();
+  const lower = clean.toLowerCase();
+  if (/(?:wynaje|wynajm|najem|do\s+wynaj[eę]cia|\bwynajem\b|\brent\b)/.test(lower)) return 'rent';
+  if (/(?:sprzeda[żz]|sprzedam|kupno|\bsale\b)/.test(lower)) return 'sale';
   return null;
 }
 

@@ -24,6 +24,7 @@ describe('normalizers', () => {
     it('detects sale vs rent from url or text', () => {
       expect(parseTransactionType('/warszawa/nieruchomosci/mieszkania/sprzedaz')).toBe('sale');
       expect(parseTransactionType('/warszawa/nieruchomosci/mieszkania/wynajem')).toBe('rent');
+      expect(parseTransactionType('https://sprzedajemy.pl/bez-prowizji-68-m-3-pokoje-balkon-1-miejsce-parkingowe-warszawa-wynajem')).toBe('rent');
       expect(parseTransactionType('Sprzedam mieszkanie 3 pok')).toBe('sale');
       expect(parseTransactionType('Wynajmę lokal biurowy')).toBe('rent');
       expect(parseTransactionType('/nieruchomosci')).toBeNull();

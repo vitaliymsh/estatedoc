@@ -43,6 +43,15 @@ describe('Exporter & Backend Client', () => {
     });
   });
 
+  it('rounds float pricePerSqm when mapping listing', () => {
+    const floatListing: StandardListing = {
+      ...sampleListing,
+      pricePerSqm: 12049.86,
+    };
+    const dto = mapListingToBatchDto(floatListing);
+    expect(dto.pricePerSqm).toBe(12050);
+  });
+
   it('prunes redundant top-level attributes from metadata and normalizes images', () => {
     const listingWithRedundantMeta: StandardListing = {
       ...sampleListing,

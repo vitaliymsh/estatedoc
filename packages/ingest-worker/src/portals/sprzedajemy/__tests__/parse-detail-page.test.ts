@@ -54,10 +54,11 @@ describe('parseDetailPage', () => {
             <li class="item"><span>Forma własności</span><strong>własność</strong></li>
           </ul>
         </div>
+        <div class="offer-date">Dodane: <strong>2026-04-10</strong></div>
         <div class="offerDescription">
           <span>
             3 000 zł - najem. Czynsz administracyjny: 1200 zł. Kaucja: 3500 zł.
-            W mieszkaniu jest winda, balkon oraz miejsce parkingowe.
+            W mieszkaniu jest winda, balkon, prywatny ogródek oraz taras i miejsce parkingowe.
           </span>
         </div>
       </div>
@@ -72,7 +73,10 @@ describe('parseDetailPage', () => {
     expect(details.metadata?.deposit).toBe(3500);
     expect(details.metadata?.hasElevator).toBe(true);
     expect(details.metadata?.hasBalcony).toBe(true);
+    expect(details.metadata?.hasGarden).toBe(true);
+    expect(details.metadata?.hasTerrace).toBe(true);
     expect(details.metadata?.hasParking).toBe(true);
+    expect(details.metadata?.postedAt).toBe('2026-04-10');
   });
 
   it('handles empty or missing detail sections gracefully', () => {

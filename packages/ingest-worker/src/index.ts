@@ -3,6 +3,7 @@ import { resolve } from 'path';
 import { fetchAllListings as fetchSprzedajemy } from './portals/sprzedajemy/index.js';
 import { fetchAllListings as fetchMorizon } from './portals/morizon/index.js';
 import { fetchAllListings as fetchOtodom } from './portals/otodom/index.js';
+import { fetchAllListings as fetchGratka } from './portals/gratka/index.js';
 import { mapListingToBatchDto, pushOffersBatch } from './exporter.js';
 import { enrichWithJev } from './utils/jev.js';
 import type { StandardListing } from './types.js';
@@ -11,7 +12,7 @@ dotenv.config();
 dotenv.config({ path: resolve(process.cwd(), '.env') });
 dotenv.config({ path: resolve(process.cwd(), '../../.env') });
 
-export type SupportedPortal = 'sprzedajemy' | 'morizon' | 'otodom';
+export type SupportedPortal = 'sprzedajemy' | 'morizon' | 'otodom' | 'gratka';
 
 export interface IngestOptions {
   portal?: SupportedPortal | 'all';
@@ -128,6 +129,34 @@ export async function runIngest(options: IngestOptions = {}): Promise<IngestResu
       listings.push(...portalListings);
     } catch (err) {
       console.error('[Ingest-Otodom] Failed to crawl Otodom:', err);
+    }
+  }
+
+  if (portal === 'gratka' || portal === 'all') {
+    const categoryPath =
+      (portal === 'gratka' ? options.categoryPath : undefined) ||
+      (portal === 'gratka' ? process.env.SCRAPE_CATEGORY : undefined) ||
+      '/nieruchomosci/mieszkania/warszawa';
+    try {
+      console.log(
+        `[Ingest-Gratka] Starting crawl for "${categoryPath}" (maxPages: ${maxPages}, limit: ${limitPerPortal}, enrichDetails: ${enrichDetails}, forceEnrich: ${forceEnrich})...`
+      );
+      let portalListings = await fetchGratka({
+        categoryPath,
+        maxPages,
+        limit: limitPerPortal > 0 ? limitPerPortal : undefined,
+        delayMs,
+        enrichDetails,
+        backendUrl,
+        knownIds,
+      });
+      if (limitPerPortal > 0) {
+        portalListings = portalListings.slice(0, limitPerPortal);
+      }
+      console.log(`[Ingest-Gratka] Scraped & kept ${portalListings.length} listings.`);
+      listings.push(...portalListings);
+    } catch (err) {
+      console.error('[Ingest-Gratka] Failed to crawl Gratka:', err);
     }
   }
 
