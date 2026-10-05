@@ -42,6 +42,8 @@ describe('Offers Routes', () => {
           title: 'Warsaw Studio',
           city: 'Warszawa',
           price: 450000,
+          areaSqm: 30,
+          pricePerSqm: 15000,
           images: ['https://example.com/photo1.jpg', 'https://example.com/photo2.jpg'],
         },
       ],
@@ -59,6 +61,9 @@ describe('Offers Routes', () => {
     const body = getRes.json();
     expect(body.total).toBe(1);
     expect(body.items[0].externalId).toBe('ext-100');
+    expect(body.items[0].price).toBe(450000);
+    expect(body.items[0].areaSqm).toBe(30);
+    expect(body.items[0].pricePerSqm).toBe(15000);
     expect(body.items[0].images).toEqual(['https://example.com/photo1.jpg', 'https://example.com/photo2.jpg']);
 
     const searchRes = await app.inject({
@@ -67,6 +72,32 @@ describe('Offers Routes', () => {
     });
     expect(searchRes.statusCode).toBe(200);
     expect(searchRes.json().total).toBe(1);
+    expect(searchRes.json().items[0].price).toBe(450000);
+  });
+
+  it('toOfferDto formats price/area as numbers and calculates pricePerSqm when null', async () => {
+    await repo.upsertBatch([
+      {
+        portal: 'morizon',
+        externalId: 'ext-calc-1',
+        url: 'https://morizon.pl/ext-calc-1',
+        title: 'Computed sqm price',
+        city: 'Warszawa',
+        price: '600000.00',
+        areaSqm: '50.00',
+      },
+    ]);
+
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/offers/1',
+    });
+
+    expect(res.statusCode).toBe(200);
+    const item = res.json();
+    expect(item.price).toBe(600000);
+    expect(item.areaSqm).toBe(50);
+    expect(item.pricePerSqm).toBe(12000);
   });
 
   it('GET /api/offers/:id returns 404 for missing and 200 for existing', async () => {

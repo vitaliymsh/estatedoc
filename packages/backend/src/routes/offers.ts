@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { FastifyPluginAsync } from 'fastify';
+import type { Offer } from '../db/schema.js';
 import type { IOfferRepository } from '../repositories/offer.repository.js';
 import {
   listOffersQuerySchema,
@@ -21,6 +22,24 @@ export interface OffersRoutesOptions {
   queryParser?: IQueryParser;
 }
 
+export function toOfferDto(row: Offer) {
+  const price = row.price !== null && row.price !== undefined ? Number(row.price) : null;
+  const areaSqm = row.areaSqm !== null && row.areaSqm !== undefined ? Number(row.areaSqm) : null;
+  const pricePerSqm =
+    row.pricePerSqm !== null && row.pricePerSqm !== undefined
+      ? Number(row.pricePerSqm)
+      : price !== null && areaSqm !== null && areaSqm > 0
+        ? Math.round(price / areaSqm)
+        : null;
+
+  return {
+    ...row,
+    price,
+    areaSqm,
+    pricePerSqm,
+  };
+}
+
 export const offersRoutes: FastifyPluginAsync<OffersRoutesOptions> = async (fastify, opts) => {
   const repo = opts.repository;
   const parser = opts.queryParser ?? new LLMQueryParser(new GeminiLLMProvider());
@@ -32,7 +51,7 @@ export const offersRoutes: FastifyPluginAsync<OffersRoutesOptions> = async (fast
     }
     const result = await repo.findAll(parsed.data);
     const body = {
-      items: result.items,
+      items: result.items.map(toOfferDto),
       total: result.total,
       limit: parsed.data.limit,
       offset: parsed.data.offset,
@@ -59,7 +78,8 @@ export const offersRoutes: FastifyPluginAsync<OffersRoutesOptions> = async (fast
       return reply.status(404).send({ error: 'Offer not found' });
     }
 
-    const etag = computeETag(offer);
+    const dto = toOfferDto(offer);
+    const etag = computeETag(dto);
     reply.header('Cache-Control', 'public, max-age=60');
     reply.header('ETag', etag);
 
@@ -67,7 +87,7 @@ export const offersRoutes: FastifyPluginAsync<OffersRoutesOptions> = async (fast
       return reply.status(304).send();
     }
 
-    return offer;
+    return dto;
   });
 
 
@@ -101,6 +121,7 @@ export const offersRoutes: FastifyPluginAsync<OffersRoutesOptions> = async (fast
       district: item.district ?? null,
       street: item.street ?? null,
       sellerType: item.sellerType ?? null,
+      pricePerSqm: item.pricePerSqm ?? null,
       images: item.images ?? null,
       description: item.description ?? null,
       metadata: item.metadata ?? null,
@@ -124,7 +145,7 @@ export const offersRoutes: FastifyPluginAsync<OffersRoutesOptions> = async (fast
     });
 
     return {
-      items: result.items,
+      items: result.items.map(toOfferDto),
       total: result.total,
       limit: parsed.data.limit,
       offset: parsed.data.offset,
