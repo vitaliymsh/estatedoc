@@ -23,8 +23,23 @@ export class DrizzleOfferRepository implements IOfferRepository {
     if (query.city) {
       conditions.push(like(offers.city, `%${query.city}%`));
     }
+    if (query.district) {
+      conditions.push(like(offers.district, `%${query.district}%`));
+    }
     if (query.portal) {
       conditions.push(eq(offers.portal, query.portal));
+    }
+    if (query.propertyType) {
+      conditions.push(eq(offers.propertyType, query.propertyType));
+    }
+    if (query.transactionType) {
+      conditions.push(eq(offers.transactionType, query.transactionType));
+    }
+    if (query.minRooms !== undefined) {
+      conditions.push(gte(offers.roomsCount, query.minRooms));
+    }
+    if (query.maxRooms !== undefined) {
+      conditions.push(lte(offers.roomsCount, query.maxRooms));
     }
     if (query.minPrice !== undefined) {
       conditions.push(gte(offers.price, String(query.minPrice)));
@@ -96,7 +111,15 @@ export class DrizzleOfferRepository implements IOfferRepository {
           price: sql`values(${offers.price})`,
           areaSqm: sql`values(${offers.areaSqm})`,
           roomsCount: sql`values(${offers.roomsCount})`,
+          floor: sql`values(${offers.floor})`,
+          totalFloors: sql`values(${offers.totalFloors})`,
+          propertyType: sql`values(${offers.propertyType})`,
+          transactionType: sql`values(${offers.transactionType})`,
           city: sql`values(${offers.city})`,
+          district: sql`values(${offers.district})`,
+          street: sql`values(${offers.street})`,
+          sellerType: sql`values(${offers.sellerType})`,
+          images: sql`values(${offers.images})`,
           description: sql`values(${offers.description})`,
           metadata: sql`values(${offers.metadata})`,
           updatedAt: sql`NOW()`,

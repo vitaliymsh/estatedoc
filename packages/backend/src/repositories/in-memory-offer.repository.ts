@@ -22,8 +22,24 @@ export class InMemoryOfferRepository implements IOfferRepository {
       const cityLower = query.city.toLowerCase();
       filtered = filtered.filter((o) => o.city.toLowerCase().includes(cityLower));
     }
+    if (query.district) {
+      const distLower = query.district.toLowerCase();
+      filtered = filtered.filter((o) => o.district && o.district.toLowerCase().includes(distLower));
+    }
     if (query.portal) {
       filtered = filtered.filter((o) => o.portal === query.portal);
+    }
+    if (query.propertyType) {
+      filtered = filtered.filter((o) => o.propertyType === query.propertyType);
+    }
+    if (query.transactionType) {
+      filtered = filtered.filter((o) => o.transactionType === query.transactionType);
+    }
+    if (query.minRooms !== undefined) {
+      filtered = filtered.filter((o) => o.roomsCount !== null && o.roomsCount >= query.minRooms!);
+    }
+    if (query.maxRooms !== undefined) {
+      filtered = filtered.filter((o) => o.roomsCount !== null && o.roomsCount <= query.maxRooms!);
     }
     if (query.minPrice !== undefined) {
       filtered = filtered.filter((o) => o.price !== null && Number(o.price) >= query.minPrice!);
@@ -85,7 +101,15 @@ export class InMemoryOfferRepository implements IOfferRepository {
           price: item.price ?? null,
           areaSqm: item.areaSqm ?? null,
           roomsCount: item.roomsCount ?? null,
+          floor: item.floor ?? null,
+          totalFloors: item.totalFloors ?? null,
+          propertyType: item.propertyType ?? null,
+          transactionType: item.transactionType ?? null,
           city: item.city,
+          district: item.district ?? null,
+          street: item.street ?? null,
+          sellerType: item.sellerType ?? null,
+          images: item.images ?? null,
           description: item.description ?? null,
           metadata: (item.metadata as Record<string, unknown>) ?? null,
           createdAt: now,

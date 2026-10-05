@@ -65,6 +65,28 @@ describe('InMemoryOfferRepository', () => {
     const sortedDesc = await repo.findAll({ limit: 10, offset: 0, sortBy: 'price_desc' });
     expect(sortedDesc.items[0].city).toBe('Krakow');
     expect(sortedDesc.items[1].city).toBe('Warszawa');
+
+    await repo.upsertBatch([
+      {
+        portal: 'morizon',
+        externalId: '3',
+        url: 'https://morizon.pl/3',
+        title: 'Mokotów Flat',
+        city: 'Warszawa',
+        district: 'Mokotów',
+        roomsCount: 3,
+        propertyType: 'apartment',
+        transactionType: 'sale',
+      },
+    ]);
+
+    const districtList = await repo.findAll({ district: 'Mokotów', limit: 10, offset: 0, sortBy: 'newest' });
+    expect(districtList.total).toBe(1);
+    expect(districtList.items[0].district).toBe('Mokotów');
+
+    const roomsList = await repo.findAll({ minRooms: 3, limit: 10, offset: 0, sortBy: 'newest' });
+    expect(roomsList.total).toBe(1);
+    expect(roomsList.items[0].roomsCount).toBe(3);
   });
 
   it('finds offer by id', async () => {
