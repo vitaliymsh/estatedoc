@@ -12,6 +12,7 @@ import {
   formatArea,
   formatPortal,
   formatRooms,
+  getOfferBadges,
 } from '../formatters'
 
 describe('Frontend Formatters', () => {
@@ -145,4 +146,54 @@ describe('Frontend Formatters', () => {
     expect(formatRooms(0, 'en')).toBe('Studio')
     expect(formatRooms(null, 'pl')).toBeNull()
   })
+
+  it('extracts clean curated card badges ignoring negative flags, dates, and noise', () => {
+    const mockT = (key: string) => {
+      const dict: Record<string, string> = {
+        elevator: 'Winda',
+        balcony_terrace: 'Balkon / Taras',
+        parking_garage: 'Parking / Garaż',
+        furnished: 'Umeblowane',
+        air_conditioning: 'Klimatyzacja',
+        market_primary_full: 'Rynek pierwotny',
+        market_secondary_full: 'Rynek wtórny',
+      }
+      return dict[key] || key
+    }
+
+    const dirtyMetadata = {
+      buildingType: 'Apartamentowiec',
+      plotSqm: 450,
+      marketType: 'primary',
+      hasElevator: true,
+      hasBalcony: true,
+      isFurnished: false, // negative - must be excluded
+      hasParking: false,   // negative - must be excluded
+      postedAt: '2026-10-05T21:34:05+00:00', // timestamp - must be excluded from badges
+      currency: 'PLN', // redundant - must be excluded
+      province: 'Dolnośląskie', // geo data - must be excluded
+      externalId: '12345', // id - must be excluded
+    }
+
+    const badges = getOfferBadges(dirtyMetadata, mockT, 'pl')
+    expect(badges).toEqual([
+      'Apartamentowiec',
+      'Działka: 450 m²',
+      'Rynek pierwotny',
+      'Winda',
+      'Balkon / Taras',
+    ])
+
+    // When furnished is true
+    const furnishedMeta = { isFurnished: true, hasAirConditioning: true }
+    expect(getOfferBadges(furnishedMeta, mockT, 'pl')).toEqual([
+      'Umeblowane',
+      'Klimatyzacja',
+    ])
+
+    // Null/undefined metadata
+    expect(getOfferBadges(null, mockT, 'pl')).toEqual([])
+    expect(getOfferBadges(undefined, mockT, 'pl')).toEqual([])
+  })
 })
+
