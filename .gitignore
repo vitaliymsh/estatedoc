@@ -36,3 +36,7 @@ Thumbs.db
 
 # Cache / snapshot files
 packages/explorer/snapshots/*.cache.json
+
+# Git worktrees
+.worktrees/
+
