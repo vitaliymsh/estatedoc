@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useId } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { MapPin, Navigation, ExternalLink, RefreshCw } from 'lucide-react'
+import { Navigation, RefreshCw } from 'lucide-react'
 import type { Offer } from '../types/offer'
 import { formatPrice, calculatePricePerSqm, buildGoogleMapsUrl } from '../lib/formatters'
 import {
@@ -12,7 +12,6 @@ import {
   POLAND_CENTER_COORDINATES,
 } from '../lib/geocoding'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 
 export interface ListingMapProps {
   offer?: Partial<Offer> | null
@@ -270,12 +269,6 @@ export function ListingMap({
     }
   }
 
-  const effectiveLoc = getEffectiveLocation(offer)
-  const district = effectiveLoc.district
-  const street = effectiveLoc.street
-  const city = effectiveLoc.city
-  const gmapsUrl = buildGoogleMapsUrl(city, district, street)
-
   return (
     <div
       className={`relative overflow-hidden rounded-2xl border border-border bg-muted/40 shadow-xs group/map ${className}`}
@@ -299,52 +292,19 @@ export function ListingMap({
         </div>
       )}
 
-      {/* Top Map Action Bar */}
-      {showControls && (
-        <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 pointer-events-auto">
-          {resolvedCoords && (
-            <Button
-              type="button"
-              variant="secondary"
-              size="sm"
-              onClick={handleRecenter}
-              title="Wycentruj mapę"
-              className="size-8 p-0 rounded-xl bg-background/90 shadow-md backdrop-blur-md hover:bg-background cursor-pointer"
-            >
-              <Navigation className="size-3.5 text-foreground" />
-            </Button>
-          )}
-
-          {gmapsUrl && (
-            <a
-              href={gmapsUrl}
-              target="_blank"
-              rel="noreferrer"
-              title="Otwórz w Google Maps"
-              className="inline-flex items-center gap-1 h-8 rounded-xl bg-background/90 px-2.5 text-xs font-medium text-foreground shadow-md backdrop-blur-md hover:bg-background border border-border/50"
-            >
-              <MapPin className="size-3 text-primary" />
-              <span>Google Maps</span>
-              <ExternalLink className="size-2.5 opacity-60 ml-0.5" />
-            </a>
-          )}
-        </div>
-      )}
-
-      {/* Bottom Address Indicator */}
-      {city && (
-        <div className="absolute bottom-3 left-3 z-10 pointer-events-none">
-          <Badge
+      {/* Map Recenter Control */}
+      {showControls && resolvedCoords && (
+        <div className="absolute top-3 right-3 z-10 pointer-events-auto">
+          <Button
+            type="button"
             variant="secondary"
-            className="rounded-xl bg-background/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-md backdrop-blur-md border border-border/50 flex items-center gap-1.5"
+            size="sm"
+            onClick={handleRecenter}
+            title="Wycentruj mapę"
+            className="size-8 p-0 rounded-xl bg-background/90 shadow-md backdrop-blur-md hover:bg-background cursor-pointer"
           >
-            <MapPin className="size-3.5 text-primary shrink-0" />
-            <span className="truncate max-w-[240px]">
-              {city}
-              {district ? `, ${district}` : ''}
-              {street ? `, ul. ${street}` : ''}
-            </span>
-          </Badge>
+            <Navigation className="size-3.5 text-foreground" />
+          </Button>
         </div>
       )}
     </div>

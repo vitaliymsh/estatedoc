@@ -744,13 +744,8 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
 
       {/* Full-Width Interactive Map Section */}
       <div className="space-y-4 pt-1">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h3 className="text-xl font-bold tracking-tight text-foreground">Lokalizacja i okolica</h3>
-            <p className="text-sm text-muted-foreground">
-              {offer.city}{district ? `, dzielnica ${district}` : ''}{street ? `, ul. ${street}` : ''}
-            </p>
-          </div>
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-xl font-bold tracking-tight text-foreground">Lokalizacja</h3>
           <a
             href={googleMapsUrl}
             target="_blank"
