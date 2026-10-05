@@ -29,11 +29,12 @@ export function extractCityAndDistrict(
   address?: MorizonJsonLdAddress,
   breadcrumbs?: string[],
   title?: string
-): { city: string; district?: string } {
+): { city: string; district?: string; street?: string } {
   let city = 'Polska';
   let district: string | undefined;
+  let street: string | undefined;
 
-  if (breadcrumbs && breadcrumbs.length >= 3) {
+  if (breadcrumbs && breadcrumbs.length >= 2) {
     // Breadcrumbs on morizon: [..., 'mazowieckie', 'Warszawa', 'Praga-Północ', 'Nowa Praga']
     const cleanCrumbs = breadcrumbs.filter(
       (c) =>
@@ -47,7 +48,6 @@ export function extractCityAndDistrict(
     );
 
     if (cleanCrumbs.length > 1) {
-      // e.g. ['mazowieckie', 'Warszawa', 'Praga-Północ'] -> city: Warszawa, district: Praga-Północ
       city = cleanCrumbs[1] || cleanCrumbs[0];
       district = cleanCrumbs[2] || undefined;
     } else if (cleanCrumbs.length === 1) {
@@ -55,14 +55,17 @@ export function extractCityAndDistrict(
     }
   }
 
-  if (city === 'Polska' && address?.addressLocality) {
-    city = address.addressLocality;
+  if (address?.addressLocality) {
+    if (city === 'Polska') {
+      city = address.addressLocality;
+    } else if (!district && address.addressLocality.toLowerCase() !== city.toLowerCase()) {
+      district = address.addressLocality;
+    }
   }
 
-  if (!district && address?.streetAddress && address.streetAddress !== city) {
-    // streetAddress or locality might be district
-    if (address.addressLocality && address.addressLocality !== city) {
-      district = address.addressLocality;
+  if (address?.streetAddress) {
+    if (address.streetAddress.toLowerCase() !== city.toLowerCase()) {
+      street = address.streetAddress;
     }
   }
 
@@ -73,7 +76,7 @@ export function extractCityAndDistrict(
     }
   }
 
-  return { city, district };
+  return { city, district, street };
 }
 
 export function cleanDescriptionHtml(htmlOrText: string | null | undefined): string | null {

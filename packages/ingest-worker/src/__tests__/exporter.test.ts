@@ -30,16 +30,15 @@ describe('Exporter & Backend Client', () => {
     expect(dto.externalId).toBe('ext-42');
     expect(dto.price).toBe(350000);
     expect(dto.description).toBe('Świetna kawalerka po remoncie.');
+    expect(dto.district).toBe('Śródmieście');
+    expect(dto.floor).toBe(2);
+    expect(dto.totalFloors).toBe(5);
+    expect(dto.propertyType).toBe('apartment');
+    expect(dto.transactionType).toBe('sale');
+    expect(dto.sellerType).toBe('private');
+    expect(dto.images).toEqual(['https://img.sprzedajemy.pl/42.jpg']);
     expect(dto.metadata).toEqual({
-      district: 'Śródmieście',
-      sellerType: 'private',
-      imageUrl: 'https://img.sprzedajemy.pl/42.jpg',
-      images: ['https://img.sprzedajemy.pl/42.jpg'],
       postedAt: '2026-03-01T12:00:00Z',
-      floor: 2,
-      totalFloors: 5,
-      propertyType: 'apartment',
-      transactionType: 'sale',
     });
   });
 

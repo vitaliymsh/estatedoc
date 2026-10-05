@@ -95,6 +95,7 @@ export function parseDetailPage(html: string): Partial<StandardListing> {
     sellerType,
     city: location.city !== 'Polska' ? location.city : undefined,
     district: location.district,
+    street: location.street,
     metadata,
   };
 }

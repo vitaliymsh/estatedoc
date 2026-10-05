@@ -17,6 +17,7 @@ export interface StandardListing {
   propertyType: PropertyType;
   city: string;
   district?: string;
+  street?: string;
   sellerType?: SellerType;
   description: string | null;
   images: string[];

@@ -8,7 +8,15 @@ export interface BatchOfferDto {
   price?: number | null;
   areaSqm?: number | null;
   roomsCount?: number | null;
+  floor?: number | null;
+  totalFloors?: number | null;
+  propertyType?: string | null;
+  transactionType?: string | null;
   city: string;
+  district?: string | null;
+  street?: string | null;
+  sellerType?: string | null;
+  images?: string[] | null;
   description?: string | null;
   metadata?: Record<string, unknown> | null;
 }
@@ -21,14 +29,7 @@ export interface PushBatchResult {
 export function mapListingToBatchDto(listing: StandardListing): BatchOfferDto {
   const metadata: Record<string, unknown> = {
     ...(listing.metadata || {}),
-    ...(listing.district && { district: listing.district }),
-    ...(listing.sellerType && { sellerType: listing.sellerType }),
-    ...(listing.images?.length ? { imageUrl: listing.images[0], images: listing.images } : {}),
     ...(listing.postedAt && { postedAt: listing.postedAt }),
-    ...(listing.floor !== null && listing.floor !== undefined && { floor: listing.floor }),
-    ...(listing.totalFloors !== null && listing.totalFloors !== undefined && { totalFloors: listing.totalFloors }),
-    ...(listing.propertyType && { propertyType: listing.propertyType }),
-    ...(listing.transactionType && { transactionType: listing.transactionType }),
   };
 
   return {
@@ -39,7 +40,15 @@ export function mapListingToBatchDto(listing: StandardListing): BatchOfferDto {
     price: listing.price ?? null,
     areaSqm: listing.areaSqm ?? null,
     roomsCount: listing.roomsCount ?? null,
+    floor: listing.floor ?? null,
+    totalFloors: listing.totalFloors ?? null,
+    propertyType: listing.propertyType ?? null,
+    transactionType: listing.transactionType ?? null,
     city: listing.city,
+    district: listing.district ?? null,
+    street: listing.street ?? null,
+    sellerType: listing.sellerType ?? null,
+    images: listing.images?.length ? listing.images : null,
     description: listing.description ?? null,
     metadata: Object.keys(metadata).length > 0 ? metadata : null,
   };

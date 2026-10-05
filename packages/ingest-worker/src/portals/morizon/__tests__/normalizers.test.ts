@@ -89,6 +89,17 @@ describe('Morizon normalizers', () => {
       );
       expect(result.city).toBe('Warszawa');
       expect(result.district).toBe('Praga-Północ');
+      expect(result.street).toBe('Wileńska');
+    });
+
+    it('extracts district from addressLocality when city is known from breadcrumbs', () => {
+      const breadcrumbs = ['morizon.pl', 'mazowieckie', 'Warszawa'];
+      const result = extractCityAndDistrict(
+        { addressLocality: 'Białołęka' },
+        breadcrumbs
+      );
+      expect(result.city).toBe('Warszawa');
+      expect(result.district).toBe('Białołęka');
     });
 
     it('extracts from address and title when breadcrumbs missing', () => {
@@ -98,6 +109,7 @@ describe('Morizon normalizers', () => {
         'Mieszkanie na sprzedaż Nowa Praga'
       );
       expect(result.city).toBe('Warszawa');
+      expect(result.street).toBe('Wileńska');
     });
 
     it('falls back to addressLocality or Polska', () => {

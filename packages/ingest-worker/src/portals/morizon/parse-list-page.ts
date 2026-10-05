@@ -66,17 +66,6 @@ export function parseListPage(html: string): StandardListing[] {
       const images = offer.image ? [offer.image] : [];
       const description = cleanDescriptionHtml(offer.itemOffered?.description);
 
-      const metadata: Record<string, unknown> = {};
-      if (offer.itemOffered?.address?.streetAddress) {
-        metadata.streetAddress = offer.itemOffered.address.streetAddress;
-      }
-      if (offer.itemOffered?.address?.addressLocality) {
-        metadata.locality = offer.itemOffered.address.addressLocality;
-      }
-      if (offer.availability) {
-        metadata.availability = offer.availability;
-      }
-
       listings.push({
         portal: 'morizon',
         externalId,
@@ -92,10 +81,11 @@ export function parseListPage(html: string): StandardListing[] {
         propertyType,
         city: location.city,
         district: location.district,
+        street: location.street,
         sellerType: undefined,
         description,
         images,
-        metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
+        metadata: undefined,
       });
     }
 
