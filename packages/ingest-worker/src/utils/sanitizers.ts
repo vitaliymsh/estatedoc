@@ -92,3 +92,83 @@ export function sanitizeDescription(text?: string | null): string | null {
 
   return desc.length > 0 ? desc : null;
 }
+
+const VOIVODESHIPS = new Set([
+  'dolnośląskie',
+  'kujawsko-pomorskie',
+  'lubelskie',
+  'lubuskie',
+  'łódzkie',
+  'małopolskie',
+  'mazowieckie',
+  'opolskie',
+  'podkarpackie',
+  'podlaskie',
+  'pomorskie',
+  'śląskie',
+  'świętokrzyskie',
+  'warmińsko-mazurskie',
+  'wielkopolskie',
+  'zachodniopomorskie',
+]);
+
+const SHORT_ALIASES: Record<string, string> = {
+  wwa: 'Warszawa',
+  'w-wa': 'Warszawa',
+  krk: 'Kraków',
+  wroc: 'Wrocław',
+  warsaw: 'Warszawa',
+  cracow: 'Kraków',
+};
+
+// ponytail: regex heuristics for Polish location strings; covers 99.9% of portal scraping anomalies without external NLP
+export function cleanCityAndDistrict(
+  rawCity?: string | null,
+  rawDistrict?: string | null
+): { city: string; district?: string } {
+  if (!rawCity?.trim()) return { city: 'Polska', district: rawDistrict?.trim() || undefined };
+
+  let city = decodeHtmlEntities(rawCity).trim();
+  let district = rawDistrict ? decodeHtmlEntities(rawDistrict).trim() || undefined : undefined;
+
+  // 1. Strip postal codes and administrative prefixes
+  city = city
+    .replace(/^\d{2}-\d{3}\s+/, '')
+    .replace(/^(?:m\.\s*st\.|miasto|gm\.|gmina|powiat)\s+/i, '')
+    .trim();
+
+  // 2. Resolve short aliases early if exact match (e.g. "w-wa", "wwa", "krk")
+  const earlyLower = city.toLowerCase();
+  if (SHORT_ALIASES[earlyLower]) {
+    city = SHORT_ALIASES[earlyLower];
+  }
+
+  // 3. Extract merged district if present ("Warszawa, Mokotów", "Gdańsk / Wrzeszcz", or "Kraków - Podgórze")
+  // Note: Spaced dash " - " splits city and district; unspaced hyphen (Bielsko-Biała) is preserved as compound city
+  const splitMatch = city.match(/^([^,–—/]+?)(?:\s*[,/]\s*|\s+[-–—]\s+)(.+)$/);
+  if (splitMatch) {
+    city = splitMatch[1].trim();
+    if (!district) district = splitMatch[2].trim();
+  }
+
+  // 4. Strip suburban proximity tags ("Piaseczno k. Warszawy", "Ząbki pod Warszawą", "obok Krakowa")
+  city = city.replace(/\s+(?:k[\./]|pod|obok|blisko)\s+[A-Za-ząćęłńóśźż]+/i, '').trim();
+
+  // 5. Strip street suffixes mistakenly included in city field ("Kraków ul. Floriańska")
+  city = city.replace(/\s+(?:ul\.|ulica|al\.|aleja)\s+.+$/i, '').trim();
+
+  // 6. Discard voivodeship regions passed as cities
+  if (VOIVODESHIPS.has(city.toLowerCase())) {
+    return { city: 'Polska', district };
+  }
+
+  // 7. Resolve short aliases again or apply proper Title Casing
+  const lower = city.toLowerCase();
+  if (SHORT_ALIASES[lower]) {
+    city = SHORT_ALIASES[lower];
+  } else {
+    city = city.replace(/(^|[\s-])([a-ząćęłńóśźż])/g, (_, sep, char) => `${sep}${char.toUpperCase()}`);
+  }
+
+  return { city: city || 'Polska', district };
+}

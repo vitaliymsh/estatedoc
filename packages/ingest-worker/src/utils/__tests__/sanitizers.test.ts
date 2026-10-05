@@ -3,6 +3,7 @@ import {
   sanitizeTitle,
   sanitizeStreet,
   sanitizeDescription,
+  cleanCityAndDistrict,
 } from '../sanitizers.js';
 
 describe('Sanitizers', () => {
@@ -81,6 +82,57 @@ describe('Sanitizers', () => {
       const input = 'Atuty:\n* balkon\n- garaż\n• winda';
       const expected = 'Atuty:\n- balkon\n- garaż\n- winda';
       expect(sanitizeDescription(input)).toBe(expected);
+    });
+  });
+
+  describe('cleanCityAndDistrict', () => {
+    it('returns Polska for empty inputs', () => {
+      expect(cleanCityAndDistrict(null)).toEqual({ city: 'Polska', district: undefined });
+      expect(cleanCityAndDistrict('')).toEqual({ city: 'Polska', district: undefined });
+      expect(cleanCityAndDistrict('   ')).toEqual({ city: 'Polska', district: undefined });
+    });
+
+    it('strips postal codes and administrative prefixes', () => {
+      expect(cleanCityAndDistrict('00-001 Warszawa')).toEqual({ city: 'Warszawa', district: undefined });
+      expect(cleanCityAndDistrict('m. st. Warszawa')).toEqual({ city: 'Warszawa', district: undefined });
+      expect(cleanCityAndDistrict('gm. Wieliczka')).toEqual({ city: 'Wieliczka', district: undefined });
+      expect(cleanCityAndDistrict('miasto Poznań')).toEqual({ city: 'Poznań', district: undefined });
+    });
+
+    it('splits merged city and district strings', () => {
+      expect(cleanCityAndDistrict('Warszawa, Mokotów')).toEqual({ city: 'Warszawa', district: 'Mokotów' });
+      expect(cleanCityAndDistrict('Kraków - Podgórze')).toEqual({ city: 'Kraków', district: 'Podgórze' });
+      expect(cleanCityAndDistrict('Gdańsk / Wrzeszcz')).toEqual({ city: 'Gdańsk', district: 'Wrzeszcz' });
+    });
+
+    it('preserves multi-word hyphenated and spaced Polish cities', () => {
+      expect(cleanCityAndDistrict('Kędzierzyn-Koźle')).toEqual({ city: 'Kędzierzyn-Koźle', district: undefined });
+      expect(cleanCityAndDistrict('Bielsko-Biała')).toEqual({ city: 'Bielsko-Biała', district: undefined });
+      expect(cleanCityAndDistrict('Nowy Dwór Mazowiecki')).toEqual({ city: 'Nowy Dwór Mazowiecki', district: undefined });
+    });
+
+    it('strips suburban proximity tags', () => {
+      expect(cleanCityAndDistrict('Piaseczno k. Warszawy')).toEqual({ city: 'Piaseczno', district: undefined });
+      expect(cleanCityAndDistrict('Ząbki pod Warszawą')).toEqual({ city: 'Ząbki', district: undefined });
+      expect(cleanCityAndDistrict('Wieliczka obok Krakowa')).toEqual({ city: 'Wieliczka', district: undefined });
+    });
+
+    it('strips accidental street suffixes', () => {
+      expect(cleanCityAndDistrict('Kraków ul. Floriańska')).toEqual({ city: 'Kraków', district: undefined });
+      expect(cleanCityAndDistrict('Warszawa al. Jerozolimskie')).toEqual({ city: 'Warszawa', district: undefined });
+    });
+
+    it('discards voivodeship regions as city', () => {
+      expect(cleanCityAndDistrict('Mazowieckie')).toEqual({ city: 'Polska', district: undefined });
+      expect(cleanCityAndDistrict('Wielkopolskie')).toEqual({ city: 'Polska', district: undefined });
+    });
+
+    it('normalizes common abbreviations and English names', () => {
+      expect(cleanCityAndDistrict('wwa')).toEqual({ city: 'Warszawa', district: undefined });
+      expect(cleanCityAndDistrict('w-wa')).toEqual({ city: 'Warszawa', district: undefined });
+      expect(cleanCityAndDistrict('krk')).toEqual({ city: 'Kraków', district: undefined });
+      expect(cleanCityAndDistrict('warsaw')).toEqual({ city: 'Warszawa', district: undefined });
+      expect(cleanCityAndDistrict('cracow')).toEqual({ city: 'Kraków', district: undefined });
     });
   });
 });
