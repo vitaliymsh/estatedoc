@@ -37,6 +37,7 @@ describe('LLMQueryParser', () => {
     const [prompt, options] = (mockProvider.generate as ReturnType<typeof vi.fn>).mock.calls[0];
     expect(prompt).toBe('3-pokojowe mieszkanie na sprzedaż z balkonem do 600k Kraków Krowodrza najtaniej');
     expect(options.responseMimeType).toBe('application/json');
+    expect(options.systemPrompt).toContain('FIELD SPECIFICATIONS & UNITS');
 
     expect(result).toEqual({
       city: 'Kraków',
