@@ -1,5 +1,5 @@
 import type { TransactionType, PropertyType, MorizonJsonLdAddress } from './types.js';
-import { sanitizeStreet, sanitizeDescription } from '../../utils/sanitizers.js';
+import { sanitizeStreet, sanitizeDescription, cleanCityAndDistrict } from '../../utils/sanitizers.js';
 
 export { calculatePricePerSqm } from '../../utils/parsers.js';
 
@@ -77,7 +77,8 @@ export function extractCityAndDistrict(
     }
   }
 
-  return { city, district, street };
+  const cleaned = cleanCityAndDistrict(city, district);
+  return { city: cleaned.city, district: cleaned.district, street };
 }
 
 export function cleanDescriptionHtml(htmlOrText: string | null | undefined): string | null {

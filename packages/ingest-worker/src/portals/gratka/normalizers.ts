@@ -1,4 +1,5 @@
 import type { PropertyType, SellerType, TransactionType } from '../../types.js';
+import { cleanCityAndDistrict, sanitizeStreet } from '../../utils/sanitizers.js';
 
 const VOIVODESHIPS = new Set([
   'dolnośląskie',
@@ -131,9 +132,12 @@ export function extractLocation(
     }
   }
 
-  if (!city) city = 'Polska';
-
-  return { city, district, street };
+  const cleaned = cleanCityAndDistrict(city, district);
+  return {
+    city: cleaned.city,
+    district: cleaned.district,
+    street: street ? sanitizeStreet(street) ?? undefined : undefined,
+  };
 }
 
 export function extractFeatures(

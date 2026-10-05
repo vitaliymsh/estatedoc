@@ -6,6 +6,7 @@ import {
   parseTransactionType,
   parsePropertyType,
   sanitizeTitle,
+  cleanCityAndDistrict,
 } from './normalizers.js';
 
 const BASE_URL = 'https://sprzedajemy.pl';
@@ -48,9 +49,9 @@ export function parseListPage(html: string): StandardListing[] {
       }
     });
 
-    const city = $item.find('strong.city').text().trim();
-    const districtText = $item.find('span.precinct').text().trim();
-    const district = districtText || undefined;
+    const rawCity = $item.find('strong.city').text().trim();
+    const rawDistrict = $item.find('span.precinct').text().trim();
+    const { city, district } = cleanCityAndDistrict(rawCity, rawDistrict);
 
     const sellerTypeClass = $item.find('.seller-type-info').attr('class') || '';
     const sellerType = parseSellerType(sellerTypeClass);

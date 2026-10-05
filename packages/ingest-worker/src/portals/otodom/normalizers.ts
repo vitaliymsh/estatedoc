@@ -16,6 +16,7 @@ import {
   sanitizeTitle,
   sanitizeStreet,
   sanitizeDescription,
+  cleanCityAndDistrict,
 } from '../../utils/sanitizers.js';
 
 export function normalizePropertyType(estate?: string): PropertyType {
@@ -70,8 +71,9 @@ export function normalizeSearchItem(item: OtodomSearchItem): StandardListing {
   const districtObj = revGeo.find((l) => l.locationLevel === 'district');
   const cityObj = revGeo.find((l) => l.locationLevel === 'city_or_village');
 
-  const city = addr?.city?.name || cityObj?.name || 'Polska';
-  const district = districtObj?.name;
+  const rawCity = addr?.city?.name || cityObj?.name || 'Polska';
+  const rawDistrict = districtObj?.name;
+  const { city, district } = cleanCityAndDistrict(rawCity, rawDistrict);
   const street = addr?.street?.name;
   const province = addr?.province?.name || revGeo.find((l) => l.locationLevel === 'voivodeship')?.name;
 
