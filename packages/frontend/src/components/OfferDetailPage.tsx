@@ -165,7 +165,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
   )
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6 pb-20 sm:pb-8">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6 pb-20 md:pb-8">
       {/* Top Navigation Row */}
       <div className="flex items-center justify-between gap-4">
         <Button
@@ -248,13 +248,45 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
           <span className="text-muted-foreground/50">•</span>
           <span>{relativeTime}</span>
         </div>
+
+        {/* Compact Mobile Meta Chips (Replaces redundant 5-card block on mobile) */}
+        <div className="flex md:hidden flex-wrap items-center gap-2 pt-1">
+          {offer.areaSqm && (
+            <div className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/70 px-2.5 py-1 text-xs font-semibold text-foreground">
+              <Maximize2 className="size-3 text-primary" />
+              {offer.areaSqm} m²
+            </div>
+          )}
+          {offer.roomsCount && (
+            <div className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/70 px-2.5 py-1 text-xs font-semibold text-foreground">
+              <Layers className="size-3 text-primary" />
+              {offer.roomsCount} {offer.roomsCount === 1 ? 'pokój' : offer.roomsCount < 5 ? 'pokoje' : 'pokoi'}
+            </div>
+          )}
+          {floorText && (
+            <div className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/70 px-2.5 py-1 text-xs font-semibold text-foreground">
+              <Building className="size-3 text-primary" />
+              {floorText}
+            </div>
+          )}
+          {offer.metadata?.marketType && (
+            <div className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/70 px-2.5 py-1 text-xs font-semibold text-foreground">
+              <Tag className="size-3 text-primary" />
+              {offer.metadata.marketType === 'primary'
+                ? 'Rynek pierwotny'
+                : offer.metadata.marketType === 'secondary'
+                  ? 'Rynek wtórny'
+                  : String(offer.metadata.marketType)}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Offer Gallery & Lightbox */}
       <OfferGallery images={images} title={offer.title} onImageError={handleImageError} />
 
-      {/* Quick Key Metrics Bar */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+      {/* Quick Key Metrics Bar (Desktop / Tablet only — avoids 3x duplication on Mobile) */}
+      <div className="hidden md:grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
         <div className="rounded-xl border bg-card/60 p-3 shadow-2xs">
           <div className="text-[11px] font-medium text-muted-foreground">Cena całkowita</div>
           <div className="text-base sm:text-lg font-bold text-foreground truncate mt-0.5">
@@ -602,17 +634,17 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                   O tej nieruchomości
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-2 pb-4">
                 <div
                   className={`relative ${
-                    !isDescriptionExpanded && isLongDescription ? 'max-h-48 overflow-hidden' : ''
+                    !isDescriptionExpanded && isLongDescription ? 'max-h-44 overflow-hidden' : ''
                   }`}
                 >
                   <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
                     {formatDescriptionText(offer.description)}
                   </p>
                   {!isDescriptionExpanded && isLongDescription && (
-                    <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-card to-transparent pointer-events-none" />
                   )}
                 </div>
 
@@ -621,7 +653,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => setIsDescriptionExpanded((prev) => !prev)}
-                    className="rounded-xl text-xs font-semibold cursor-pointer"
+                    className="mt-1 rounded-xl text-xs font-semibold cursor-pointer"
                   >
                     {isDescriptionExpanded ? 'Zwiń opis' : 'Pokaż więcej opisu'}
                   </Button>
@@ -634,90 +666,92 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
         {/* Right Column (1 Col Sticky Sidebar Card) */}
         <div className="lg:col-span-1">
           <div className="sticky top-24 space-y-4">
-            <Card className="rounded-2xl border bg-card p-6 shadow-md space-y-5">
-              {/* Price Row */}
-              <div className="space-y-1">
-                <span className="text-xs font-medium text-muted-foreground">Cena całkowita</span>
-                <div className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-                  {formatPrice(offer.price)}
+            <Card className="rounded-2xl border bg-card p-4 sm:p-6 shadow-md space-y-3 sm:space-y-4">
+              {/* Tablet & Desktop Price & Actions (Handled by sticky bottom bar on mobile) */}
+              <div className="hidden md:block space-y-4">
+                {/* Price Row */}
+                <div className="space-y-1">
+                  <span className="text-xs font-medium text-muted-foreground">Cena całkowita</span>
+                  <div className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+                    {formatPrice(offer.price)}
+                  </div>
+                  {pricePerSqm && (
+                    <div className="text-xs font-medium text-muted-foreground">
+                      Cena za metr kwadratowy: <span className="font-semibold text-foreground">{pricePerSqm}</span>
+                    </div>
+                  )}
                 </div>
-                {pricePerSqm && (
-                  <div className="text-xs font-medium text-muted-foreground">
-                    Cena za metr kwadratowy: <span className="font-semibold text-foreground">{pricePerSqm}</span>
+
+                {/* Direct Actions */}
+                {phone ? (
+                  <div className="space-y-2">
+                    <a
+                      href={`tel:${phone.replace(/\s+/g, '')}`}
+                      className={buttonVariants({
+                        size: 'lg',
+                        className: 'w-full gap-2 rounded-xl font-semibold shadow-xs cursor-pointer',
+                      })}
+                    >
+                      <Phone className="size-4" />
+                      Zadzwoń: {phone}
+                    </a>
+                    <a
+                      href={offer.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={buttonVariants({
+                        variant: 'outline',
+                        size: 'default',
+                        className: 'w-full gap-2 rounded-xl font-medium shadow-2xs cursor-pointer hover:bg-accent',
+                      })}
+                    >
+                      Przejdź do oferty na {offer.portal}
+                      <ExternalLink className="size-3.5 opacity-70" />
+                    </a>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <a
+                      href={offer.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={buttonVariants({
+                        size: 'lg',
+                        className: 'w-full gap-2 rounded-xl font-semibold shadow-xs cursor-pointer',
+                      })}
+                    >
+                      Przejdź do oferty na {offer.portal}
+                      <ExternalLink className="size-4" />
+                    </a>
+                    <p className="text-center text-[11px] text-muted-foreground">
+                      Przejdź do portalu źródłowego, aby skontaktować się ze sprzedającym.
+                    </p>
                   </div>
                 )}
               </div>
 
-              {/* Direct Actions */}
-              {phone ? (
-                <div className="space-y-2">
-                  <a
-                    href={`tel:${phone.replace(/\s+/g, '')}`}
-                    className={buttonVariants({
-                      size: 'lg',
-                      className: 'w-full gap-2 rounded-xl font-semibold shadow-xs cursor-pointer',
-                    })}
-                  >
-                    <Phone className="size-4" />
-                    Zadzwoń: {phone}
-                  </a>
-                  <a
-                    href={offer.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={buttonVariants({
-                      variant: 'outline',
-                      size: 'default',
-                      className: 'w-full gap-2 rounded-xl font-medium shadow-2xs cursor-pointer hover:bg-accent',
-                    })}
-                  >
-                    Przejdź do oferty na {offer.portal}
-                    <ExternalLink className="size-3.5 opacity-70" />
-                  </a>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <a
-                    href={offer.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={buttonVariants({
-                      size: 'lg',
-                      className: 'w-full gap-2 rounded-xl font-semibold shadow-xs cursor-pointer',
-                    })}
-                  >
-                    Przejdź do oferty na {offer.portal}
-                    <ExternalLink className="size-4" />
-                  </a>
-                  <p className="text-center text-[11px] text-muted-foreground">
-                    Przejdź do portalu źródłowego, aby skontaktować się ze sprzedającym.
-                  </p>
-                </div>
-              )}
-
               {/* Agency / Seller Contact Box */}
               {offer.metadata?.agencyName && (
-                <>
-                  <Separator />
-                  <div className="space-y-1.5 rounded-xl bg-muted/50 p-3.5">
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                      <ShieldCheck className="size-4 text-primary" />
+                <div className="flex items-center gap-2.5 rounded-xl bg-muted/40 p-2.5 sm:p-3">
+                  <ShieldCheck className="size-4 text-primary shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground">
                       Kontakt z biurem
                     </div>
-                    <p className="text-xs font-medium text-foreground">
+                    <p className="text-xs font-semibold text-foreground truncate">
                       {String(offer.metadata.agencyName)}
                     </p>
                   </div>
-                </>
+                </div>
               )}
 
               {/* Trust Badge, External ID fineprint & Actions */}
-              <div className="space-y-2 pt-1 border-t text-xs text-muted-foreground">
+              <div className="space-y-1.5 pt-2 border-t border-border/50 text-xs text-muted-foreground">
                 <div className="flex items-center justify-between text-[11px]">
                   <span>ID: <code className="font-mono text-foreground/80">{offer.externalId}</code></span>
                   <span>{relativeTime}</span>
                 </div>
-                <div className="flex items-center justify-between pt-1">
+                <div className="flex items-center justify-between pt-0.5 text-[11px]">
                   <button
                     type="button"
                     onClick={handleCopyLink}
@@ -768,9 +802,9 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
       </div>
 
       {/* Mobile Floating Bottom Action Bar */}
-      <div className="fixed bottom-0 inset-x-0 sm:hidden bg-background/95 backdrop-blur-md border-t px-4 py-3 z-40 flex items-center justify-between gap-3 shadow-lg">
+      <div className="fixed bottom-0 inset-x-0 md:hidden bg-background/95 backdrop-blur-md border-t px-4 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] z-40 flex items-center justify-between gap-3 shadow-lg">
         <div className="min-w-0">
-          <div className="text-xs font-semibold text-foreground truncate">
+          <div className="text-sm font-bold text-foreground truncate">
             {formatPrice(offer.price)}
           </div>
           {pricePerSqm && (
@@ -785,7 +819,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
               href={`tel:${phone.replace(/\s+/g, '')}`}
               className={buttonVariants({
                 size: 'sm',
-                className: 'gap-1.5 rounded-xl text-xs font-semibold shrink-0 cursor-pointer',
+                className: 'gap-1.5 rounded-xl text-xs font-semibold shrink-0 cursor-pointer h-9 px-3',
               })}
             >
               <Phone className="size-3.5" />
@@ -799,7 +833,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
             className={buttonVariants({
               variant: phone ? 'outline' : 'default',
               size: 'sm',
-              className: 'gap-1.5 rounded-xl text-xs font-semibold shrink-0 cursor-pointer',
+              className: 'gap-1.5 rounded-xl text-xs font-semibold shrink-0 cursor-pointer h-9 px-3',
             })}
           >
             Oferta
