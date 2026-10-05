@@ -12,6 +12,7 @@ import {
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { SlidersHorizontal, X, ArrowUpDown, RefreshCw, Sparkles } from 'lucide-react'
+import { DocplannerIcon } from './icons/DocplannerIcon'
 import type { ListOffersFilter, SortBy } from '../types/offer'
 
 const QUICK_CITIES = ['Warszawa', 'Kraków', 'Gdańsk', 'Wrocław', 'Poznań', 'Łódź']
@@ -49,7 +50,10 @@ export function Header({
     <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-xl font-bold tracking-tight text-primary">EstatePlanner</h1>
+          <div className="flex items-center gap-2.5">
+            <DocplannerIcon className="h-6 w-auto shrink-0" />
+            <h1 className="text-xl font-black tracking-tight text-primary">EstateDOC</h1>
+          </div>
           {onSync && (
             <Tooltip>
               <TooltipTrigger
