@@ -1,6 +1,6 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
-import { db } from './db/index.js';
+import { db, closeDb } from './db/index.js';
 import { DrizzleOfferRepository } from './repositories/drizzle-offer.repository.js';
 import { offersRoutes } from './routes/offers.js';
 import type { IOfferRepository } from './repositories/offer.repository.js';
@@ -14,12 +14,28 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   const app = Fastify({ logger: options.logger ?? false });
   await app.register(cors);
 
+  app.setErrorHandler((error, _request, reply) => {
+    const err = error as { statusCode?: number; message?: string };
+    const statusCode = err.statusCode ?? 500;
+    app.log.error(error);
+    reply.status(statusCode).send({
+      error: err.message || 'Internal Server Error',
+      statusCode,
+    });
+  });
+
   app.get('/health', async () => {
     return { status: 'ok', timestamp: new Date().toISOString() };
   });
 
   const repository = options.repository ?? new DrizzleOfferRepository(db);
   await app.register(offersRoutes, { prefix: '/api/offers', repository });
+
+  app.addHook('onClose', async () => {
+    if (!options.repository) {
+      await closeDb();
+    }
+  });
 
   return app;
 }

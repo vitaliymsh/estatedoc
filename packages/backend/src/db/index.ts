@@ -14,3 +14,7 @@ const connectionUri = process.env.DATABASE_URL || 'mysql://estateplanner:estatep
 
 export const pool = mysql.createPool(connectionUri);
 export const db = drizzle(pool, { schema, mode: 'default' });
+
+export async function closeDb(): Promise<void> {
+  await pool.end();
+}

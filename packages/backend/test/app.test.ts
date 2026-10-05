@@ -35,4 +35,26 @@ describe('App Integration', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().items).toEqual([]);
   });
+
+  it('handles errors gracefully with standard json envelope', async () => {
+    const errorApp = await buildApp({
+      repository: new InMemoryOfferRepository(),
+      logger: false,
+    });
+    errorApp.get('/test-error', async () => {
+      throw new Error('Test unhandled failure');
+    });
+    await errorApp.ready();
+
+    const res = await errorApp.inject({
+      method: 'GET',
+      url: '/test-error',
+    });
+    expect(res.statusCode).toBe(500);
+    expect(res.json()).toEqual({
+      error: 'Test unhandled failure',
+      statusCode: 500,
+    });
+    await errorApp.close();
+  });
 });
