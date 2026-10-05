@@ -72,4 +72,30 @@ describe('parseUrlFilters & syncUrlFilters', () => {
     })
     expect(window.location.search).toBe('?prompt=mieszkanie+krakow')
   })
+
+  it('manages temporaryKey in sessionStorage and localStorage', async () => {
+    const { getStoredTemporaryKey, setStoredTemporaryKey, removeStoredTemporaryKey } = await import('../../hooks/use-offers')
+
+    const store: Record<string, string> = {}
+    const mockStorage = {
+      getItem: (k: string) => store[k] ?? null,
+      setItem: (k: string, v: string) => {
+        store[k] = v
+      },
+      removeItem: (k: string) => {
+        delete store[k]
+      },
+    }
+
+    Object.defineProperty(window, 'sessionStorage', { value: mockStorage, configurable: true })
+    Object.defineProperty(window, 'localStorage', { value: mockStorage, configurable: true })
+
+    expect(getStoredTemporaryKey()).toBeNull()
+
+    setStoredTemporaryKey('pass123')
+    expect(getStoredTemporaryKey()).toBe('pass123')
+
+    removeStoredTemporaryKey()
+    expect(getStoredTemporaryKey()).toBeNull()
+  })
 })

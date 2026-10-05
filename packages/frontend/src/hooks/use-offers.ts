@@ -1,74 +1,36 @@
 import { useEffect, useState } from 'react'
 import type { Offer, OffersResponse, ListOffersFilter, SortBy } from '../types/offer'
 import { cacheOffers } from '../lib/offer-prefetch'
+import { apiUrl } from '../lib/api-config'
 
 export const PAGE_SIZE = 12
 
+function parseRange(minVal: string | null, maxVal: string | null): [number | undefined, number | undefined] {
+  const min = minVal ? Number(minVal) : undefined
+  const max = maxVal ? Number(maxVal) : undefined
+  return min !== undefined && max !== undefined && min > max ? [max, min] : [min, max]
+}
+
 export function parseUrlFilters(): ListOffersFilter {
   const params = new URLSearchParams(window.location.search)
-  const prompt = params.get('prompt') || undefined
-  const q = params.get('q') || undefined
-  const city = params.get('city') || undefined
-  const district = params.get('district') || undefined
-  const portal = params.get('portal') || undefined
-  const transactionType = (params.get('transactionType') as ListOffersFilter['transactionType']) || undefined
-  const propertyType = (params.get('propertyType') as ListOffersFilter['propertyType']) || undefined
-  const sellerType = (params.get('sellerType') as ListOffersFilter['sellerType']) || undefined
-  const marketType = (params.get('marketType') as ListOffersFilter['marketType']) || undefined
-  let minPrice = params.get('minPrice') ? Number(params.get('minPrice')) : undefined
-  let maxPrice = params.get('maxPrice') ? Number(params.get('maxPrice')) : undefined
-  if (minPrice !== undefined && maxPrice !== undefined && minPrice > maxPrice) {
-    const tmp = minPrice
-    minPrice = maxPrice
-    maxPrice = tmp
-  }
-
-  let minArea = params.get('minArea') ? Number(params.get('minArea')) : undefined
-  let maxArea = params.get('maxArea') ? Number(params.get('maxArea')) : undefined
-  if (minArea !== undefined && maxArea !== undefined && minArea > maxArea) {
-    const tmp = minArea
-    minArea = maxArea
-    maxArea = tmp
-  }
-
-  let minRooms = params.get('minRooms') ? Number(params.get('minRooms')) : undefined
-  let maxRooms = params.get('maxRooms') ? Number(params.get('maxRooms')) : undefined
-  if (minRooms !== undefined && maxRooms !== undefined && minRooms > maxRooms) {
-    const tmp = minRooms
-    minRooms = maxRooms
-    maxRooms = tmp
-  }
-
-  let minFloor = params.get('minFloor') ? Number(params.get('minFloor')) : undefined
-  let maxFloor = params.get('maxFloor') ? Number(params.get('maxFloor')) : undefined
-  if (minFloor !== undefined && maxFloor !== undefined && minFloor > maxFloor) {
-    const tmp = minFloor
-    minFloor = maxFloor
-    maxFloor = tmp
-  }
-
-  const hasElevator = params.has('hasElevator') ? params.get('hasElevator') === 'true' : undefined
-  const hasBalcony = params.has('hasBalcony') ? params.get('hasBalcony') === 'true' : undefined
-  const hasParking = params.has('hasParking') ? params.get('hasParking') === 'true' : undefined
-  const hasAirConditioning = params.has('hasAirConditioning') ? params.get('hasAirConditioning') === 'true' : undefined
-  const isFurnished = params.has('isFurnished') ? params.get('isFurnished') === 'true' : undefined
-  const hasBasement = params.has('hasBasement') ? params.get('hasBasement') === 'true' : undefined
-
+  const [minPrice, maxPrice] = parseRange(params.get('minPrice'), params.get('maxPrice'))
+  const [minArea, maxArea] = parseRange(params.get('minArea'), params.get('maxArea'))
+  const [minRooms, maxRooms] = parseRange(params.get('minRooms'), params.get('maxRooms'))
+  const [minFloor, maxFloor] = parseRange(params.get('minFloor'), params.get('maxFloor'))
+  const parseBool = (k: string) => (params.has(k) ? params.get(k) === 'true' : undefined)
   const validSorts = ['newest', 'price_asc', 'price_desc', 'area_asc', 'area_desc', 'price_sqm_asc', 'price_sqm_desc']
   const sortByParam = params.get('sortBy')
-  const sortBy: SortBy = validSorts.includes(sortByParam || '') ? (sortByParam as SortBy) : 'newest'
-  const page = Math.max(1, Number(params.get('page')) || 1)
 
   return {
-    prompt,
-    q,
-    city,
-    district,
-    portal,
-    transactionType,
-    propertyType,
-    sellerType,
-    marketType,
+    prompt: params.get('prompt') || undefined,
+    q: params.get('q') || undefined,
+    city: params.get('city') || undefined,
+    district: params.get('district') || undefined,
+    portal: params.get('portal') || undefined,
+    transactionType: (params.get('transactionType') as ListOffersFilter['transactionType']) || undefined,
+    propertyType: (params.get('propertyType') as ListOffersFilter['propertyType']) || undefined,
+    sellerType: (params.get('sellerType') as ListOffersFilter['sellerType']) || undefined,
+    marketType: (params.get('marketType') as ListOffersFilter['marketType']) || undefined,
     minPrice,
     maxPrice,
     minArea,
@@ -77,56 +39,68 @@ export function parseUrlFilters(): ListOffersFilter {
     maxRooms,
     minFloor,
     maxFloor,
-    hasElevator,
-    hasBalcony,
-    hasParking,
-    hasAirConditioning,
-    isFurnished,
-    hasBasement,
-    sortBy,
-    page,
+    hasElevator: parseBool('hasElevator'),
+    hasBalcony: parseBool('hasBalcony'),
+    hasParking: parseBool('hasParking'),
+    hasAirConditioning: parseBool('hasAirConditioning'),
+    isFurnished: parseBool('isFurnished'),
+    hasBasement: parseBool('hasBasement'),
+    sortBy: validSorts.includes(sortByParam || '') ? (sortByParam as SortBy) : 'newest',
+    page: Math.max(1, Number(params.get('page')) || 1),
   }
 }
 
 export function syncUrlFilters(filter: ListOffersFilter) {
-  const params = new URLSearchParams(window.location.search)
-  if (filter.prompt) params.set('prompt', filter.prompt); else params.delete('prompt')
-  if (filter.q) params.set('q', filter.q); else params.delete('q')
-  if (filter.city) params.set('city', filter.city); else params.delete('city')
-  if (filter.district) params.set('district', filter.district); else params.delete('district')
-  if (filter.portal) params.set('portal', filter.portal); else params.delete('portal')
-  if (filter.transactionType) params.set('transactionType', filter.transactionType); else params.delete('transactionType')
-  if (filter.propertyType) params.set('propertyType', filter.propertyType); else params.delete('propertyType')
-  if (filter.sellerType) params.set('sellerType', filter.sellerType); else params.delete('sellerType')
-  if (filter.marketType) params.set('marketType', filter.marketType); else params.delete('marketType')
-  if (filter.minPrice !== undefined) params.set('minPrice', String(filter.minPrice)); else params.delete('minPrice')
-  if (filter.maxPrice !== undefined) params.set('maxPrice', String(filter.maxPrice)); else params.delete('maxPrice')
-  if (filter.minArea !== undefined) params.set('minArea', String(filter.minArea)); else params.delete('minArea')
-  if (filter.maxArea !== undefined) params.set('maxArea', String(filter.maxArea)); else params.delete('maxArea')
-  if (filter.minRooms !== undefined) params.set('minRooms', String(filter.minRooms)); else params.delete('minRooms')
-  if (filter.maxRooms !== undefined) params.set('maxRooms', String(filter.maxRooms)); else params.delete('maxRooms')
-  if (filter.minFloor !== undefined) params.set('minFloor', String(filter.minFloor)); else params.delete('minFloor')
-  if (filter.maxFloor !== undefined) params.set('maxFloor', String(filter.maxFloor)); else params.delete('maxFloor')
-  if (filter.hasElevator !== undefined) params.set('hasElevator', String(filter.hasElevator)); else params.delete('hasElevator')
-  if (filter.hasBalcony !== undefined) params.set('hasBalcony', String(filter.hasBalcony)); else params.delete('hasBalcony')
-  if (filter.hasParking !== undefined) params.set('hasParking', String(filter.hasParking)); else params.delete('hasParking')
-  if (filter.hasAirConditioning !== undefined) params.set('hasAirConditioning', String(filter.hasAirConditioning)); else params.delete('hasAirConditioning')
-  if (filter.isFurnished !== undefined) params.set('isFurnished', String(filter.isFurnished)); else params.delete('isFurnished')
-  if (filter.hasBasement !== undefined) params.set('hasBasement', String(filter.hasBasement)); else params.delete('hasBasement')
-  if (filter.sortBy !== 'newest') params.set('sortBy', filter.sortBy); else params.delete('sortBy')
-  if (filter.page > 1) params.set('page', String(filter.page)); else params.delete('page')
-
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(filter)) {
+    if (value !== undefined && value !== '' && !(key === 'sortBy' && value === 'newest') && !(key === 'page' && value === 1)) {
+      params.set(key, String(value))
+    }
+  }
   const queryString = params.toString()
   const newUrl = queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname
   window.history.replaceState(window.history.state, '', newUrl)
 }
 
+export function getStoredTemporaryKey(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return window.sessionStorage?.getItem('temporaryKey') || window.localStorage?.getItem('temporaryKey') || null
+  } catch {
+    return null
+  }
+}
+
+export function setStoredTemporaryKey(key: string) {
+  if (typeof window === 'undefined') return
+  try {
+    window.sessionStorage?.setItem('temporaryKey', key)
+    window.localStorage?.setItem('temporaryKey', key)
+  } catch {
+    // ignore storage errors
+  }
+}
+
+export function removeStoredTemporaryKey() {
+  if (typeof window === 'undefined') return
+  try {
+    window.sessionStorage?.removeItem('temporaryKey')
+    window.localStorage?.removeItem('temporaryKey')
+  } catch {
+    // ignore storage errors
+  }
+}
+
 export interface IngestOptions {
-  portal?: 'all' | 'sprzedajemy' | 'morizon'
+  portal?: 'all' | 'sprzedajemy' | 'morizon' | 'otodom' | 'gratka'
   maxPages?: number
 }
 
 export function useOffers() {
+  const [temporaryKey, setTemporaryKeyState] = useState<string | null>(getStoredTemporaryKey)
+  const [isKeyRequired, setIsKeyRequired] = useState(() => !getStoredTemporaryKey())
+  const [isVerifyingKey, setIsVerifyingKey] = useState(false)
+  const [keyError, setKeyError] = useState<string | null>(null)
   const [filter, setFilter] = useState<ListOffersFilter>(parseUrlFilters)
   const [searchInput, setSearchInput] = useState(filter.prompt || filter.q || '')
   const [parsedFilters, setParsedFilters] = useState<Record<string, unknown> | null>(null)
@@ -138,17 +112,82 @@ export function useOffers() {
 
   const refetch = () => setRefreshCount((c) => c + 1)
 
+  const handleSetTemporaryKey = async (key: string) => {
+    setIsVerifyingKey(true)
+    setKeyError(null)
+    try {
+      const res = await fetch(apiUrl('/api/offers/verify-key'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-temporary-key': key,
+        },
+        body: JSON.stringify({ key }),
+      })
+      if (!res.ok) {
+        removeStoredTemporaryKey()
+        setKeyError('Invalid access key. Please try again.')
+        return false
+      }
+      setStoredTemporaryKey(key)
+      setTemporaryKeyState(key)
+      setIsKeyRequired(false)
+      setKeyError(null)
+      refetch()
+      return true
+    } catch {
+      setKeyError('Connection error. Please try again.')
+      return false
+    } finally {
+      setIsVerifyingKey(false)
+    }
+  }
+
+  // Verify stored key validity on mount
+  useEffect(() => {
+    const existing = getStoredTemporaryKey()
+    if (!existing) return
+
+    fetch(apiUrl('/api/offers/verify-key'), {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-temporary-key': existing,
+      },
+      body: JSON.stringify({ key: existing }),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          removeStoredTemporaryKey()
+          setTemporaryKeyState(null)
+          setIsKeyRequired(true)
+          setKeyError('Invalid access key. Please try again.')
+        }
+      })
+      .catch(() => {})
+  }, [])
+
   const triggerSync = async (options?: IngestOptions) => {
     setIsSyncing(true)
     try {
-      const res = await fetch('/api/dev/ingest', {
+      const res = await fetch(apiUrl('/api/dev/ingest'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(temporaryKey ? { 'x-temporary-key': temporaryKey } : {}),
+        },
         body: JSON.stringify({
           portal: options?.portal ?? 'all',
           maxPages: options?.maxPages ?? 1,
         }),
       })
+      if (res.status === 401) {
+        removeStoredTemporaryKey()
+        setTemporaryKeyState(null)
+        setIsKeyRequired(true)
+        setKeyError('Invalid access key. Please try again.')
+        return { ok: false, error: 'Unauthorized' }
+      }
       const data = await res.json().catch(() => null)
       if (!res.ok) {
         throw new Error(data?.error || data?.message || 'Ingestion failed')
@@ -201,11 +240,15 @@ export function useOffers() {
     setLoading(true)
 
     const offset = (filter.page - 1) * PAGE_SIZE
+    const authHeaders: Record<string, string> = temporaryKey ? { 'x-temporary-key': temporaryKey } : {}
 
     const fetchPromise = filter.prompt
-      ? fetch('/api/offers/search', {
+      ? fetch(apiUrl('/api/offers/search'), {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...authHeaders,
+          },
           body: JSON.stringify({
             prompt: filter.prompt,
             limit: PAGE_SIZE,
@@ -215,36 +258,30 @@ export function useOffers() {
         })
       : (() => {
           const params = new URLSearchParams()
-          if (filter.q) params.set('q', filter.q)
-          if (filter.city) params.set('city', filter.city)
-          if (filter.district) params.set('district', filter.district)
-          if (filter.portal) params.set('portal', filter.portal)
-          if (filter.transactionType) params.set('transactionType', filter.transactionType)
-          if (filter.propertyType) params.set('propertyType', filter.propertyType)
-          if (filter.sellerType) params.set('sellerType', filter.sellerType)
-          if (filter.marketType) params.set('marketType', filter.marketType)
-          if (filter.minPrice !== undefined) params.set('minPrice', String(filter.minPrice))
-          if (filter.maxPrice !== undefined) params.set('maxPrice', String(filter.maxPrice))
-          if (filter.minArea !== undefined) params.set('minArea', String(filter.minArea))
-          if (filter.maxArea !== undefined) params.set('maxArea', String(filter.maxArea))
-          if (filter.minRooms !== undefined) params.set('minRooms', String(filter.minRooms))
-          if (filter.maxRooms !== undefined) params.set('maxRooms', String(filter.maxRooms))
-          if (filter.minFloor !== undefined) params.set('minFloor', String(filter.minFloor))
-          if (filter.maxFloor !== undefined) params.set('maxFloor', String(filter.maxFloor))
-          if (filter.hasElevator !== undefined) params.set('hasElevator', String(filter.hasElevator))
-          if (filter.hasBalcony !== undefined) params.set('hasBalcony', String(filter.hasBalcony))
-          if (filter.hasParking !== undefined) params.set('hasParking', String(filter.hasParking))
-          if (filter.hasAirConditioning !== undefined) params.set('hasAirConditioning', String(filter.hasAirConditioning))
-          if (filter.isFurnished !== undefined) params.set('isFurnished', String(filter.isFurnished))
-          if (filter.hasBasement !== undefined) params.set('hasBasement', String(filter.hasBasement))
-          params.set('sortBy', filter.sortBy)
+          for (const [key, value] of Object.entries(filter)) {
+            if (value !== undefined && key !== 'prompt' && key !== 'page') {
+              params.set(key, String(value))
+            }
+          }
           params.set('limit', String(PAGE_SIZE))
           params.set('offset', String(offset))
-          return fetch(`/api/offers?${params.toString()}`, { signal: controller.signal })
+          return fetch(apiUrl(`/api/offers?${params.toString()}`), {
+            headers: authHeaders,
+            signal: controller.signal,
+          })
         })()
 
     fetchPromise
-      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (res.status === 401) {
+          removeStoredTemporaryKey()
+          setTemporaryKeyState(null)
+          setIsKeyRequired(true)
+          setKeyError('Invalid access key. Please try again.')
+          return null
+        }
+        return res.ok ? res.json() : null
+      })
       .then((data: OffersResponse | null) => {
         if (data && typeof data.total === 'number') {
           setOffers(data.items)
@@ -273,7 +310,7 @@ export function useOffers() {
     return () => {
       controller.abort()
     }
-  }, [filter, refreshCount])
+  }, [filter, refreshCount, temporaryKey])
 
   const resetFilters = () => {
     setSearchInput('')
@@ -296,5 +333,11 @@ export function useOffers() {
     isSyncing,
     triggerSync,
     resetFilters,
+    temporaryKey,
+    isKeyRequired,
+    isVerifyingKey,
+    keyError,
+    handleSetTemporaryKey,
+    setIsKeyRequired,
   }
 }

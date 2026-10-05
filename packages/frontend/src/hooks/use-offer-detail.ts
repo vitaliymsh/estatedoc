@@ -1,36 +1,34 @@
 import { useState, useEffect } from 'react'
 import type { Offer } from '../types/offer'
 import { getCachedOffer, cacheOffers, prefetchImages } from '../lib/offer-prefetch'
+import { apiUrl } from '../lib/api-config'
 
 export function useOfferDetail(id: number | null) {
-  const [data, setData] = useState<{ id: number | null; offer: Offer | null }>({
-    id,
-    offer: id ? getCachedOffer(id) || null : null,
-  })
+  const [remoteOffer, setRemoteOffer] = useState<Offer | null>(null)
   const [loading, setLoading] = useState<boolean>(() => Boolean(id && !getCachedOffer(id)))
   const [error, setError] = useState<string | null>(null)
 
-  const offer = data.id === id ? data.offer : (id ? getCachedOffer(id) || null : null)
+  const cached = id ? getCachedOffer(id) : undefined
+  const offer = (remoteOffer?.id === id ? remoteOffer : cached) ?? null
 
   useEffect(() => {
     if (!id) {
-      setData({ id: null, offer: null })
+      setRemoteOffer(null)
       setLoading(false)
       setError(null)
       return
     }
 
-    const controller = new AbortController()
-    const cached = getCachedOffer(id)
-    if (cached) {
-      setData({ id, offer: cached })
+    const currentCached = getCachedOffer(id)
+    if (currentCached) {
       setLoading(false)
-      if (cached.images) prefetchImages(cached.images)
+      prefetchImages(currentCached.images || [])
     } else {
       setLoading(true)
     }
 
-    fetch(`/api/offers/${id}`, { signal: controller.signal })
+    const controller = new AbortController()
+    fetch(apiUrl(`/api/offers/${id}`), { signal: controller.signal })
       .then((res) => {
         if (!res.ok) {
           throw new Error(`Offer fetch failed: ${res.statusText}`)
@@ -38,13 +36,13 @@ export function useOfferDetail(id: number | null) {
         return res.json()
       })
       .then((fresh: Offer) => {
-        setData({ id, offer: fresh })
+        setRemoteOffer(fresh)
         cacheOffers([fresh])
-        if (fresh.images) prefetchImages(fresh.images)
+        prefetchImages(fresh.images || [])
         setError(null)
       })
       .catch((err) => {
-        if (err.name !== 'AbortError' && !cached) {
+        if (err.name !== 'AbortError' && !currentCached) {
           setError(err instanceof Error ? err.message : 'Nie znaleziono oferty')
         }
       })
@@ -61,3 +59,4 @@ export function useOfferDetail(id: number | null) {
 
   return { offer, loading, error }
 }
+
