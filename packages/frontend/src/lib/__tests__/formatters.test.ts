@@ -127,6 +127,10 @@ describe('Frontend Formatters', () => {
     expect(formatPortal('otodom').badgeClassName).toContain('bg-emerald-600')
     expect(formatPortal('otodom').badgeClassName).toContain('text-white')
 
+    expect(formatPortal('gratka').name).toBe('Gratka')
+    expect(formatPortal('gratka').badgeClassName).toContain('bg-amber-600')
+    expect(formatPortal('gratka').badgeClassName).toContain('text-white')
+
     expect(formatPortal(null).name).toBe('Portal')
     expect(formatPortal(null).badgeClassName).toContain('text-white')
   })

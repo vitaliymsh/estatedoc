@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
+import { createContext, useContext, useState, useMemo, useCallback, type ReactNode } from 'react'
 
 export type Language = 'pl' | 'en'
 
@@ -186,6 +186,13 @@ export const translations = {
     listing_btn: 'Oferta',
     yes: 'Tak',
     no: 'Brak',
+    exclusive_offer: 'Wyłączność',
+    temporary_key_title: 'Wymagany klucz dostępu',
+    temporary_key_desc: 'Wprowadź klucz dostępu (temporaryKey), aby uzyskać dostęp do aplikacji.',
+    temporary_key_label: 'Klucz dostępu (temporaryKey)',
+    temporary_key_placeholder: 'Wpisz klucz dostępu...',
+    temporary_key_submit: 'Zatwierdź i wejdź',
+    temporary_key_error: 'Nieprawidłowy klucz dostępu. Spróbuj ponownie.',
   },
   en: {
     brand_aria: 'EstateDOC Home',
@@ -370,6 +377,13 @@ export const translations = {
     listing_btn: 'Listing',
     yes: 'Yes',
     no: 'No',
+    exclusive_offer: 'Exclusive',
+    temporary_key_title: 'Access Key Required',
+    temporary_key_desc: 'Please enter the access key (temporaryKey) to access the application.',
+    temporary_key_label: 'Access key (temporaryKey)',
+    temporary_key_placeholder: 'Enter access key...',
+    temporary_key_submit: 'Submit & Enter',
+    temporary_key_error: 'Invalid access key. Please try again.',
   },
 } as const
 
@@ -380,8 +394,8 @@ export function getTranslation(
   key: TranslationKey,
   params?: Record<string, string | number>
 ): string {
-  const dict = translations[lang] || translations.pl
-  let text: string = dict[key] || translations.pl[key] || (key as string)
+  const dict = translations[lang] || translations.en || translations.pl
+  let text: string = dict[key] || translations.en[key] || (key as string)
   if (params) {
     for (const [k, v] of Object.entries(params)) {
       text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v))
@@ -397,9 +411,9 @@ interface LanguageContextType {
 }
 
 const LanguageContext = createContext<LanguageContextType>({
-  lang: 'pl',
+  lang: 'en',
   setLang: () => {},
-  t: (key, params) => getTranslation('pl', key, params),
+  t: (key, params) => getTranslation('en', key, params),
 })
 
 const STORAGE_KEY = 'estatedoc_lang'
@@ -410,21 +424,26 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       const saved = localStorage.getItem(STORAGE_KEY)
       if (saved === 'en' || saved === 'pl') return saved
     }
-    return 'pl'
+    return 'en'
   })
 
-  const setLang = (nextLang: Language) => {
+  const setLang = useCallback((nextLang: Language) => {
     setLangState(nextLang)
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEY, nextLang)
     }
-  }
+  }, [])
 
-  const t = (key: TranslationKey, params?: Record<string, string | number>) =>
-    getTranslation(lang, key, params)
+  const t = useCallback(
+    (key: TranslationKey, params?: Record<string, string | number>) =>
+      getTranslation(lang, key, params),
+    [lang]
+  )
+
+  const value = useMemo(() => ({ lang, setLang, t }), [lang, setLang, t])
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t }}>
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   )

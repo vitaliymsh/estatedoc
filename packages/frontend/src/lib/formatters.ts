@@ -1,5 +1,41 @@
 import type { Language } from './i18n'
 
+export const IGNORED_METADATA_KEYS = new Set([
+  'street',
+  'district',
+  'city',
+  'price',
+  'pricePerSqm',
+  'areaSqm',
+  'roomsCount',
+  'floor',
+  'totalFloors',
+  'propertyType',
+  'transactionType',
+  'sellerType',
+  'images',
+  'imageUrl',
+  'description',
+  'title',
+  'url',
+  'portal',
+  'externalId',
+  'sourceUrl',
+  'coordinates',
+  'buildingType',
+  'hasElevator',
+  'hasBalcony',
+  'hasParking',
+  'yearBuilt',
+  'tags',
+  'airQuality',
+  'noiseLevel',
+  'lat',
+  'lng',
+  'latitude',
+  'longitude',
+])
+
 export function formatPrice(
   price: number | null | undefined,
   lang: Language = 'pl',
@@ -111,6 +147,13 @@ export function formatPortal(portal: string | null | undefined): FormattedPortal
       name: 'Otodom',
       badgeClassName: 'bg-emerald-600/90 text-white border-emerald-500/40 shadow-xs backdrop-blur-md',
       dotColor: 'bg-emerald-500',
+    }
+  }
+  if (lower.includes('gratka')) {
+    return {
+      name: 'Gratka',
+      badgeClassName: 'bg-amber-600/90 text-white border-amber-500/40 shadow-xs backdrop-blur-md',
+      dotColor: 'bg-amber-500',
     }
   }
   if (lower.includes('olx')) {

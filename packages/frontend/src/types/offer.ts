@@ -13,6 +13,8 @@ export interface OfferMetadata {
   exclusiveOffer?: boolean
   hasElevator?: boolean
   hasBalcony?: boolean
+  hasGarden?: boolean
+  hasTerrace?: boolean
   hasParking?: boolean
   hasBasement?: boolean
   hasAirConditioning?: boolean
@@ -25,6 +27,7 @@ export interface OfferMetadata {
   latitude?: number | null
   longitude?: number | null
   imageUrl?: string
+  pricePerSqm?: number
   [key: string]: unknown
 }
 
