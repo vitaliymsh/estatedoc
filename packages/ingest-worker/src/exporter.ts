@@ -1,4 +1,4 @@
-import type { StandardListing } from './portals/sprzedajemy/types.js';
+import type { StandardListing } from './types.js';
 
 export interface BatchOfferDto {
   portal: string;
