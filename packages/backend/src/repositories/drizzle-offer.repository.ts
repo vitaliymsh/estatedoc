@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, like, count, sql } from 'drizzle-orm';
+import { eq, and, or, gte, lte, like, count, asc, desc, sql } from 'drizzle-orm';
 import type { MySql2Database } from 'drizzle-orm/mysql2';
 import * as schema from '../db/schema.js';
 import { offers, type Offer, type NewOffer } from '../db/schema.js';
@@ -11,6 +11,15 @@ export class DrizzleOfferRepository implements IOfferRepository {
   async findAll(query: ListOffersQuery): Promise<ListOffersResult> {
     const conditions = [];
 
+    if (query.q) {
+      conditions.push(
+        or(
+          like(offers.title, `%${query.q}%`),
+          like(offers.description, `%${query.q}%`),
+          like(offers.city, `%${query.q}%`)
+        )
+      );
+    }
     if (query.city) {
       conditions.push(like(offers.city, `%${query.city}%`));
     }
@@ -26,6 +35,13 @@ export class DrizzleOfferRepository implements IOfferRepository {
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
+    let orderByClause = desc(offers.createdAt);
+    if (query.sortBy === 'price_asc') {
+      orderByClause = asc(offers.price);
+    } else if (query.sortBy === 'price_desc') {
+      orderByClause = desc(offers.price);
+    }
+
     const [countResult] = await this.db
       .select({ total: count() })
       .from(offers)
@@ -35,6 +51,7 @@ export class DrizzleOfferRepository implements IOfferRepository {
       .select()
       .from(offers)
       .where(whereClause)
+      .orderBy(orderByClause)
       .limit(query.limit)
       .offset(query.offset);
 

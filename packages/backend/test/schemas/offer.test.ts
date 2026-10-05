@@ -10,12 +10,16 @@ describe('Offer Schemas', () => {
 
   it('coerces numeric query params correctly', () => {
     const result = listOffersQuerySchema.parse({
+      q: ' kawalerka ',
       minPrice: '500000',
       maxPrice: '1000000',
+      sortBy: 'price_asc',
       limit: '50',
       offset: '10',
       city: 'Warszawa',
     });
+    expect(result.q).toBe('kawalerka');
+    expect(result.sortBy).toBe('price_asc');
     expect(result.minPrice).toBe(500000);
     expect(result.maxPrice).toBe(1000000);
     expect(result.limit).toBe(50);

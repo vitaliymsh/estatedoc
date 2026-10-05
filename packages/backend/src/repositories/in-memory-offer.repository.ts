@@ -9,6 +9,15 @@ export class InMemoryOfferRepository implements IOfferRepository {
   async findAll(query: ListOffersQuery): Promise<ListOffersResult> {
     let filtered = [...this.offers];
 
+    if (query.q) {
+      const qLower = query.q.toLowerCase();
+      filtered = filtered.filter(
+        (o) =>
+          o.title.toLowerCase().includes(qLower) ||
+          (o.description && o.description.toLowerCase().includes(qLower)) ||
+          o.city.toLowerCase().includes(qLower)
+      );
+    }
     if (query.city) {
       const cityLower = query.city.toLowerCase();
       filtered = filtered.filter((o) => o.city.toLowerCase().includes(cityLower));
@@ -21,6 +30,14 @@ export class InMemoryOfferRepository implements IOfferRepository {
     }
     if (query.maxPrice !== undefined) {
       filtered = filtered.filter((o) => o.price !== null && Number(o.price) <= query.maxPrice!);
+    }
+
+    if (query.sortBy === 'price_asc') {
+      filtered.sort((a, b) => Number(a.price ?? 0) - Number(b.price ?? 0));
+    } else if (query.sortBy === 'price_desc') {
+      filtered.sort((a, b) => Number(b.price ?? 0) - Number(a.price ?? 0));
+    } else {
+      filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     }
 
     const total = filtered.length;

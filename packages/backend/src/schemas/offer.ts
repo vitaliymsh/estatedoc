@@ -1,10 +1,12 @@
 import { z } from 'zod';
 
 export const listOffersQuerySchema = z.object({
-  city: z.string().optional(),
-  portal: z.string().optional(),
+  q: z.string().trim().optional(),
+  city: z.string().trim().optional(),
+  portal: z.string().trim().optional(),
   minPrice: z.coerce.number().min(0).optional(),
   maxPrice: z.coerce.number().min(0).optional(),
+  sortBy: z.enum(['newest', 'price_asc', 'price_desc']).default('newest'),
   limit: z.coerce.number().min(1).max(100).default(20),
   offset: z.coerce.number().min(0).default(0),
 });

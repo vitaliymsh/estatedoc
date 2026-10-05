@@ -47,12 +47,24 @@ describe('InMemoryOfferRepository', () => {
       },
     ]);
 
-    const warsawList = await repo.findAll({ city: 'Warszawa', limit: 10, offset: 0 });
+    const warsawList = await repo.findAll({ city: 'Warszawa', limit: 10, offset: 0, sortBy: 'newest' });
     expect(warsawList.total).toBe(1);
     expect(warsawList.items[0].city).toBe('Warszawa');
 
-    const cheapList = await repo.findAll({ maxPrice: 400000, limit: 10, offset: 0 });
+    const cheapList = await repo.findAll({ maxPrice: 400000, limit: 10, offset: 0, sortBy: 'newest' });
     expect(cheapList.total).toBe(1);
+
+    const textSearchList = await repo.findAll({ q: 'Expensive', limit: 10, offset: 0, sortBy: 'newest' });
+    expect(textSearchList.total).toBe(1);
+    expect(textSearchList.items[0].city).toBe('Krakow');
+
+    const sortedAsc = await repo.findAll({ limit: 10, offset: 0, sortBy: 'price_asc' });
+    expect(sortedAsc.items[0].city).toBe('Warszawa');
+    expect(sortedAsc.items[1].city).toBe('Krakow');
+
+    const sortedDesc = await repo.findAll({ limit: 10, offset: 0, sortBy: 'price_desc' });
+    expect(sortedDesc.items[0].city).toBe('Krakow');
+    expect(sortedDesc.items[1].city).toBe('Warszawa');
   });
 
   it('finds offer by id', async () => {

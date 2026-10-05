@@ -58,6 +58,13 @@ describe('Offers Routes', () => {
     const body = getRes.json();
     expect(body.total).toBe(1);
     expect(body.items[0].externalId).toBe('ext-100');
+
+    const searchRes = await app.inject({
+      method: 'GET',
+      url: '/api/offers?q=Studio&sortBy=price_desc',
+    });
+    expect(searchRes.statusCode).toBe(200);
+    expect(searchRes.json().total).toBe(1);
   });
 
   it('GET /api/offers/:id returns 404 for missing and 200 for existing', async () => {
