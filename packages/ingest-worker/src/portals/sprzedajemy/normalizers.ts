@@ -1,6 +1,7 @@
 import type { TransactionType, PropertyType } from './types.js';
 
 export { calculatePricePerSqm } from '../../utils/parsers.js';
+export { sanitizeTitle, sanitizeStreet, sanitizeDescription } from '../../utils/sanitizers.js';
 
 export function parseTransactionType(input: string): TransactionType | null {
   if (!input) return null;

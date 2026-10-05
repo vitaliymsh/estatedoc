@@ -1,6 +1,6 @@
 import * as cheerio from 'cheerio';
 import type { StandardListing } from './types.js';
-import { parseFloor } from './normalizers.js';
+import { parseFloor, sanitizeDescription } from './normalizers.js';
 import { cleanAndDeduplicateImages } from '../../utils/gallery.js';
 
 export function parseDetailPage(html: string): Partial<StandardListing> {
@@ -12,7 +12,7 @@ export function parseDetailPage(html: string): Partial<StandardListing> {
   const metadata: Record<string, unknown> = {};
 
   const descEl = $('.offerDescription');
-  const description = descEl.length > 0 ? descEl.text().trim().replace(/\s+/g, ' ') : null;
+  const description = descEl.length > 0 ? sanitizeDescription(descEl.text()) : null;
 
   let floor: number | null = null;
   let totalFloors: number | null = null;
