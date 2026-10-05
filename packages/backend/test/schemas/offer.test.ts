@@ -66,6 +66,7 @@ describe('Offer Schemas', () => {
         propertyType: 'apartment',
         transactionType: 'sale',
         sellerType: 'private',
+        pricePerSqm: '12000',
         images: ['https://img.jpg'],
         metadata: { plotSqm: 500 },
       },
@@ -75,7 +76,22 @@ describe('Offer Schemas', () => {
     expect(result[0].portal).toBe('sprzedajemy');
     expect(result[0].district).toBe('Mokotów');
     expect(result[0].floor).toBe(3);
+    expect(result[0].pricePerSqm).toBe(12000);
     expect(result[0].images).toEqual(['https://img.jpg']);
+  });
+
+  it('rejects invalid image URLs in batchIngestOffersSchema', () => {
+    const payload = [
+      {
+        portal: 'sprzedajemy',
+        externalId: 'ext-1',
+        url: 'https://sprzedajemy.pl/oferta-1',
+        title: 'Mieszkanie 50m2',
+        city: 'Warszawa',
+        images: ['not-a-valid-url'],
+      },
+    ];
+    expect(() => batchIngestOffersSchema.parse(payload)).toThrow();
   });
 
   it('validates checkExistingOffersSchema', () => {

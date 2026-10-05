@@ -84,7 +84,7 @@ describe('parseListPage', () => {
       portal: 'sprzedajemy',
       externalId: '73849568',
       url: 'https://sprzedajemy.pl/lokal-134m2-warszawa-4-1b8e55-6fpbc4-nr73849568',
-      title: 'Lokal 134m2 Warszawa',
+      title: 'Lokal Warszawa',
       price: 10700,
       pricePerSqm: 80,
       areaSqm: 134,

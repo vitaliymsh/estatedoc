@@ -6,6 +6,7 @@ export interface BatchOfferDto {
   url: string;
   title: string;
   price?: number | null;
+  pricePerSqm?: number | null;
   areaSqm?: number | null;
   roomsCount?: number | null;
   floor?: number | null;
@@ -26,11 +27,50 @@ export interface PushBatchResult {
   updated: number;
 }
 
+const REDUNDANT_METADATA_KEYS = new Set([
+  'street',
+  'district',
+  'city',
+  'price',
+  'pricePerSqm',
+  'areaSqm',
+  'roomsCount',
+  'floor',
+  'totalFloors',
+  'propertyType',
+  'transactionType',
+  'sellerType',
+  'images',
+  'imageUrl',
+  'description',
+  'title',
+  'url',
+  'portal',
+  'externalId',
+]);
+
 export function mapListingToBatchDto(listing: StandardListing): BatchOfferDto {
-  const metadata: Record<string, unknown> = {
+  const rawMetadata: Record<string, unknown> = {
     ...(listing.metadata || {}),
     ...(listing.postedAt && { postedAt: listing.postedAt }),
   };
+
+  const metadata: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(rawMetadata)) {
+    if (!REDUNDANT_METADATA_KEYS.has(key) && value !== undefined && value !== null) {
+      metadata[key] = value;
+    }
+  }
+
+  const normalizedImages = (listing.images || [])
+    .map((img) => (typeof img === 'string' ? img.trim() : ''))
+    .filter((img) => img.length > 0);
+
+  const pricePerSqm =
+    listing.pricePerSqm ??
+    (listing.price && listing.areaSqm && listing.areaSqm > 0
+      ? Math.round(listing.price / listing.areaSqm)
+      : null);
 
   return {
     portal: listing.portal,
@@ -38,6 +78,7 @@ export function mapListingToBatchDto(listing: StandardListing): BatchOfferDto {
     url: listing.url,
     title: listing.title,
     price: listing.price ?? null,
+    pricePerSqm,
     areaSqm: listing.areaSqm ?? null,
     roomsCount: listing.roomsCount ?? null,
     floor: listing.floor ?? null,
@@ -48,7 +89,7 @@ export function mapListingToBatchDto(listing: StandardListing): BatchOfferDto {
     district: listing.district ?? null,
     street: listing.street ?? null,
     sellerType: listing.sellerType ?? null,
-    images: listing.images?.length ? listing.images : null,
+    images: normalizedImages.length > 0 ? normalizedImages : null,
     description: listing.description ?? null,
     metadata: Object.keys(metadata).length > 0 ? metadata : null,
   };

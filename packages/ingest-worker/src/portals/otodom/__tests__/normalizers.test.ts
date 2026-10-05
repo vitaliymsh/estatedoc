@@ -184,7 +184,7 @@ describe('otodom normalizers', () => {
 
       const enriched = enrichListingFromDetail(initial, detail);
 
-      expect(enriched.description).toBe('<p>Pełny opis lokalu z balkonem i windą.</p>');
+      expect(enriched.description).toBe('Pełny opis lokalu z balkonem i windą.');
       expect(enriched.totalFloors).toBe(8);
       expect(enriched.images).toEqual([
         'https://img.cdn/detail1.jpg',

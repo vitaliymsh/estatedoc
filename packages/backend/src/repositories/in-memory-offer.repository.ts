@@ -109,6 +109,7 @@ export class InMemoryOfferRepository implements IOfferRepository {
           district: item.district ?? null,
           street: item.street ?? null,
           sellerType: item.sellerType ?? null,
+          pricePerSqm: item.pricePerSqm ?? null,
           images: item.images ?? null,
           description: item.description ?? null,
           metadata: (item.metadata as Record<string, unknown>) ?? null,

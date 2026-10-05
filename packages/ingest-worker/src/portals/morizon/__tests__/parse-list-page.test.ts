@@ -91,7 +91,7 @@ describe('Morizon parseListPage', () => {
     const first = listings[0];
     expect(first.portal).toBe('morizon');
     expect(first.externalId).toBe('mzn2046721837');
-    expect(first.title).toBe('Mieszkanie na sprzedaż, 43 m² Nowa Praga, Wileńska');
+    expect(first.title).toBe('Mieszkanie na sprzedaż, Nowa Praga, Wileńska');
     expect(first.price).toBe(599000);
     expect(first.areaSqm).toBe(42.9);
     expect(first.pricePerSqm).toBe(13963);

@@ -146,6 +146,7 @@ export class DrizzleOfferRepository implements IOfferRepository {
           district: sql`values(${offers.district})`,
           street: sql`values(${offers.street})`,
           sellerType: sql`values(${offers.sellerType})`,
+          pricePerSqm: sql`values(${offers.pricePerSqm})`,
           images: sql`values(${offers.images})`,
           description: sql`values(${offers.description})`,
           metadata: sql`values(${offers.metadata})`,

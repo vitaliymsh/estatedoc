@@ -1,36 +1,32 @@
 import { describe, it, expect } from 'vitest'
 import {
   formatPrice,
-  calculatePricePerSqm,
+  formatPricePerSqm,
   formatFloor,
   formatSellerType,
   formatMetadataValue,
-  IGNORED_METADATA_KEYS,
   formatRelativeTime,
   buildGoogleMapsUrl,
   formatPropertyType,
   formatTransactionType,
-  normalizeOfferImages,
-  formatDescriptionText,
-  sanitizeTitle,
   formatArea,
   formatPortal,
-  formatStreet,
   formatRooms,
 } from '../formatters'
 
 describe('Frontend Formatters', () => {
   it('formats price in PLN and EN', () => {
-    expect(formatPrice('599000.00')).toBe('599\u00A0000 zł')
+    expect(formatPrice(599000)).toBe('599\u00A0000 zł')
     expect(formatPrice(null)).toBe('Cena do negocjacji')
-    expect(formatPrice('599000.00', 'en')).toBe('599,000 PLN')
+    expect(formatPrice(599000, 'en')).toBe('599,000 PLN')
     expect(formatPrice(null, 'en')).toBe('Price negotiable')
   })
 
-  it('calculates price per sqm in PL and EN', () => {
-    expect(calculatePricePerSqm('599000', '42.9')).toBe('13\u00A0963 zł/m²')
-    expect(calculatePricePerSqm('599000', '42.9', 'en')).toBe('13,963 PLN/m²')
-    expect(calculatePricePerSqm(null, '50')).toBeNull()
+  it('formats price per sqm in PL and EN', () => {
+    expect(formatPricePerSqm(13963)).toBe('13\u00A0963 zł/m²')
+    expect(formatPricePerSqm(13963, 'en')).toBe('13,963 PLN/m²')
+    expect(formatPricePerSqm(null)).toBeNull()
+    expect(formatPricePerSqm(0)).toBeNull()
   })
 
   it('formats floor information in PL and EN', () => {
@@ -55,22 +51,6 @@ describe('Frontend Formatters', () => {
     expect(formatSellerType('private', 'en')).toBe('Private')
     expect(formatSellerType('agency', 'en')).toBe('Agency')
     expect(formatSellerType(null)).toBeNull()
-  })
-
-  it('filters internal metadata keys from badge rendering', () => {
-    expect(IGNORED_METADATA_KEYS.has('images')).toBe(true)
-    expect(IGNORED_METADATA_KEYS.has('imageUrl')).toBe(true)
-    expect(IGNORED_METADATA_KEYS.has('availability')).toBe(true)
-    expect(IGNORED_METADATA_KEYS.has('locality')).toBe(true)
-    expect(IGNORED_METADATA_KEYS.has('streetAddress')).toBe(true)
-    expect(IGNORED_METADATA_KEYS.has('floor')).toBe(true)
-    expect(IGNORED_METADATA_KEYS.has('propertyType')).toBe(true)
-    expect(IGNORED_METADATA_KEYS.has('transactionType')).toBe(true)
-    expect(IGNORED_METADATA_KEYS.has('plotSqm')).toBe(true)
-    expect(IGNORED_METADATA_KEYS.has('buildingType')).toBe(true)
-    expect(IGNORED_METADATA_KEYS.has('yearBuilt')).toBe(true)
-    expect(IGNORED_METADATA_KEYS.has('price')).toBe(true)
-    expect(IGNORED_METADATA_KEYS.has('category')).toBe(true)
   })
 
   it('formats metadata values in PL and EN', () => {
@@ -118,62 +98,20 @@ describe('Frontend Formatters', () => {
     expect(formatTransactionType('rent', 'en')).toBe('for rent')
   })
 
-  it('normalizes offer images from arrays, json strings, or metadata fallback', () => {
-    expect(normalizeOfferImages(['https://example.com/1.jpg', 'https://example.com/2.jpg'])).toEqual([
-      'https://example.com/1.jpg',
-      'https://example.com/2.jpg',
-    ])
-    expect(normalizeOfferImages('["https://example.com/1.jpg", "https://example.com/2.jpg"]')).toEqual([
-      'https://example.com/1.jpg',
-      'https://example.com/2.jpg',
-    ])
-    expect(normalizeOfferImages('https://example.com/single.jpg')).toEqual([
-      'https://example.com/single.jpg',
-    ])
-    expect(normalizeOfferImages(null, 'https://example.com/fallback.jpg')).toEqual([
-      'https://example.com/fallback.jpg',
-    ])
-    expect(normalizeOfferImages(null, null)).toEqual([])
-  })
-
-  it('formats description text with clean paragraph and list spacing', () => {
-    const raw = 'Mieszkanie na Mokotowie. BUDYNEK/OSIEDLE Mieszkanie na parterze. - Salon z kuchnią - Dwa pokoje'
-    const formatted = formatDescriptionText(raw)
-    expect(formatted).toContain('BUDYNEK/OSIEDLE')
-    expect(formatted).toContain('• Salon z kuchnią')
-    expect(formatted).toContain('• Dwa pokoje')
-  })
-
-  it('sanitizes noisy titles by stripping pipes, HTML entities, and redundant specs', () => {
-    expect(
-      sanitizeTitle('70 m² | 3 pokoje | Śródmieście | STUDENCI | 0 zł prowizji')
-    ).toBe('Śródmieście, STUDENCI, 0 zł prowizji')
-
-    expect(
-      sanitizeTitle('NOWOCZESNY DOM JEDNORODZINNY - 140 M2')
-    ).toBe('Nowoczesny dom jednorodzinny')
-
-    expect(
-      sanitizeTitle('Mieszkanie na sprzedaż, 105 m² &amp; balkon')
-    ).toBe('Mieszkanie na sprzedaż & balkon')
-
-    expect(sanitizeTitle(null)).toBe('')
-  })
-
   it('formats area by stripping trailing zeroes and handling invalid values', () => {
-    expect(formatArea('70.00')).toBe('70 m²')
-    expect(formatArea('147.50')).toBe('147.5 m²')
+    expect(formatArea(70)).toBe('70 m²')
+    expect(formatArea(147.5)).toBe('147.5 m²')
     expect(formatArea(28.05)).toBe('28.05 m²')
-    expect(formatArea('0')).toBeNull()
+    expect(formatArea(0)).toBeNull()
     expect(formatArea(null)).toBeNull()
   })
 
   it('formats rent prices with monthly suffix and handles non-positive prices', () => {
-    expect(formatPrice('3000', 'pl', 'rent')).toBe('3000 zł/mc')
-    expect(formatPrice('30000', 'pl', 'rent')).toBe('30\u00A0000 zł/mc')
-    expect(formatPrice('3000', 'en', 'rent')).toBe('3,000 PLN/mo')
-    expect(formatPrice('0', 'pl')).toBe('Cena do negocjacji')
-    expect(formatPrice('-500', 'pl')).toBe('Cena do negocjacji')
+    expect(formatPrice(3000, 'pl', 'rent')).toBe('3000 zł/mc')
+    expect(formatPrice(30000, 'pl', 'rent')).toBe('30\u00A0000 zł/mc')
+    expect(formatPrice(3000, 'en', 'rent')).toBe('3,000 PLN/mo')
+    expect(formatPrice(0, 'pl')).toBe('Cena do negocjacji')
+    expect(formatPrice(-500, 'pl')).toBe('Cena do negocjacji')
   })
 
   it('formats portal names with clean labels and white text on tinted badges', () => {
@@ -191,31 +129,6 @@ describe('Frontend Formatters', () => {
 
     expect(formatPortal(null).name).toBe('Portal')
     expect(formatPortal(null).badgeClassName).toContain('text-white')
-  })
-
-  it('formats street names properly without stuttering ul. prefixes', () => {
-    expect(formatStreet('Adama Mickiewicza')).toBe('ul. Adama Mickiewicza')
-    expect(formatStreet('ul. Adama Mickiewicza')).toBe('ul. Adama Mickiewicza')
-    expect(formatStreet('ulica Adama Mickiewicza')).toBe('ul. Adama Mickiewicza')
-    expect(formatStreet('al. Jerozolimskie')).toBe('al. Jerozolimskie')
-    expect(formatStreet('aleja Powstańców')).toBe('al. Powstańców')
-    expect(formatStreet('pl. Zbawiciela')).toBe('pl. Zbawiciela')
-    expect(formatStreet('os. Tysiąclecia')).toBe('os. Tysiąclecia')
-    expect(formatStreet(null)).toBeNull()
-  })
-
-  it('ensures title sanitizer capitalizes first letter of lowercase titles', () => {
-    expect(
-      sanitizeTitle('mieszkanie w centrum z garażem wolnostojącym')
-    ).toBe('Mieszkanie w centrum z garażem wolnostojącym')
-  })
-
-  it('filters gps coordinates and administrative regions from badge rendering', () => {
-    expect(IGNORED_METADATA_KEYS.has('latitude')).toBe(true)
-    expect(IGNORED_METADATA_KEYS.has('longitude')).toBe(true)
-    expect(IGNORED_METADATA_KEYS.has('coordinates')).toBe(true)
-    expect(IGNORED_METADATA_KEYS.has('province')).toBe(true)
-    expect(IGNORED_METADATA_KEYS.has('voivodeship')).toBe(true)
   })
 
   it('formats room counts in PL and EN including studio handling', () => {

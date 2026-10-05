@@ -1,7 +1,12 @@
 import * as cheerio from 'cheerio';
 import type { StandardListing } from './types.js';
 import { parsePrice, parseArea, parseRooms, parseOfferId, parseSellerType } from './parsers.js';
-import { calculatePricePerSqm, parseTransactionType, parsePropertyType } from './normalizers.js';
+import {
+  calculatePricePerSqm,
+  parseTransactionType,
+  parsePropertyType,
+  sanitizeTitle,
+} from './normalizers.js';
 
 const BASE_URL = 'https://sprzedajemy.pl';
 
@@ -63,7 +68,7 @@ export function parseListPage(html: string): StandardListing[] {
       portal: 'sprzedajemy',
       externalId,
       url,
-      title,
+      title: sanitizeTitle(title),
       price,
       pricePerSqm,
       areaSqm,

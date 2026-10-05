@@ -53,12 +53,13 @@ export const batchOfferItemSchema = z.object({
   propertyType: z.enum(['apartment', 'house', 'land', 'commercial', 'garage', 'other']).nullish(),
   transactionType: z.enum(['sale', 'rent']).nullish(),
   city: z.string().min(1).max(64),
-  district: z.string().max(64).nullish(),
-  street: z.string().max(128).nullish(),
-  sellerType: z.enum(['private', 'company', 'agency', 'developer', 'verified']).nullish(),
-  images: z.array(z.string().min(1)).nullish(),
-  description: z.string().nullish(),
-  metadata: z.record(z.string(), z.unknown()).nullish(),
+  district: z.string().max(64).nullable().optional(),
+  street: z.string().max(128).nullable().optional(),
+  sellerType: z.enum(['private', 'company', 'agency', 'developer', 'verified']).nullable().optional(),
+  pricePerSqm: z.coerce.number().int().nullish(),
+  images: z.array(z.string().url()).nullish(),
+  description: z.string().nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 });
 
 export const batchIngestOffersSchema = z.array(batchOfferItemSchema).min(1).max(500);

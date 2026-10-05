@@ -29,6 +29,7 @@ describe('Exporter & Backend Client', () => {
     expect(dto.portal).toBe('sprzedajemy');
     expect(dto.externalId).toBe('ext-42');
     expect(dto.price).toBe(350000);
+    expect(dto.pricePerSqm).toBe(10769);
     expect(dto.description).toBe('Świetna kawalerka po remoncie.');
     expect(dto.district).toBe('Śródmieście');
     expect(dto.floor).toBe(2);
@@ -38,6 +39,31 @@ describe('Exporter & Backend Client', () => {
     expect(dto.sellerType).toBe('private');
     expect(dto.images).toEqual(['https://img.sprzedajemy.pl/42.jpg']);
     expect(dto.metadata).toEqual({
+      postedAt: '2026-03-01T12:00:00Z',
+    });
+  });
+
+  it('prunes redundant top-level attributes from metadata and normalizes images', () => {
+    const listingWithRedundantMeta: StandardListing = {
+      ...sampleListing,
+      images: ['  https://img.sprzedajemy.pl/1.jpg ', '', '   '],
+      metadata: {
+        street: 'ul. Marszałkowska',
+        district: 'Śródmieście',
+        city: 'Warszawa',
+        price: 350000,
+        imageUrl: 'https://img.sprzedajemy.pl/1.jpg',
+        images: ['https://img.sprzedajemy.pl/1.jpg'],
+        hasElevator: true,
+        yearBuilt: 2010,
+      },
+    };
+
+    const dto = mapListingToBatchDto(listingWithRedundantMeta);
+    expect(dto.images).toEqual(['https://img.sprzedajemy.pl/1.jpg']);
+    expect(dto.metadata).toEqual({
+      hasElevator: true,
+      yearBuilt: 2010,
       postedAt: '2026-03-01T12:00:00Z',
     });
   });

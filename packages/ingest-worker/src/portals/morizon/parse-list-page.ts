@@ -8,6 +8,7 @@ import {
   extractCityAndDistrict,
   cleanDescriptionHtml,
 } from './normalizers.js';
+import { sanitizeTitle } from '../../utils/sanitizers.js';
 
 const BASE_URL = 'https://www.morizon.pl';
 
@@ -74,7 +75,7 @@ export function parseListPage(html: string): StandardListing[] {
         portal: 'morizon',
         externalId,
         url: fullUrl,
-        title,
+        title: sanitizeTitle(title),
         price,
         pricePerSqm,
         areaSqm,
@@ -110,15 +111,15 @@ export function parseListPage(html: string): StandardListing[] {
 
     const fullUrl = href.startsWith('http') ? href : `${BASE_URL}${href}`;
     const cardEl = $(el).closest('article, div, li') || $(el);
-    const title = $(el).find('h2, h3').text().trim() || $(el).attr('title') || $(el).text().trim();
-    if (!title) return;
+    const rawTitle = $(el).find('h2, h3').text().trim() || $(el).attr('title') || $(el).text().trim();
+    if (!rawTitle) return;
 
     const priceText = cardEl.find('.price, [class*="price"]').first().text().trim();
     const price = parsePrice(priceText);
-    const areaSqm = parseArea(title);
-    const roomsCount = parseRooms(title);
-    const transactionType = parseTransactionType(`${fullUrl} ${title}`);
-    const propertyType = parsePropertyType(`${fullUrl} ${title}`);
+    const areaSqm = parseArea(rawTitle);
+    const roomsCount = parseRooms(rawTitle);
+    const transactionType = parseTransactionType(`${fullUrl} ${rawTitle}`);
+    const propertyType = parsePropertyType(`${fullUrl} ${rawTitle}`);
     const pricePerSqm = calculatePricePerSqm(price, areaSqm);
 
     const imgUrl = cardEl.find('img').attr('src') || cardEl.find('img').attr('data-src');
@@ -128,7 +129,7 @@ export function parseListPage(html: string): StandardListing[] {
       portal: 'morizon',
       externalId,
       url: fullUrl,
-      title,
+      title: sanitizeTitle(rawTitle),
       price,
       pricePerSqm,
       areaSqm,
