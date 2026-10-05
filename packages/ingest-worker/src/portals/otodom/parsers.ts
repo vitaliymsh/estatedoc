@@ -51,7 +51,7 @@ export function parseFloor(floor: string | number | null | undefined): number | 
   const trimmed = String(floor).trim().toLowerCase();
   if (!trimmed) return null;
 
-  if (trimmed === 'ground' || trimmed === 'parter') {
+  if (trimmed === 'ground' || trimmed === 'parter' || trimmed === 'ground_floor' || trimmed === 'floor_0') {
     return 0;
   }
 

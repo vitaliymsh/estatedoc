@@ -127,6 +127,7 @@ describe('otodom normalizers', () => {
           agencyName: 'Freedom Nieruchomosci',
           province: 'lubelskie',
           currency: 'PLN',
+          pricePerSqm: 11920.76,
         },
       });
     });
@@ -173,8 +174,11 @@ describe('otodom normalizers', () => {
         target: {
           Build_year: '1990',
           Building_floors_num: '8',
+          Floor_no: ['floor_4'],
+          Construction_status: 'ready_to_use',
+          Building_ownership: 'full_ownership',
           Equipment_types: ['furniture', 'fridge'],
-          Extras_types: ['garage', 'lift', 'balcony'],
+          Extras_types: ['garage', 'lift', 'balcony', 'garden', 'terrace'],
         },
         images: [
           { large: 'https://img.cdn/detail1.jpg' },
@@ -185,6 +189,7 @@ describe('otodom normalizers', () => {
       const enriched = enrichListingFromDetail(initial, detail);
 
       expect(enriched.description).toBe('Pełny opis lokalu z balkonem i windą.');
+      expect(enriched.floor).toBe(4);
       expect(enriched.totalFloors).toBe(8);
       expect(enriched.images).toEqual([
         'https://img.cdn/detail1.jpg',
@@ -197,7 +202,11 @@ describe('otodom normalizers', () => {
       expect(enriched.metadata?.rentExtra).toBe(1450);
       expect(enriched.metadata?.hasElevator).toBe(true);
       expect(enriched.metadata?.hasBalcony).toBe(true);
+      expect(enriched.metadata?.hasGarden).toBe(true);
+      expect(enriched.metadata?.hasTerrace).toBe(true);
       expect(enriched.metadata?.hasParking).toBe(true);
+      expect(enriched.metadata?.condition).toBe('ready_to_use');
+      expect(enriched.metadata?.ownership).toBe('full_ownership');
       expect(enriched.metadata?.latitude).toBe(52.159);
       expect(enriched.metadata?.longitude).toBe(20.794);
     });

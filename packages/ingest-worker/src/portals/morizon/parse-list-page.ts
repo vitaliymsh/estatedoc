@@ -9,37 +9,31 @@ import {
   cleanDescriptionHtml,
 } from './normalizers.js';
 import { sanitizeTitle } from '../../utils/sanitizers.js';
+import { extractJsonLd } from '../../utils/parsers.js';
 
 const BASE_URL = 'https://www.morizon.pl';
 
 export function parseListPage(html: string): StandardListing[] {
   if (!html) return [];
-  const $ = cheerio.load(html);
 
   // 1. Try Schema.org JSON-LD extraction
-  const jsonLdScripts = $('script[type="application/ld+json"]').toArray();
+  const jsonLdItems = extractJsonLd<Record<string, any>>(html);
   let productJsonLd: MorizonJsonLdProduct | null = null;
   const breadcrumbNames: string[] = [];
 
-  for (const el of jsonLdScripts) {
-    const raw = $(el).html();
-    if (!raw) continue;
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed['@type'] === 'BreadcrumbList' && Array.isArray(parsed.itemListElement)) {
-        for (const item of parsed.itemListElement) {
-          if (item.name) breadcrumbNames.push(item.name);
-        }
-      } else if (
-        (parsed['@type'] === 'Product' || parsed['@type'] === 'RealEstateListing' || parsed.offers?.offers) &&
-        !productJsonLd
-      ) {
-        productJsonLd = parsed as MorizonJsonLdProduct;
+  for (const item of jsonLdItems) {
+    if (item['@type'] === 'BreadcrumbList' && Array.isArray(item.itemListElement)) {
+      for (const el of item.itemListElement) {
+        if (el.name) breadcrumbNames.push(el.name);
       }
-    } catch {
-      // Ignore JSON parse failures in single script tag
+    } else if (
+      (item['@type'] === 'Product' || item['@type'] === 'RealEstateListing' || item.offers?.offers) &&
+      !productJsonLd
+    ) {
+      productJsonLd = item as MorizonJsonLdProduct;
     }
   }
+
 
   if (productJsonLd?.offers?.offers && Array.isArray(productJsonLd.offers.offers)) {
     const listings: StandardListing[] = [];
@@ -100,6 +94,7 @@ export function parseListPage(html: string): StandardListing[] {
   }
 
   // 2. DOM fallback
+  const $ = cheerio.load(html);
   const domListings: StandardListing[] = [];
   const seenIds = new Set<string>();
 

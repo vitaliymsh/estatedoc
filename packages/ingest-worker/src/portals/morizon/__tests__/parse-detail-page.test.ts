@@ -21,7 +21,8 @@ describe('Morizon parseDetailPage', () => {
           },
           "url": "https://www.morizon.pl/oferta/sprzedaz-mieszkanie-warszawa-praga-polnoc-wilenska-42m2-mzn2046721837",
           "price": 599000,
-          "priceCurrency": "PLN"
+          "priceCurrency": "PLN",
+          "datePosted": "2026-08-15"
         }
         </script>
         <script type="application/ld+json">
@@ -66,6 +67,7 @@ describe('Morizon parseDetailPage', () => {
     expect(details.images).toContain('https://img1.staticmorizon.com.pl/thumb/photo2.jpg');
     expect(details.metadata?.agencyName).toBe('HOMEMADE NIERUCHOMOŚCI');
     expect(details.metadata?.agencyPhone).toBe('665 565 622');
+    expect(details.metadata?.postedAt).toBe('2026-08-15');
   });
 
   it('parses Morizon DOM parameters table, amenities list, tags, and environmental cards', () => {
@@ -103,6 +105,10 @@ describe('Morizon parseDetailPage', () => {
               <div class="information-table__cell--value"><span data-cy="informationTableValue">650 zł</span></div>
             </div>
             <div class="information-table__row" data-cy="informationTableRow">
+              <div class="information-table__cell--label"><span data-cy="informationTableLabel">Stan mieszkania</span></div>
+              <div class="information-table__cell--value"><span data-cy="informationTableValue">Do zamieszkania</span></div>
+            </div>
+            <div class="information-table__row" data-cy="informationTableRow">
               <div class="information-table__cell--label"><span data-cy="informationTableLabel">Rodzaj umowy</span></div>
               <div class="information-table__cell--value"><span data-cy="informationTableValue">Na wyłączność</span></div>
             </div>
@@ -112,6 +118,8 @@ describe('Morizon parseDetailPage', () => {
             <li class="icon-list-tile" data-cy="iconListTile">Winda</li>
             <li class="icon-list-tile" data-cy="iconListTile">Miejsce postojowe (parking naziemny)</li>
             <li class="icon-list-tile" data-cy="iconListTile">Piwnica</li>
+            <li class="icon-list-tile" data-cy="iconListTile">Ogródek</li>
+            <li class="icon-list-tile" data-cy="iconListTile">Taras</li>
           </ul>
 
           <ul class="tags__list">
@@ -135,11 +143,14 @@ describe('Morizon parseDetailPage', () => {
     expect(details.metadata?.marketType).toBe('secondary');
     expect(details.metadata?.heating).toBe('miejskie');
     expect(details.metadata?.ownership).toBe('własność');
+    expect(details.metadata?.condition).toBe('do zamieszkania');
     expect(details.metadata?.rentExtra).toBe(650);
     expect(details.metadata?.exclusiveOffer).toBe(true);
     expect(details.metadata?.hasElevator).toBe(true);
     expect(details.metadata?.hasParking).toBe(true);
     expect(details.metadata?.hasBasement).toBe(true);
+    expect(details.metadata?.hasGarden).toBe(true);
+    expect(details.metadata?.hasTerrace).toBe(true);
     expect(details.metadata?.tags).toEqual(['cicha okolica', 'sklep pod domem', 'park w pobliżu']);
     expect(details.metadata?.airQuality).toBe('Dobra');
     expect(details.metadata?.noiseLevel).toBe('Niski');

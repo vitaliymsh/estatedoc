@@ -33,6 +33,7 @@ export interface MorizonJsonLdOffer {
   image?: string | string[];
   category?: string;
   description?: string;
+  datePosted?: string;
   seller?: {
     '@type'?: string;
     name?: string;

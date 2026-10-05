@@ -3,6 +3,7 @@ import type { StandardListing, MorizonJsonLdOffer } from './types.js';
 import { parsePrice, parseFloor, parseSellerType } from './parsers.js';
 import { extractCityAndDistrict, cleanDescriptionHtml } from './normalizers.js';
 import { cleanAndDeduplicateImages } from '../../utils/gallery.js';
+import { extractJsonLd } from '../../utils/parsers.js';
 
 export function parseDetailPage(html: string): Partial<StandardListing> {
   if (!html) {
@@ -15,23 +16,16 @@ export function parseDetailPage(html: string): Partial<StandardListing> {
   let offerJsonLd: MorizonJsonLdOffer | null = null;
 
   // 1. Parse JSON-LD scripts
-  const scripts = $('script[type="application/ld+json"]').toArray();
-  for (const el of scripts) {
-    const raw = $(el).html();
-    if (!raw) continue;
-    try {
-      const parsed = JSON.parse(raw);
-      if (parsed['@type'] === 'BreadcrumbList' && Array.isArray(parsed.itemListElement)) {
-        for (const item of parsed.itemListElement) {
-          if (item.name) breadcrumbNames.push(item.name);
-        }
-      } else if (parsed['@type'] === 'Offer' && !offerJsonLd) {
-        offerJsonLd = parsed as MorizonJsonLdOffer;
+  for (const item of extractJsonLd<Record<string, any>>(html)) {
+    if (item['@type'] === 'BreadcrumbList' && Array.isArray(item.itemListElement)) {
+      for (const el of item.itemListElement) {
+        if (el.name) breadcrumbNames.push(el.name);
       }
-    } catch {
-      // Ignore single script parse errors
+    } else if (item['@type'] === 'Offer' && !offerJsonLd) {
+      offerJsonLd = item as MorizonJsonLdOffer;
     }
   }
+
 
   let description: string | null = null;
   let price: number | null = null;
@@ -61,6 +55,9 @@ export function parseDetailPage(html: string): Partial<StandardListing> {
     if (offer.category) {
       metadata.category = offer.category;
     }
+    if (offer.datePosted) {
+      metadata.postedAt = String(offer.datePosted);
+    }
   }
 
   // Fallback description from DOM if missing
@@ -79,17 +76,19 @@ export function parseDetailPage(html: string): Partial<StandardListing> {
     }
   }
 
-  // Extract gallery images
-  $('img, a[data-fancybox], a.gallery__item, picture source').each((_, el) => {
-    const src =
-      $(el).attr('src') ||
-      $(el).attr('data-src') ||
-      $(el).attr('href') ||
-      $(el).attr('srcset');
-    if (src && (src.includes('staticmorizon') || src.includes('cdngr'))) {
-      rawImages.push(src);
-    }
-  });
+  // Extract gallery images only from details-gallery / main gallery, avoiding recommendations & blog sliders
+  $('.details-gallery, .page-details__gallery, [data-cy="gallery"], .gallery')
+    .find('img, picture source, a[data-fancybox]')
+    .each((_, el) => {
+      const src =
+        $(el).attr('src') ||
+        $(el).attr('data-src') ||
+        $(el).attr('href') ||
+        $(el).attr('srcset');
+      if (src && (src.includes('staticmorizon') || src.includes('cdngr'))) {
+        rawImages.push(src);
+      }
+    });
 
   // Extract DOM information tables
   $('.information-table__row, [data-cy="informationTableRow"]').each((_, el) => {
@@ -115,6 +114,8 @@ export function parseDetailPage(html: string): Partial<StandardListing> {
       metadata.heating = val.toLowerCase();
     } else if (label.includes('forma własności')) {
       metadata.ownership = val.toLowerCase();
+    } else if (label.includes('stan')) {
+      metadata.condition = val.toLowerCase();
     } else if (label.includes('czynsz')) {
       const cleanRent = val.replace(/\s+/g, '').match(/\d+/);
       if (cleanRent) metadata.rentExtra = parseInt(cleanRent[0], 10);
@@ -138,16 +139,22 @@ export function parseDetailPage(html: string): Partial<StandardListing> {
     if (lower.includes('winda')) metadata.hasElevator = true;
     if (lower.includes('postojow') || lower.includes('parking') || lower.includes('garaż')) metadata.hasParking = true;
     if (lower.includes('piwnica') || lower.includes('komórk')) metadata.hasBasement = true;
-    if (lower.includes('balkon') || lower.includes('taras') || lower.includes('loggi')) metadata.hasBalcony = true;
+    if (lower.includes('balkon') || lower.includes('loggi')) metadata.hasBalcony = true;
+    if (lower.includes('taras')) metadata.hasTerrace = true;
+    if (lower.includes('ogród') || lower.includes('ogródek')) metadata.hasGarden = true;
     if (lower.includes('klimatyzacj')) metadata.hasAirConditioning = true;
     if (lower.includes('umeblowan')) metadata.isFurnished = true;
   });
 
   // Extract tags
   const tags: string[] = [];
+  const seenTags = new Set<string>();
   $('.tags__list li, .page-details__details-tags-wrapper li').each((_, el) => {
     const text = $(el).text().trim();
-    if (text && !tags.includes(text)) tags.push(text);
+    if (text && text.toUpperCase() !== 'REKLAMA' && !seenTags.has(text)) {
+      seenTags.add(text);
+      tags.push(text);
+    }
   });
   if (tags.length > 0) metadata.tags = tags;
 
@@ -155,9 +162,11 @@ export function parseDetailPage(html: string): Partial<StandardListing> {
   $('.environmental-cards div, .page-details__environmental-cards div').each((_, el) => {
     const text = $(el).text().trim();
     if (text.includes('Jakość powietrza')) {
-      metadata.airQuality = text.split(':')[1]?.trim() || text.replace('Jakość powietrza', '').trim();
+      const val = text.split(':')[1]?.trim() || text.replace('Jakość powietrza', '').trim();
+      if (val) metadata.airQuality = val;
     } else if (text.includes('Poziom hałasu')) {
-      metadata.noiseLevel = text.split(':')[1]?.trim() || text.replace('Poziom hałasu', '').trim();
+      const val = text.split(':')[1]?.trim() || text.replace('Poziom hałasu', '').trim();
+      if (val) metadata.noiseLevel = val;
     }
   });
 

@@ -85,6 +85,9 @@ export function normalizeSearchItem(item: OtodomSearchItem): StandardListing {
   if (item.totalPrice?.currency) {
     metadata.currency = item.totalPrice.currency;
   }
+  if (item.pricePerSquareMeter?.value) {
+    metadata.pricePerSqm = item.pricePerSquareMeter.value;
+  }
 
   return {
     portal: 'otodom',
@@ -118,6 +121,8 @@ export function enrichListingFromDetail(
     ...(listing.metadata || {}),
   };
 
+  let floor = listing.floor;
+
   // Characteristics key-value
   const chars = ad.characteristics || [];
   for (const c of chars) {
@@ -131,6 +136,13 @@ export function enrichListingFromDetail(
       meta.buildingMaterial = c.value;
     } else if (c.key === 'heating') {
       meta.heating = c.value;
+    } else if (c.key === 'construction_status') {
+      meta.condition = c.value;
+    } else if (c.key === 'building_ownership') {
+      meta.ownership = c.value;
+    } else if (c.key === 'floor_no' && floor === null) {
+      const parsed = parseFloor(c.value);
+      if (parsed !== null) floor = parsed;
     }
   }
 
@@ -140,15 +152,28 @@ export function enrichListingFromDetail(
     const year = parseInt(String(target.Build_year), 10);
     if (!isNaN(year)) meta.yearBuilt = year;
   }
+  if (target.Construction_status) {
+    meta.condition = String(target.Construction_status);
+  }
+  if (target.Building_ownership) {
+    meta.ownership = String(target.Building_ownership);
+  }
   let totalFloors = listing.totalFloors;
   if (target.Building_floors_num) {
     const tf = parseInt(String(target.Building_floors_num), 10);
     if (!isNaN(tf)) totalFloors = tf;
   }
+  if (floor === null && target.Floor_no) {
+    const floorVal = Array.isArray(target.Floor_no) ? target.Floor_no[0] : target.Floor_no;
+    const parsed = parseFloor(floorVal as string | number);
+    if (parsed !== null) floor = parsed;
+  }
 
   const extras = Array.isArray(target.Extras_types) ? target.Extras_types : [];
   if (extras.includes('lift') || extras.includes('winda')) meta.hasElevator = true;
   if (extras.includes('balcony') || extras.includes('balkon')) meta.hasBalcony = true;
+  if (extras.includes('garden') || extras.includes('ogrod') || extras.includes('ogródek')) meta.hasGarden = true;
+  if (extras.includes('terrace') || extras.includes('taras')) meta.hasTerrace = true;
   if (extras.includes('garage') || extras.includes('parking') || extras.includes('garaz')) {
     meta.hasParking = true;
   }
@@ -167,6 +192,7 @@ export function enrichListingFromDetail(
   return {
     ...listing,
     description: sanitizeDescription(ad.description) || listing.description,
+    floor,
     totalFloors,
     images: finalImages,
     metadata: Object.keys(meta).length > 0 ? meta : undefined,

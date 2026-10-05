@@ -1,16 +1,10 @@
-import type { StandardListing } from '../../types.js';
+import { type StandardListing, DEFAULT_HEADERS } from '../../types.js';
 import { parseOtodomListPage, type OtodomListPageResult } from './parse-list-page.js';
 import { parseOtodomDetailPage } from './parse-detail-page.js';
 import { checkExistingOfferIds } from '../../exporter.js';
 
 const BASE_URL = 'https://www.otodom.pl';
 
-const DEFAULT_HEADERS = {
-  'User-Agent':
-    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-  'Accept-Language': 'pl-PL,pl;q=0.9,en-US;q=0.8,en;q=0.7',
-};
 
 export interface OtodomFetchPageOptions {
   categoryPath?: string;

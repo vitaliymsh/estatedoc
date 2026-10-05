@@ -4,7 +4,7 @@ import {
   fetchOtodomDetails,
   fetchAllListings,
 } from '../fetch-listings.js';
-import type { StandardListing } from '../../types.js';
+import type { StandardListing } from '../../../types.js';
 
 describe('otodom fetch-listings', () => {
   const sampleListHtml = `

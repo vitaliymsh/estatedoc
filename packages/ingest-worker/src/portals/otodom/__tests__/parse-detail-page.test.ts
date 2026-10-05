@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseOtodomDetailPage } from '../parse-detail-page.js';
-import type { StandardListing } from '../../types.js';
+import type { StandardListing } from '../../../types.js';
 
 describe('parseOtodomDetailPage', () => {
   const baseListing: StandardListing = {
