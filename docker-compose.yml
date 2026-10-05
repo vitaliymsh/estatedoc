@@ -13,5 +13,19 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
+  ingest-worker:
+    build:
+      context: .
+      dockerfile: packages/ingest-worker/Dockerfile
+    container_name: estateplanner-ingest-worker
+    restart: unless-stopped
+    environment:
+      - BACKEND_URL=${BACKEND_URL:-http://host.docker.internal:4000}
+      - SCRAPE_LIMIT=${SCRAPE_LIMIT:-10}
+      - INGEST_INTERVAL_HOURS=${INGEST_INTERVAL_HOURS:-24}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
 volumes:
   mysql_data:
