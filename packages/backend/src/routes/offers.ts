@@ -90,9 +90,7 @@ export const offersRoutes: FastifyPluginAsync<OffersRoutesOptions> = async (fast
   });
 
   fastify.post('/verify-key', async (request, reply) => {
-    const bodyKey = (request.body as { key?: string } | undefined)?.key;
-    const headerKey = request.headers['x-temporary-key'];
-    const key = headerKey || bodyKey;
+    const key = request.headers['x-temporary-key'];
     if (expectedKey && key !== expectedKey) {
       return reply.status(401).send({ ok: false, error: 'Invalid temporaryKey' });
     }
