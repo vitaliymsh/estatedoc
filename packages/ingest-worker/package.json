@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "ingest": "tsx src/index.ts",
+    "scheduler": "tsx src/scheduler.ts",
     "build": "tsc",
     "test": "vitest run src"
   },
