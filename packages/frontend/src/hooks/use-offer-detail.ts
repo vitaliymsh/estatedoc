@@ -4,9 +4,8 @@ import { getCachedOffer, cacheOffers, prefetchImages } from '../lib/offer-prefet
 import { apiUrl } from '../lib/api-config'
 
 export function useOfferDetail(id: number | null) {
-  const cached = id ? getCachedOffer(id) : undefined
-  const [offer, setOffer] = useState<Offer | null>(cached ?? null)
-  const [loading, setLoading] = useState(!cached && Boolean(id))
+  const [offer, setOffer] = useState<Offer | null>(() => (id ? getCachedOffer(id) ?? null : null))
+  const [loading, setLoading] = useState(() => Boolean(id && !getCachedOffer(id)))
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -17,10 +16,11 @@ export function useOfferDetail(id: number | null) {
       return
     }
 
-    const currentCached = getCachedOffer(id)
-    setOffer(currentCached ?? null)
-    setLoading(!currentCached)
-    if (currentCached?.images) prefetchImages(currentCached.images)
+    const cached = getCachedOffer(id)
+    setOffer(cached ?? null)
+    setLoading(!cached)
+    setError(null)
+    if (cached?.images?.length) prefetchImages(cached.images)
 
     const controller = new AbortController()
     fetch(apiUrl(`/api/offers/${id}`), { signal: controller.signal })
@@ -31,11 +31,11 @@ export function useOfferDetail(id: number | null) {
       .then((fresh: Offer) => {
         setOffer(fresh)
         cacheOffers([fresh])
-        if (fresh.images) prefetchImages(fresh.images)
+        if (fresh.images?.length) prefetchImages(fresh.images)
         setError(null)
       })
       .catch((err) => {
-        if (err.name !== 'AbortError' && !currentCached) {
+        if (err.name !== 'AbortError' && !cached) {
           setError(err instanceof Error ? err.message : 'Nie znaleziono oferty')
         }
       })
