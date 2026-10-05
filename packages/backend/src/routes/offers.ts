@@ -15,8 +15,6 @@ import {
   type AiSearchInput,
 } from '../schemas/offer.js';
 import type { IQueryParser } from '../services/query-parser.js';
-import { LLMQueryParser } from '../services/query-parser.js';
-import { GeminiLLMProvider } from '../services/llm/gemini-llm-provider.js';
 
 export const zodValidatorCompiler = ({ schema }: any) => (data: unknown) => {
   if (!schema?.safeParse) return { value: data };
@@ -50,7 +48,7 @@ export function toOfferDto(row: Offer) {
 export const offersRoutes: FastifyPluginAsync<OffersRoutesOptions> = async (fastify, opts) => {
   fastify.setValidatorCompiler(zodValidatorCompiler);
   const repo = opts.repository;
-  const parser = opts.queryParser ?? new LLMQueryParser(new GeminiLLMProvider());
+  const parser = opts.queryParser;
   const expectedKey = opts.temporaryKey ?? process.env.TEMPORARY_KEY;
 
   fastify.get('/', { schema: { querystring: listOffersQuerySchema } }, async (request, reply) => {
@@ -103,6 +101,9 @@ export const offersRoutes: FastifyPluginAsync<OffersRoutesOptions> = async (fast
     }
 
     const { prompt, limit, offset } = request.body as AiSearchInput;
+    if (!parser) {
+      return reply.status(503).send({ error: 'AI query parser not configured' });
+    }
     const filters = await parser.parse(prompt);
     const result = await repo.findAll({
       ...filters,

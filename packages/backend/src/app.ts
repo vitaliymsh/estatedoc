@@ -7,7 +7,8 @@ import { offersRoutes, zodValidatorCompiler } from './routes/offers.js';
 import { devRoutes } from './routes/dev.js';
 import { ProcessIngestRunner, type IIngestRunner } from './services/ingest-runner.js';
 import type { IOfferRepository } from './repositories/offer.repository.js';
-import type { IQueryParser } from './services/query-parser.js';
+import { LLMQueryParser, type IQueryParser } from './services/query-parser.js';
+import { GeminiLLMProvider } from './services/llm/gemini-llm-provider.js';
 
 export interface BuildAppOptions {
   repository?: IOfferRepository;
@@ -45,10 +46,11 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   app.get('/health', async () => ({ status: 'ok', timestamp: new Date().toISOString() }));
 
   const repository = options.repository ?? new DrizzleOfferRepository(db);
+  const queryParser = options.queryParser ?? new LLMQueryParser(new GeminiLLMProvider());
   await app.register(offersRoutes, {
     prefix: '/api/offers',
     repository,
-    queryParser: options.queryParser,
+    queryParser,
     temporaryKey: options.temporaryKey,
   });
 

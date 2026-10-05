@@ -48,100 +48,32 @@ export async function runIngest(options: IngestOptions = {}): Promise<IngestResu
   const knownIds = forceEnrich ? new Set<string>() : undefined;
   const listings: StandardListing[] = [];
 
-  if (portal === 'sprzedajemy' || portal === 'all') {
-    const categoryPath =
-      (portal === 'sprzedajemy' ? options.categoryPath : undefined) ||
-      process.env.SCRAPE_CATEGORY ||
-      '/nieruchomosci';
-    try {
-      console.log(
-        `[Ingest-Sprzedajemy] Starting crawl for "${categoryPath}" (maxPages: ${maxPages}, limit: ${limitPerPortal}, enrichDetails: ${enrichDetails}, forceEnrich: ${forceEnrich})...`
-      );
-      let portalListings = await fetchSprzedajemy({
-        categoryPath,
-        maxPages,
-        limit: limitPerPortal > 0 ? limitPerPortal : undefined,
-        delayMs,
-        enrichDetails,
-        backendUrl,
-        knownIds,
-      });
-      if (limitPerPortal > 0) {
-        portalListings = portalListings.slice(0, limitPerPortal);
-      }
-      console.log(`[Ingest-Sprzedajemy] Scraped & kept ${portalListings.length} listings.`);
-      listings.push(...portalListings);
-    } catch (err) {
-      console.error('[Ingest-Sprzedajemy] Failed to crawl Sprzedajemy:', err);
-    }
-  }
+const PORTAL_SCRAPERS: Record<
+  SupportedPortal,
+  { name: string; defaultCategory: string; fetch: (opts: any) => Promise<StandardListing[]> }
+> = {
+  sprzedajemy: { name: 'Sprzedajemy', defaultCategory: '/nieruchomosci', fetch: fetchSprzedajemy },
+  morizon: { name: 'Morizon', defaultCategory: '/mieszkania/warszawa', fetch: fetchMorizon },
+  otodom: { name: 'Otodom', defaultCategory: '/pl/wyniki/sprzedaz/mieszkanie/cala-polska', fetch: fetchOtodom },
+  gratka: { name: 'Gratka', defaultCategory: '/nieruchomosci/mieszkania/warszawa', fetch: fetchGratka },
+};
 
-  if (portal === 'morizon' || portal === 'all') {
-    const categoryPath =
-      (portal === 'morizon' ? options.categoryPath : undefined) ||
-      (portal === 'morizon' ? process.env.SCRAPE_CATEGORY : undefined) ||
-      '/mieszkania/warszawa';
-    try {
-      console.log(
-        `[Ingest-Morizon] Starting crawl for "${categoryPath}" (maxPages: ${maxPages}, limit: ${limitPerPortal}, enrichDetails: ${enrichDetails}, forceEnrich: ${forceEnrich})...`
-      );
-      let portalListings = await fetchMorizon({
-        categoryPath,
-        maxPages,
-        limit: limitPerPortal > 0 ? limitPerPortal : undefined,
-        delayMs,
-        enrichDetails,
-        backendUrl,
-        knownIds,
-      });
-      if (limitPerPortal > 0) {
-        portalListings = portalListings.slice(0, limitPerPortal);
-      }
-      console.log(`[Ingest-Morizon] Scraped & kept ${portalListings.length} listings.`);
-      listings.push(...portalListings);
-    } catch (err) {
-      console.error('[Ingest-Morizon] Failed to crawl Morizon:', err);
-    }
-  }
+  const activePortals = (
+    portal === 'all' ? (Object.keys(PORTAL_SCRAPERS) as SupportedPortal[]) : [portal]
+  ).filter((p) => p in PORTAL_SCRAPERS);
 
-  if (portal === 'otodom' || portal === 'all') {
+  for (const p of activePortals) {
+    const config = PORTAL_SCRAPERS[p];
     const categoryPath =
-      (portal === 'otodom' ? options.categoryPath : undefined) ||
-      (portal === 'otodom' ? process.env.SCRAPE_CATEGORY : undefined) ||
-      '/pl/wyniki/sprzedaz/mieszkanie/cala-polska';
-    try {
-      console.log(
-        `[Ingest-Otodom] Starting crawl for "${categoryPath}" (maxPages: ${maxPages}, limit: ${limitPerPortal}, enrichDetails: ${enrichDetails}, forceEnrich: ${forceEnrich})...`
-      );
-      let portalListings = await fetchOtodom({
-        categoryPath,
-        maxPages,
-        limit: limitPerPortal > 0 ? limitPerPortal : undefined,
-        delayMs,
-        enrichDetails,
-        backendUrl,
-        knownIds,
-      });
-      if (limitPerPortal > 0) {
-        portalListings = portalListings.slice(0, limitPerPortal);
-      }
-      console.log(`[Ingest-Otodom] Scraped & kept ${portalListings.length} listings.`);
-      listings.push(...portalListings);
-    } catch (err) {
-      console.error('[Ingest-Otodom] Failed to crawl Otodom:', err);
-    }
-  }
+      (portal === p ? options.categoryPath : undefined) ||
+      (portal === p ? process.env.SCRAPE_CATEGORY : undefined) ||
+      config.defaultCategory;
 
-  if (portal === 'gratka' || portal === 'all') {
-    const categoryPath =
-      (portal === 'gratka' ? options.categoryPath : undefined) ||
-      (portal === 'gratka' ? process.env.SCRAPE_CATEGORY : undefined) ||
-      '/nieruchomosci/mieszkania/warszawa';
     try {
       console.log(
-        `[Ingest-Gratka] Starting crawl for "${categoryPath}" (maxPages: ${maxPages}, limit: ${limitPerPortal}, enrichDetails: ${enrichDetails}, forceEnrich: ${forceEnrich})...`
+        `[Ingest-${config.name}] Starting crawl for "${categoryPath}" (maxPages: ${maxPages}, limit: ${limitPerPortal}, enrichDetails: ${enrichDetails}, forceEnrich: ${forceEnrich})...`
       );
-      let portalListings = await fetchGratka({
+      let portalListings = await config.fetch({
         categoryPath,
         maxPages,
         limit: limitPerPortal > 0 ? limitPerPortal : undefined,
@@ -153,10 +85,10 @@ export async function runIngest(options: IngestOptions = {}): Promise<IngestResu
       if (limitPerPortal > 0) {
         portalListings = portalListings.slice(0, limitPerPortal);
       }
-      console.log(`[Ingest-Gratka] Scraped & kept ${portalListings.length} listings.`);
+      console.log(`[Ingest-${config.name}] Scraped & kept ${portalListings.length} listings.`);
       listings.push(...portalListings);
     } catch (err) {
-      console.error('[Ingest-Gratka] Failed to crawl Gratka:', err);
+      console.error(`[Ingest-${config.name}] Failed to crawl ${config.name}:`, err);
     }
   }
 
