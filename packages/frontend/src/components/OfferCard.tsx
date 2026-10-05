@@ -6,17 +6,13 @@ import { cn } from '@/lib/utils'
 import type { Offer } from '../types/offer'
 import {
   formatPrice,
-  calculatePricePerSqm,
+  formatPricePerSqm,
   formatFloor,
   formatSellerType,
   formatMetadataValue,
   formatPortal,
   formatArea,
   formatRooms,
-  formatStreet,
-  sanitizeTitle,
-  normalizeOfferImages,
-  IGNORED_METADATA_KEYS,
 } from '../lib/formatters'
 import { prefetchOffer } from '../lib/offer-prefetch'
 import { useTranslation } from '@/lib/i18n'
@@ -34,25 +30,20 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
   const { t, lang } = useTranslation()
   const [imgError, setImgError] = useState(false)
   const [showMapPreview, setShowMapPreview] = useState(false)
-  const pricePerSqm = calculatePricePerSqm(offer.price, offer.areaSqm, lang)
-  const normalizedImages = normalizeOfferImages(offer.images, offer.metadata?.imageUrl)
-  const imageUrl = !imgError && normalizedImages.length > 0 ? normalizedImages[0] : undefined
+  const pricePerSqm = formatPricePerSqm(offer.pricePerSqm, lang)
+  const imageUrl = !imgError && offer.images?.[0] ? offer.images[0] : undefined
 
-  const district = offer.district || offer.metadata?.district
-  const formattedStreet = formatStreet(offer.street || (offer.metadata?.street as string | undefined))
-  const sellerLabel = formatSellerType(
-    offer.sellerType || (offer.metadata?.sellerType as string | undefined),
-    lang
-  )
+  const district = offer.district
+  const street = offer.street
+  const sellerLabel = formatSellerType(offer.sellerType, lang)
   const floorText = formatFloor(offer.floor, offer.totalFloors, lang)
   const portalInfo = formatPortal(offer.portal)
-  const cleanTitle = sanitizeTitle(offer.title)
   const areaText = formatArea(offer.areaSqm)
   const roomsText = formatRooms(offer.roomsCount, lang)
 
   const metadataEntries = offer.metadata
     ? Object.entries(offer.metadata).filter(
-        ([key, val]) => !IGNORED_METADATA_KEYS.has(key) && val !== null && val !== undefined
+        ([, val]) => val !== null && val !== undefined
       )
     : []
 
@@ -174,7 +165,7 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
             <span className="truncate">
               {offer.city}
               {district ? `, ${district}` : ''}
-              {formattedStreet ? `, ${formattedStreet}` : ''}
+              {street ? `, ${street}` : ''}
             </span>
           </span>
           {roomsText ? (
@@ -184,10 +175,10 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
           ) : null}
         </div>
 
-        {/* Sanitized Title */}
-        {cleanTitle ? (
+        {/* Title */}
+        {offer.title ? (
           <p className="line-clamp-1 text-muted-foreground text-xs font-normal">
-            {cleanTitle}
+            {offer.title}
           </p>
         ) : null}
 

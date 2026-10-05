@@ -35,20 +35,16 @@ import { useOfferDetail } from '../hooks/use-offer-detail'
 import { OfferGallery } from './OfferGallery'
 import {
   formatPrice,
-  calculatePricePerSqm,
+  formatPricePerSqm,
   formatFloor,
   formatSellerType,
   formatMetadataValue,
   formatPortal,
   formatArea,
-  formatStreet,
   formatRelativeTime,
   buildGoogleMapsUrl,
   formatPropertyType,
   formatTransactionType,
-  normalizeOfferImages,
-  formatDescriptionText,
-  IGNORED_METADATA_KEYS,
 } from '../lib/formatters'
 import { ListingMap } from './ListingMap'
 import { useTranslation } from '@/lib/i18n'
@@ -65,8 +61,8 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
   const [failedImages, setFailedImages] = useState<Set<string>>(new Set())
 
-  const rawImages = offer ? normalizeOfferImages(offer.images, offer.metadata?.imageUrl) : []
-  const images = rawImages.filter((img) => !failedImages.has(img))
+  const rawImages = offer?.images ?? []
+  const images = rawImages.filter((img: string) => !failedImages.has(img))
 
   const handleImageError = (imgUrl: string) => {
     setFailedImages((prev) => {
@@ -83,8 +79,6 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
       setTimeout(() => setIsCopied(false), 2000)
     }
   }
-
-  const formattedDescription = formatDescriptionText(offer?.description)
 
   if (loading && !offer) {
     return (
@@ -128,14 +122,10 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
     )
   }
 
-  const pricePerSqm = calculatePricePerSqm(offer.price, offer.areaSqm, lang)
-  const district = offer.district || (offer.metadata?.district as string | undefined)
-  const street = offer.street || (offer.metadata?.street as string | undefined)
-  const formattedStreet = formatStreet(street)
-  const sellerLabel = formatSellerType(
-    offer.sellerType || (offer.metadata?.sellerType as string | undefined),
-    lang
-  )
+  const pricePerSqm = formatPricePerSqm(offer.pricePerSqm, lang)
+  const district = offer.district
+  const street = offer.street
+  const sellerLabel = formatSellerType(offer.sellerType, lang)
   const floorText = formatFloor(offer.floor, offer.totalFloors, lang)
   const portalInfo = formatPortal(offer.portal)
   const areaText = formatArea(offer.areaSqm)
@@ -147,11 +137,11 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
 
   const metadataEntries = offer.metadata
     ? Object.entries(offer.metadata).filter(
-        ([key, val]) => !IGNORED_METADATA_KEYS.has(key) && val !== null && val !== undefined
+        ([, val]) => val !== null && val !== undefined
       )
     : []
 
-  const isLongDescription = (formattedDescription.length || 0) > 350
+  const isLongDescription = (offer.description?.length || 0) > 350
 
   const hasApartmentParams = Boolean(
     offer.areaSqm ||
@@ -247,7 +237,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
             <span>
               {offer.city}
               {district ? `, ${district}` : ''}
-              {formattedStreet ? `, ${formattedStreet}` : ''}
+              {street ? `, ${street}` : ''}
             </span>
             <ExternalLink className="size-3 ml-0.5 opacity-60" />
           </a>
@@ -601,7 +591,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                   }`}
                 >
                   <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-                    {formatDescriptionText(offer.description)}
+                    {offer.description}
                   </p>
                   {!isDescriptionExpanded && isLongDescription && (
                     <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-card to-transparent pointer-events-none" />

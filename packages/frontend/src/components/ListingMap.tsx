@@ -3,7 +3,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Navigation, RefreshCw } from 'lucide-react'
 import type { Offer } from '../types/offer'
-import { formatPrice, calculatePricePerSqm, buildGoogleMapsUrl } from '../lib/formatters'
+import { formatPrice, formatPricePerSqm, buildGoogleMapsUrl } from '../lib/formatters'
 import {
   resolveOfferCoordinates,
   extractCoordinates,
@@ -319,12 +319,12 @@ function resolveSyncCoordinates(item: Partial<Offer>): Coordinates | null {
 
 function buildPopupHtml(item: Partial<Offer>, coords: Coordinates, lang: Language = 'pl'): string {
   const price = formatPrice(item.price ?? null, lang)
-  const priceSqm = calculatePricePerSqm(item.price ?? null, item.areaSqm ?? null, lang)
+  const priceSqm = formatPricePerSqm(item.pricePerSqm ?? null, lang)
   const effectiveLoc = getEffectiveLocation(item)
   const district = effectiveLoc.district
   const street = effectiveLoc.street
   const city = effectiveLoc.city
-  const thumbnail = item.images?.[0] || (item.metadata?.imageUrl as string | undefined)
+  const thumbnail = item.images?.[0]
   const locationText = [street ? `ul. ${street}` : null, district, city]
     .filter(Boolean)
     .join(', ')

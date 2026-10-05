@@ -1,30 +1,80 @@
 import type { Language } from './i18n'
 
 export function formatPrice(
-  price: string | number | null | undefined,
+  price: number | null | undefined,
   lang: Language = 'pl',
   transactionType?: string | null
 ): string {
-  if (price === null || price === undefined || price === '') {
-    return lang === 'en' ? 'Price negotiable' : 'Cena do negocjacji'
-  }
-  const num = Number(price)
-  if (isNaN(num) || num <= 0) {
+  if (price === null || price === undefined || price <= 0 || isNaN(price)) {
     return lang === 'en' ? 'Price negotiable' : 'Cena do negocjacji'
   }
   const isRent = transactionType?.toLowerCase() === 'rent'
   const currency = lang === 'en' ? (isRent ? 'PLN/mo' : 'PLN') : (isRent ? 'zł/mc' : 'zł')
   const locale = lang === 'en' ? 'en-US' : 'pl-PL'
-  const formattedNum = num.toLocaleString(locale)
+  const formattedNum = price.toLocaleString(locale)
   return `${formattedNum} ${currency}`
 }
 
-export function formatArea(areaSqm: string | number | null | undefined): string | null {
-  if (areaSqm === null || areaSqm === undefined || areaSqm === '') return null
-  const num = Number(areaSqm)
-  if (isNaN(num) || num <= 0) return null
-  const formatted = num % 1 === 0 ? String(num) : String(parseFloat(num.toFixed(2)))
+export function formatPricePerSqm(
+  val: number | null | undefined,
+  lang: Language = 'pl'
+): string | null {
+  if (val === null || val === undefined || isNaN(val) || val <= 0) return null
+  const unit = lang === 'en' ? 'PLN/m²' : 'zł/m²'
+  const locale = lang === 'en' ? 'en-US' : 'pl-PL'
+  return `${Math.round(val).toLocaleString(locale)} ${unit}`
+}
+
+export function formatArea(areaSqm: number | null | undefined): string | null {
+  if (areaSqm === null || areaSqm === undefined || isNaN(areaSqm) || areaSqm <= 0) return null
+  const formatted = areaSqm % 1 === 0 ? String(areaSqm) : String(parseFloat(areaSqm.toFixed(2)))
   return `${formatted} m²`
+}
+
+export function formatRooms(
+  roomsCount: number | null | undefined,
+  lang: Language = 'pl'
+): string | null {
+  if (roomsCount === null || roomsCount === undefined || isNaN(roomsCount)) return null
+  if (roomsCount === 0) {
+    return lang === 'en' ? 'Studio' : 'Kawalerka'
+  }
+  if (roomsCount === 1) {
+    return lang === 'en' ? '1 room' : '1 pokój'
+  }
+  if (lang === 'en') {
+    return `${roomsCount} rooms`
+  }
+  if (roomsCount >= 2 && roomsCount <= 4) {
+    return `${roomsCount} pokoje`
+  }
+  return `${roomsCount} pokoi`
+}
+
+export function formatFloor(
+  floor: number | null | undefined,
+  totalFloors: number | null | undefined,
+  lang: Language = 'pl'
+): string | null {
+  if (floor === null || floor === undefined) {
+    if (!totalFloors) return null
+    return lang === 'en' ? `${totalFloors} floors` : `${totalFloors} pięter`
+  }
+  if (floor === 0) {
+    const ground = lang === 'en' ? 'Ground floor' : 'Parter'
+    return totalFloors ? `${ground}/${totalFloors}` : ground
+  }
+  const prefix = lang === 'en' ? 'Floor' : 'Piętro'
+  return totalFloors ? `${prefix} ${floor}/${totalFloors}` : `${prefix} ${floor}`
+}
+
+export function formatSellerType(sellerType: string | null | undefined, lang: Language = 'pl'): string | null {
+  if (!sellerType) return null
+  if (sellerType === 'private') return lang === 'en' ? 'Private' : 'Prywatne'
+  if (sellerType === 'agency' || sellerType === 'company') return lang === 'en' ? 'Agency' : 'Biuro'
+  if (sellerType === 'developer') return lang === 'en' ? 'Developer' : 'Deweloper'
+  if (sellerType === 'verified') return lang === 'en' ? 'Verified' : 'Zweryfikowany'
+  return sellerType
 }
 
 export interface FormattedPortal {
@@ -76,194 +126,6 @@ export function formatPortal(portal: string | null | undefined): FormattedPortal
     dotColor: 'bg-primary',
   }
 }
-
-export function formatStreet(street: string | null | undefined): string | null {
-  if (!street) return null
-  const trimmed = street.trim()
-  if (!trimmed) return null
-  if (/^(al\.|aleja|aleje)\s+/i.test(trimmed)) {
-    return `al. ${trimmed.replace(/^(al\.|aleja|aleje)\s+/i, '')}`
-  }
-  if (/^(pl\.|plac)\s+/i.test(trimmed)) {
-    return `pl. ${trimmed.replace(/^(pl\.|plac)\s+/i, '')}`
-  }
-  if (/^(os\.|osiedle)\s+/i.test(trimmed)) {
-    return `os. ${trimmed.replace(/^(os\.|osiedle)\s+/i, '')}`
-  }
-  if (/^(ul\.|ulica)\s+/i.test(trimmed)) {
-    return `ul. ${trimmed.replace(/^(ul\.|ulica)\s+/i, '')}`
-  }
-  return `ul. ${trimmed}`
-}
-
-const HTML_ENTITIES: Record<string, string> = {
-  '&amp;': '&',
-  '&quot;': '"',
-  '&#39;': "'",
-  '&lt;': '<',
-  '&gt;': '>',
-  '&oacute;': 'ó',
-  '&Oacute;': 'Ó',
-  '&nbsp;': ' ',
-}
-
-export function sanitizeTitle(title: string | null | undefined): string {
-  if (!title) return ''
-  let text = title
-  for (const [entity, replacement] of Object.entries(HTML_ENTITIES)) {
-    text = text.replaceAll(entity, replacement)
-  }
-
-  // Strip specs like 70 m², 70m2, 3 pokoje, 140 M2
-  text = text.replace(/(?:^|[\s,|•-])\d+(?:[.,]\d+)?\s*(?:m2|m²|pokoje|pokoi|pokój|pok\.)(?=$|[\s,|•-])/gi, '')
-
-  text = text
-    .split(/[|•]/)
-    .map((s) => s.trim().replace(/^[-–—]\s*|\s*[-–—]$/g, '').trim())
-    .filter(Boolean)
-    .join(', ')
-
-  text = text
-    .replace(/\s*,\s*,+/g, ',')
-    .replace(/\s*,\s*(&|\b(?:i|oraz|and)\b)/gi, ' $1')
-    .replace(/^[, -]+|[, -]+$/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-
-  if (text.length > 5 && text === text.toUpperCase() && /[A-ZĄĆĘŁŃÓŚŹŻ]/.test(text)) {
-    text = text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
-  } else if (text.length > 0) {
-    text = text.charAt(0).toUpperCase() + text.slice(1)
-  }
-
-  return text
-}
-
-export function calculatePricePerSqm(
-  price: string | null,
-  areaSqm: string | null,
-  lang: Language = 'pl'
-): string | null {
-  if (!price || !areaSqm) return null
-  const p = Number(price)
-  const a = Number(areaSqm)
-  if (isNaN(p) || isNaN(a) || a <= 0) return null
-  const unit = lang === 'en' ? 'PLN/m²' : 'zł/m²'
-  const locale = lang === 'en' ? 'en-US' : 'pl-PL'
-  return `${Math.round(p / a).toLocaleString(locale)} ${unit}`
-}
-
-export function formatRooms(
-  roomsCount: number | null | undefined,
-  lang: Language = 'pl'
-): string | null {
-  if (roomsCount === null || roomsCount === undefined || isNaN(roomsCount)) return null
-  if (roomsCount === 0) {
-    return lang === 'en' ? 'Studio' : 'Kawalerka'
-  }
-  if (roomsCount === 1) {
-    return lang === 'en' ? '1 room' : '1 pokój'
-  }
-  if (lang === 'en') {
-    return `${roomsCount} rooms`
-  }
-  if (roomsCount >= 2 && roomsCount <= 4) {
-    return `${roomsCount} pokoje`
-  }
-  return `${roomsCount} pokoi`
-}
-
-export function formatFloor(
-  floor: number | null | undefined,
-  totalFloors: number | null | undefined,
-  lang: Language = 'pl'
-): string | null {
-  if (floor === null || floor === undefined) {
-    if (!totalFloors) return null
-    return lang === 'en' ? `${totalFloors} floors` : `${totalFloors} pięter`
-  }
-  if (floor === 0) {
-    const ground = lang === 'en' ? 'Ground floor' : 'Parter'
-    return totalFloors ? `${ground}/${totalFloors}` : ground
-  }
-  const prefix = lang === 'en' ? 'Floor' : 'Piętro'
-  return totalFloors ? `${prefix} ${floor}/${totalFloors}` : `${prefix} ${floor}`
-}
-
-export function formatSellerType(sellerType: string | null | undefined, lang: Language = 'pl'): string | null {
-  if (!sellerType) return null
-  if (sellerType === 'private') return lang === 'en' ? 'Private' : 'Prywatne'
-  if (sellerType === 'agency' || sellerType === 'company') return lang === 'en' ? 'Agency' : 'Biuro'
-  if (sellerType === 'developer') return lang === 'en' ? 'Developer' : 'Deweloper'
-  if (sellerType === 'verified') return lang === 'en' ? 'Verified' : 'Zweryfikowany'
-  return sellerType
-}
-
-export const IGNORED_METADATA_KEYS = new Set([
-  'imageUrl',
-  'images',
-  'district',
-  'street',
-  'streetAddress',
-  'locality',
-  'availability',
-  'postedAt',
-  'sellerType',
-  'floor',
-  'totalFloors',
-  'propertyType',
-  'transactionType',
-  'plotSqm',
-  'buildingType',
-  'buildingMaterial',
-  'marketType',
-  'yearBuilt',
-  'condition',
-  'heating',
-  'ownership',
-  'rentExtra',
-  'deposit',
-  'exclusiveOffer',
-  'hasElevator',
-  'hasBalcony',
-  'hasParking',
-  'hasBasement',
-  'hasAirConditioning',
-  'isFurnished',
-  'isPetFriendly',
-  'tags',
-  'airQuality',
-  'noiseLevel',
-  'agencyName',
-  'agencyPhone',
-  'areaSqm',
-  'roomsCount',
-  'price',
-  'currency',
-  'category',
-  'viewCount',
-  'sourceId',
-  'latitude',
-  'longitude',
-  'lat',
-  'lng',
-  'lon',
-  'coordinates',
-  'province',
-  'voivodeship',
-  'region',
-  'state',
-  'country',
-  'county',
-  'postalCode',
-  'zipCode',
-  'id',
-  'externalId',
-  'url',
-  'title',
-  'description',
-  'city',
-])
 
 export function formatMetadataValue(key: string, val: unknown, lang: Language = 'pl'): string {
   if (key === 'plotSqm') return lang === 'en' ? `Plot: ${val} m²` : `Działka: ${val} m²`
@@ -342,42 +204,3 @@ export function formatTransactionType(type: string | null | undefined, lang: Lan
       return type
   }
 }
-
-export function normalizeOfferImages(images: unknown, metadataImageUrl?: unknown): string[] {
-  if (Array.isArray(images)) {
-    return images
-      .filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
-      .map((img) => img.trim())
-  }
-  if (typeof images === 'string' && images.trim().length > 0) {
-    try {
-      const parsed = JSON.parse(images)
-      if (Array.isArray(parsed)) {
-        return parsed
-          .filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
-          .map((img) => img.trim())
-      }
-      if (typeof parsed === 'string' && parsed.trim().length > 0) {
-        return [parsed.trim()]
-      }
-    } catch {
-      return [images.trim()]
-    }
-  }
-  if (typeof metadataImageUrl === 'string' && metadataImageUrl.trim().length > 0) {
-    return [metadataImageUrl.trim()]
-  }
-  return []
-}
-
-const SECTION_SPLIT_RE =
-  /([.!?])\s*(BUDYNEK\/OSIEDLE|NIERUCHOMOŚĆ|OKOLICA|STANDARD|LOKALIZACJA|DODATKOWE INFORMACJE|ROZKŁAD POMIESZCZEŃ|STAN PRAWNY|KOMUNIKACJA)/gi
-const LIST_BULLET_RE = /\s*-\s+/g
-
-export function formatDescriptionText(text: string | null | undefined): string {
-  if (!text) return ''
-  return text.replace(SECTION_SPLIT_RE, '$1\n\n$2').replace(LIST_BULLET_RE, '\n• ').trim()
-}
-
-
-
