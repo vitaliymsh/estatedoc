@@ -38,6 +38,11 @@ export function syncUrlFilters(filter: ListOffersFilter) {
   window.history.replaceState(window.history.state, '', newUrl)
 }
 
+export interface IngestOptions {
+  portal?: 'all' | 'sprzedajemy' | 'morizon'
+  maxPages?: number
+}
+
 export function useOffers() {
   const [filter, setFilter] = useState<ListOffersFilter>(parseUrlFilters)
   const [searchInput, setSearchInput] = useState(filter.prompt || filter.q || '')
@@ -50,22 +55,27 @@ export function useOffers() {
 
   const refetch = () => setRefreshCount((c) => c + 1)
 
-  const triggerSync = async (maxPages: number = 1) => {
+  const triggerSync = async (options?: IngestOptions) => {
     setIsSyncing(true)
     try {
       const res = await fetch('/api/dev/ingest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ portal: 'all', maxPages }),
+        body: JSON.stringify({
+          portal: options?.portal ?? 'all',
+          maxPages: options?.maxPages ?? 1,
+        }),
       })
+      const data = await res.json().catch(() => null)
       if (!res.ok) {
-        throw new Error('Ingestion failed')
+        throw new Error(data?.error || data?.message || 'Ingestion failed')
       }
       refetch()
-      return { ok: true }
+      return { ok: true, message: data?.message || 'Zakończono pobieranie' }
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
       console.error('Sync error:', err)
-      return { ok: false, error: err }
+      return { ok: false, error: msg }
     } finally {
       setIsSyncing(false)
     }

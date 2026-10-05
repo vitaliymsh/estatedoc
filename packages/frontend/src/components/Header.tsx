@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -10,9 +11,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
-import { SlidersHorizontal, X, ArrowUpDown, RefreshCw, Sparkles } from 'lucide-react'
+import { SlidersHorizontal, X, ArrowUpDown, Sparkles, Search } from 'lucide-react'
 import { DocplannerIcon } from './icons/DocplannerIcon'
+import { cn } from '@/lib/utils'
 import type { ListOffersFilter, SortBy } from '../types/offer'
 
 const QUICK_CITIES = ['Warszawa', 'Kraków', 'Gdańsk', 'Wrocław', 'Poznań', 'Łódź']
@@ -27,8 +28,6 @@ interface HeaderProps {
   onSortChange: (sortBy: SortBy) => void
   onOpenFilterModal: () => void
   activeFiltersCount: number
-  isSyncing?: boolean
-  onSync?: () => void
   showFilters?: boolean
 }
 
@@ -42,64 +41,103 @@ export function Header({
   onSortChange,
   onOpenFilterModal,
   activeFiltersCount,
-  isSyncing = false,
-  onSync,
   showFilters = true,
 }: HeaderProps) {
+  const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(Boolean(searchInput))
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (isMobileSearchOpen) {
+      inputRef.current?.focus()
+    }
+  }, [isMobileSearchOpen])
+
+  const handleOpenSearch = () => {
+    setIsMobileSearchOpen(true)
+  }
+
+  const handleCloseSearch = () => {
+    if (searchInput) {
+      onClearSearch()
+    }
+    setIsMobileSearchOpen(false)
+  }
+
   return (
     <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
-      <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <DocplannerIcon className="h-6 w-auto shrink-0" />
-            <h1 className="text-xl font-black tracking-tight text-primary">EstateDOC</h1>
-          </div>
-          {onSync && (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onSync}
-                    disabled={isSyncing}
-                    className="h-7 gap-1.5 rounded-full text-xs px-2.5 font-medium cursor-pointer"
-                  />
-                }
-              >
-                <RefreshCw className={`size-3 ${isSyncing ? 'animate-spin text-primary' : ''}`} />
-                <span className="hidden sm:inline">{isSyncing ? 'Pobieranie...' : 'Pobierz oferty'}</span>
-              </TooltipTrigger>
-              <TooltipContent>Pobierz nowe oferty ze scrapera</TooltipContent>
-            </Tooltip>
-          )}
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-4 sm:h-16 sm:px-6 lg:px-8">
+        {/* Brand Icon + Collapsible Title */}
+        <div className="flex items-center gap-2.5 shrink-0">
+          <DocplannerIcon className="h-6 w-auto shrink-0" />
+          <h1
+            className={cn(
+              "text-xl font-black tracking-tight text-primary transition-all duration-300 ease-in-out overflow-hidden whitespace-nowrap",
+              isMobileSearchOpen ? "max-w-0 opacity-0 sm:max-w-none sm:opacity-100" : "max-w-40 opacity-100"
+            )}
+          >
+            EstateDOC
+          </h1>
         </div>
 
-        {/* Airbnb Center Search Capsule */}
+        {/* Collapsed Search Button on Mobile */}
+        {!isMobileSearchOpen && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={handleOpenSearch}
+            className="size-9 rounded-full sm:hidden text-muted-foreground hover:text-foreground"
+            aria-label="Szukaj"
+          >
+            <Search className="size-4" />
+          </Button>
+        )}
+
+        {/* Search Capsule (Expanding on Mobile, Fixed Capsule on Desktop) */}
         <form
           onSubmit={(e) => {
             e.preventDefault()
             onSearchSubmit?.(searchInput)
           }}
-          className="relative flex w-full max-w-md items-center rounded-full border bg-muted/30 px-3 py-1.5 shadow-xs transition hover:shadow-md focus-within:ring-2 focus-within:ring-ring sm:w-80 md:w-96"
+          className={cn(
+            "relative h-9 items-center rounded-full border bg-muted/30 px-3 shadow-xs transition-all duration-300 hover:shadow-md focus-within:ring-2 focus-within:ring-ring sm:flex sm:w-80 md:w-96",
+            isMobileSearchOpen ? "flex flex-1" : "hidden sm:flex"
+          )}
         >
           <Sparkles className="size-4 text-primary shrink-0 animate-pulse" />
           <Input
+            ref={inputRef}
             type="text"
             value={searchInput}
             onChange={(e) => onSearchChange(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                handleCloseSearch()
+              }
+            }}
             placeholder="Szukaj np. 3 pokoje do 600k Kraków..."
-            className="h-7 border-0 bg-transparent px-2 text-sm shadow-none focus-visible:ring-0"
+            className="h-full border-0 bg-transparent px-2 text-sm shadow-none focus-visible:ring-0"
           />
-          {searchInput && (
-            <button
+          {(searchInput || isMobileSearchOpen) && (
+            <Button
               type="button"
-              onClick={onClearSearch}
-              className="rounded-full p-1 text-muted-foreground hover:bg-muted"
-              aria-label="Wyczyść"
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => {
+                if (searchInput) {
+                  onClearSearch()
+                } else {
+                  setIsMobileSearchOpen(false)
+                }
+              }}
+              className={cn(
+                "rounded-full p-0 text-muted-foreground hover:bg-muted hover:text-foreground",
+                !searchInput && "sm:hidden"
+              )}
+              aria-label={searchInput ? "Wyczyść" : "Zamknij"}
             >
               <X className="size-3.5" />
-            </button>
+            </Button>
           )}
         </form>
       </div>

@@ -3,6 +3,7 @@ import { Header } from '@/components/Header'
 import { OfferGrid } from '@/components/OfferGrid'
 import { Pagination } from '@/components/Pagination'
 import { FilterModal } from '@/components/FilterModal'
+import { DevIntakeFab } from '@/components/DevIntakeFab'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useOffers, PAGE_SIZE } from '@/hooks/use-offers'
 import type { ListOffersFilter, SortBy } from '@/types/offer'
@@ -108,8 +109,6 @@ export default function App() {
         }}
         onOpenFilterModal={() => setIsFilterModalOpen(true)}
         activeFiltersCount={activeFiltersCount}
-        isSyncing={isSyncing}
-        onSync={() => triggerSync(1)}
         showFilters={selectedOfferId === null}
       />
 
@@ -193,6 +192,8 @@ export default function App() {
           setFilter((prev) => ({ ...prev, ...draft }))
         }
       />
+
+      <DevIntakeFab isSyncing={isSyncing} onSync={triggerSync} />
     </div>
   )
 }
