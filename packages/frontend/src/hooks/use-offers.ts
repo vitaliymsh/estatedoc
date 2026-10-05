@@ -111,7 +111,7 @@ export function useOffers() {
 
   // Fetch from backend API
   useEffect(() => {
-    let isCancelled = false
+    const controller = new AbortController()
     setLoading(true)
 
     const offset = (filter.page - 1) * PAGE_SIZE
@@ -125,6 +125,7 @@ export function useOffers() {
             limit: PAGE_SIZE,
             offset,
           }),
+          signal: controller.signal,
         })
       : (() => {
           const params = new URLSearchParams()
@@ -136,13 +137,12 @@ export function useOffers() {
           params.set('sortBy', filter.sortBy)
           params.set('limit', String(PAGE_SIZE))
           params.set('offset', String(offset))
-          return fetch(`/api/offers?${params.toString()}`)
+          return fetch(`/api/offers?${params.toString()}`, { signal: controller.signal })
         })()
 
     fetchPromise
       .then((res) => (res.ok ? res.json() : null))
       .then((data: OffersResponse | null) => {
-        if (isCancelled) return
         if (data && typeof data.total === 'number') {
           setOffers(data.items)
           setTotal(data.total)
@@ -154,18 +154,21 @@ export function useOffers() {
           setParsedFilters(null)
         }
       })
-      .catch(() => {
-        if (isCancelled) return
-        setOffers([])
-        setTotal(0)
-        setParsedFilters(null)
+      .catch((err) => {
+        if (err?.name !== 'AbortError') {
+          setOffers([])
+          setTotal(0)
+          setParsedFilters(null)
+        }
       })
       .finally(() => {
-        if (!isCancelled) setLoading(false)
+        if (!controller.signal.aborted) {
+          setLoading(false)
+        }
       })
 
     return () => {
-      isCancelled = true
+      controller.abort()
     }
   }, [filter, refreshCount])
 

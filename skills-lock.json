@@ -7,6 +7,18 @@
       "skillPath": "skills/fastify/SKILL.md",
       "computedHash": "cd479b552b22493a73eabcef8804f956847c8d3d9d0aaf051ccb01d22dc3247e"
     },
+    "jev": {
+      "source": "okooo5km/jev",
+      "sourceType": "github",
+      "skillPath": "jev/SKILL.md",
+      "computedHash": "c4e5d28e7c2996d544b1fd6026af52f29a39aca6188d6482a4ac630ba1841ee8"
+    },
+    "jev-capability-advisor": {
+      "source": "stark-ai-de/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/skill-maintenance/jev-capability-advisor/SKILL.md",
+      "computedHash": "b9cd279fc1b201085c61a9721297c468ff01b1cbdcf38eed0af9d039a20497fa"
+    },
     "postgresql-table-design": {
       "source": "wshobson/agents",
       "sourceType": "github",

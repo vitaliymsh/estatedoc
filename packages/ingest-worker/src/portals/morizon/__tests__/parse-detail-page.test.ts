@@ -61,11 +61,88 @@ describe('Morizon parseDetailPage', () => {
     expect(details.floor).toBe(6);
     expect(details.totalFloors).toBe(7);
     expect(details.price).toBe(599000);
-    expect(details.images).toContain('https://img1.staticmorizon.com.pl/big/thumb-main.jpg');
-    expect(details.images).toContain('https://img1.staticmorizon.com.pl/big/photo1.jpg');
-    expect(details.images).toContain('https://img1.staticmorizon.com.pl/big/photo2.jpg');
+    expect(details.images).toContain('https://img1.staticmorizon.com.pl/thumb/thumb-main.jpg');
+    expect(details.images).toContain('https://img1.staticmorizon.com.pl/thumb/photo1.jpg');
+    expect(details.images).toContain('https://img1.staticmorizon.com.pl/thumb/photo2.jpg');
     expect(details.metadata?.agencyName).toBe('HOMEMADE NIERUCHOMOŚCI');
     expect(details.metadata?.agencyPhone).toBe('665 565 622');
+  });
+
+  it('parses Morizon DOM parameters table, amenities list, tags, and environmental cards', () => {
+    const htmlWithDomTables = `
+      <!DOCTYPE html>
+      <html>
+        <body>
+          <div class="page-details__information-table">
+            <div class="information-table__row" data-cy="informationTableRow">
+              <div class="information-table__cell--label"><span data-cy="informationTableLabel">Typ budynku</span></div>
+              <div class="information-table__cell--value"><span data-cy="informationTableValue">Kamienica</span></div>
+            </div>
+            <div class="information-table__row" data-cy="informationTableRow">
+              <div class="information-table__cell--label"><span data-cy="informationTableLabel">Materiał budowlany</span></div>
+              <div class="information-table__cell--value"><span data-cy="informationTableValue">Cegła</span></div>
+            </div>
+            <div class="information-table__row" data-cy="informationTableRow">
+              <div class="information-table__cell--label"><span data-cy="informationTableLabel">Rok budowy</span></div>
+              <div class="information-table__cell--value"><span data-cy="informationTableValue">1953</span></div>
+            </div>
+            <div class="information-table__row" data-cy="informationTableRow">
+              <div class="information-table__cell--label"><span data-cy="informationTableLabel">Rynek</span></div>
+              <div class="information-table__cell--value"><span data-cy="informationTableValue">Wtórny</span></div>
+            </div>
+            <div class="information-table__row" data-cy="informationTableRow">
+              <div class="information-table__cell--label"><span data-cy="informationTableLabel">Ogrzewanie</span></div>
+              <div class="information-table__cell--value"><span data-cy="informationTableValue">Miejskie</span></div>
+            </div>
+            <div class="information-table__row" data-cy="informationTableRow">
+              <div class="information-table__cell--label"><span data-cy="informationTableLabel">Forma własności</span></div>
+              <div class="information-table__cell--value"><span data-cy="informationTableValue">Własność</span></div>
+            </div>
+            <div class="information-table__row" data-cy="informationTableRow">
+              <div class="information-table__cell--label"><span data-cy="informationTableLabel">Czynsz</span></div>
+              <div class="information-table__cell--value"><span data-cy="informationTableValue">650 zł</span></div>
+            </div>
+            <div class="information-table__row" data-cy="informationTableRow">
+              <div class="information-table__cell--label"><span data-cy="informationTableLabel">Rodzaj umowy</span></div>
+              <div class="information-table__cell--value"><span data-cy="informationTableValue">Na wyłączność</span></div>
+            </div>
+          </div>
+
+          <ul class="attribute-list__wrapper">
+            <li class="icon-list-tile" data-cy="iconListTile">Winda</li>
+            <li class="icon-list-tile" data-cy="iconListTile">Miejsce postojowe (parking naziemny)</li>
+            <li class="icon-list-tile" data-cy="iconListTile">Piwnica</li>
+          </ul>
+
+          <ul class="tags__list">
+            <li>cicha okolica</li>
+            <li>sklep pod domem</li>
+            <li>park w pobliżu</li>
+          </ul>
+
+          <div class="environmental-cards">
+            <div>Jakość powietrza: Dobra</div>
+            <div>Poziom hałasu: Niski</div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const details = parseDetailPage(htmlWithDomTables);
+    expect(details.metadata?.buildingType).toBe('kamienica');
+    expect(details.metadata?.buildingMaterial).toBe('cegła');
+    expect(details.metadata?.yearBuilt).toBe(1953);
+    expect(details.metadata?.marketType).toBe('secondary');
+    expect(details.metadata?.heating).toBe('miejskie');
+    expect(details.metadata?.ownership).toBe('własność');
+    expect(details.metadata?.rentExtra).toBe(650);
+    expect(details.metadata?.exclusiveOffer).toBe(true);
+    expect(details.metadata?.hasElevator).toBe(true);
+    expect(details.metadata?.hasParking).toBe(true);
+    expect(details.metadata?.hasBasement).toBe(true);
+    expect(details.metadata?.tags).toEqual(['cicha okolica', 'sklep pod domem', 'park w pobliżu']);
+    expect(details.metadata?.airQuality).toBe('Dobra');
+    expect(details.metadata?.noiseLevel).toBe('Niski');
   });
 
   it('handles empty html gracefully', () => {

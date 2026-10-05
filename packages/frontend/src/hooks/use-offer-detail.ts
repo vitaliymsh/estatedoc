@@ -4,62 +4,59 @@ import { getCachedOffer, cacheOffers, prefetchImages } from '../lib/offer-prefet
 import { normalizeOfferImages } from '../lib/formatters'
 
 export function useOfferDetail(id: number | null) {
-  const getInitialOffer = (): Offer | null => {
-    if (!id) return null
-    return getCachedOffer(id) || null
-  }
-
-  const [offer, setOffer] = useState<Offer | null>(getInitialOffer)
-  const [loading, setLoading] = useState<boolean>(() => {
-    if (!id) return false
-    return !getInitialOffer()
+  const [data, setData] = useState<{ id: number | null; offer: Offer | null }>({
+    id,
+    offer: id ? getCachedOffer(id) || null : null,
   })
+  const [loading, setLoading] = useState<boolean>(() => Boolean(id && !getCachedOffer(id)))
   const [error, setError] = useState<string | null>(null)
+
+  const offer = data.id === id ? data.offer : (id ? getCachedOffer(id) || null : null)
 
   useEffect(() => {
     if (!id) {
-      setOffer(null)
+      setData({ id: null, offer: null })
       setLoading(false)
       setError(null)
       return
     }
 
-    const initial = getInitialOffer()
-    if (initial) {
-      setOffer(initial)
+    const controller = new AbortController()
+    const cached = getCachedOffer(id)
+    if (cached) {
+      setData({ id, offer: cached })
       setLoading(false)
-      prefetchImages(normalizeOfferImages(initial.images, initial.metadata?.imageUrl))
+      prefetchImages(normalizeOfferImages(cached.images, cached.metadata?.imageUrl))
     } else {
       setLoading(true)
     }
 
-    let isCancelled = false
-    fetch(`/api/offers/${id}`)
+    fetch(`/api/offers/${id}`, { signal: controller.signal })
       .then((res) => {
         if (!res.ok) {
           throw new Error(`Offer fetch failed: ${res.statusText}`)
         }
         return res.json()
       })
-      .then((data: Offer) => {
-        if (isCancelled) return
-        setOffer(data)
-        cacheOffers([data])
-        prefetchImages(normalizeOfferImages(data.images, data.metadata?.imageUrl))
+      .then((fresh: Offer) => {
+        setData({ id, offer: fresh })
+        cacheOffers([fresh])
+        prefetchImages(normalizeOfferImages(fresh.images, fresh.metadata?.imageUrl))
         setError(null)
       })
       .catch((err) => {
-        if (isCancelled) return
-        if (!initial) {
+        if (err.name !== 'AbortError' && !cached) {
           setError(err instanceof Error ? err.message : 'Nie znaleziono oferty')
         }
       })
       .finally(() => {
-        if (!isCancelled) setLoading(false)
+        if (!controller.signal.aborted) {
+          setLoading(false)
+        }
       })
 
     return () => {
-      isCancelled = true
+      controller.abort()
     }
   }, [id])
 

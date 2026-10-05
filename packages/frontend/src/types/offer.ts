@@ -2,11 +2,24 @@ export interface OfferMetadata {
   postedAt?: string
   plotSqm?: number
   buildingType?: string
+  buildingMaterial?: string
   marketType?: string
   yearBuilt?: number
   condition?: string
   heating?: string
   ownership?: string
+  rentExtra?: number
+  deposit?: number
+  exclusiveOffer?: boolean
+  hasElevator?: boolean
+  hasBalcony?: boolean
+  hasParking?: boolean
+  hasBasement?: boolean
+  hasAirConditioning?: boolean
+  isFurnished?: boolean
+  tags?: string[]
+  airQuality?: string
+  noiseLevel?: string
   agencyName?: string
   agencyPhone?: string
   latitude?: number | null

@@ -21,6 +21,7 @@ export interface MorizonFetchOptions {
 export interface MorizonFetchAllOptions {
   categoryPath?: string;
   maxPages?: number;
+  limit?: number;
   delayMs?: number;
   enrichDetails?: boolean;
   backendUrl?: string;
@@ -60,6 +61,7 @@ export async function fetchAllListings(options: MorizonFetchAllOptions = {}): Pr
   const {
     categoryPath = '/mieszkania/warszawa',
     maxPages = 5,
+    limit,
     delayMs = 1000,
     enrichDetails = false,
     backendUrl,
@@ -72,6 +74,7 @@ export async function fetchAllListings(options: MorizonFetchAllOptions = {}): Pr
 
   // ponytail: sequential page fetch with 1s delay, upgrade to worker queue if mass-scraping
   for (let page = 1; page <= maxPages; page++) {
+    if (limit && allListings.length >= limit) break;
     const listings = await fetchListingsPage({ categoryPath, page, fetchFn });
     if (listings.length === 0) break;
 
@@ -83,6 +86,7 @@ export async function fetchAllListings(options: MorizonFetchAllOptions = {}): Pr
 
     let addedCount = 0;
     for (const listing of listings) {
+      if (limit && allListings.length >= limit) break;
       if (!seenIds.has(listing.externalId)) {
         seenIds.add(listing.externalId);
 

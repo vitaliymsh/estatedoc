@@ -105,60 +105,42 @@ export function ListingMap({
   const markersLayerRef = useRef<L.LayerGroup | null>(null)
   const mapId = useId()
 
-  const [resolvedCoords, setResolvedCoords] = useState<Coordinates | null>(() => {
-    if (customCoordinates) return customCoordinates
-    if (offer) {
-      const extracted = extractCoordinates(offer)
-      if (extracted) return extracted
-    }
-    if (offers && offers.length > 0) return POLAND_CENTER_COORDINATES
-    return null
-  })
-  const [isLoadingCoords, setIsLoadingCoords] = useState<boolean>(() => {
-    if (customCoordinates) return false
-    if (offer && extractCoordinates(offer)) return false
-    if (offers && offers.length > 0) return false
-    return Boolean(offer)
-  })
+  const directCoords =
+    customCoordinates ||
+    (offer ? extractCoordinates(offer) : null) ||
+    (offers && offers.length > 0 ? POLAND_CENTER_COORDINATES : null)
 
-  // 1. Resolve coordinates for single offer
+  const [asyncCoords, setAsyncCoords] = useState<Coordinates | null>(null)
+  const [isLoadingCoords, setIsLoadingCoords] = useState<boolean>(() => !directCoords && Boolean(offer))
+
+  const resolvedCoords = directCoords || asyncCoords
+
+  // 1. Resolve coordinates asynchronously when direct coordinates not present
   useEffect(() => {
-    if (customCoordinates) {
-      setResolvedCoords(customCoordinates)
-      setIsLoadingCoords(false)
+    if (directCoords || !offer) {
       return
     }
 
-    if (offer) {
-      const direct = extractCoordinates(offer)
-      if (direct) {
-        setResolvedCoords(direct)
+    let isMounted = true
+    setIsLoadingCoords(true)
+
+    resolveOfferCoordinates(offer).then((coords) => {
+      if (isMounted) {
+        setAsyncCoords(coords)
         setIsLoadingCoords(false)
-        return
       }
+    })
 
-      let isMounted = true
-      setIsLoadingCoords(true)
-
-      resolveOfferCoordinates(offer).then((coords) => {
-        if (isMounted) {
-          setResolvedCoords(coords)
-          setIsLoadingCoords(false)
-        }
-      })
-
-      return () => {
-        isMounted = false
-      }
-    } else if (offers && offers.length > 0) {
-      setResolvedCoords(POLAND_CENTER_COORDINATES)
-      setIsLoadingCoords(false)
+    return () => {
+      isMounted = false
     }
-  }, [offer, customCoordinates, offers])
+  }, [offer, directCoords])
 
   // 2. Initialize and manage Leaflet Map lifecycle
   useEffect(() => {
     if (!containerRef.current || !resolvedCoords) return
+
+    let resizeTimer: ReturnType<typeof setTimeout> | null = null
 
     // Create map instance once
     if (!mapInstanceRef.current) {
@@ -193,7 +175,7 @@ export function ListingMap({
       mapInstanceRef.current = map
 
       // Invalidate size to ensure clean tile rendering after layout
-      setTimeout(() => {
+      resizeTimer = setTimeout(() => {
         map.invalidateSize()
       }, 150)
     } else {
@@ -204,6 +186,7 @@ export function ListingMap({
     }
 
     return () => {
+      if (resizeTimer) clearTimeout(resizeTimer)
       // Cleanup map on unmount
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove()
@@ -211,7 +194,7 @@ export function ListingMap({
         markersLayerRef.current = null
       }
     }
-  }, [resolvedCoords, zoom, interactive, tileProvider])
+  }, [resolvedCoords, zoom, interactive, tileProvider, apiKey])
 
   // 3. Render markers
   useEffect(() => {

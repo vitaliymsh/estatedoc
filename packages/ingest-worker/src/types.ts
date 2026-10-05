@@ -2,6 +2,39 @@ export type TransactionType = 'sale' | 'rent';
 export type PropertyType = 'apartment' | 'house' | 'land' | 'commercial' | 'garage' | 'other';
 export type SellerType = 'private' | 'company' | 'agency' | 'developer' | 'verified';
 
+export interface StandardListingMetadata {
+  buildingType?: string;
+  buildingMaterial?: string;
+  yearBuilt?: number;
+  marketType?: string;
+  condition?: string;
+  heating?: string;
+  ownership?: string;
+  plotSqm?: number;
+  rentExtra?: number;
+  deposit?: number;
+  availableFrom?: string;
+  exclusiveOffer?: boolean;
+  amenities?: string[];
+  hasElevator?: boolean;
+  hasBalcony?: boolean;
+  hasParking?: boolean;
+  hasBasement?: boolean;
+  hasAirConditioning?: boolean;
+  isFurnished?: boolean;
+  isPetFriendly?: boolean;
+  tags?: string[];
+  airQuality?: string;
+  noiseLevel?: string;
+  agencyName?: string;
+  agencyPhone?: string;
+  postedAt?: string;
+  updatedAt?: string;
+  viewCount?: number;
+  imageUrl?: string;
+  [key: string]: unknown;
+}
+
 export interface StandardListing {
   portal: string;
   externalId: string;
@@ -22,5 +55,5 @@ export interface StandardListing {
   description: string | null;
   images: string[];
   postedAt?: string;
-  metadata?: Record<string, unknown>;
+  metadata?: StandardListingMetadata;
 }

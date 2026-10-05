@@ -34,13 +34,45 @@ describe('parseDetailPage', () => {
     expect(details.floor).toBe(3);
     expect(details.totalFloors).toBe(5);
     expect(details.images).toEqual([
-      'https://thumbs.img-sprzedajemy.pl/thumb/1024x768_0/b4/38/78/img1.jpg',
-      'https://thumbs.img-sprzedajemy.pl/thumb/1024x768_0/b4/38/78/img2.jpg',
+      'https://thumbs.img-sprzedajemy.pl/1000x901c/b4/38/78/img1.jpg',
+      'https://thumbs.img-sprzedajemy.pl/1000x901c/b4/38/78/img2.jpg',
     ]);
     expect(details.metadata).toMatchObject({
-      marketType: 'wtórny',
+      marketType: 'secondary',
       yearBuilt: 2018,
     });
+  });
+
+  it('extracts building material, building type, rent and deposit from Sprzedajemy', () => {
+    const htmlWithSpecs = `
+      <div id="detailedInformations">
+        <div class="attributes-box">
+          <ul class="attribute-list">
+            <li class="item"><span>Zabudowa</span><strong>kamienica</strong></li>
+            <li class="item"><span>Materiał budynku</span><strong>cegła</strong></li>
+            <li class="item"><span>Ogrzewanie</span><strong>sieć</strong></li>
+            <li class="item"><span>Forma własności</span><strong>własność</strong></li>
+          </ul>
+        </div>
+        <div class="offerDescription">
+          <span>
+            3 000 zł - najem. Czynsz administracyjny: 1200 zł. Kaucja: 3500 zł.
+            W mieszkaniu jest winda, balkon oraz miejsce parkingowe.
+          </span>
+        </div>
+      </div>
+    `;
+
+    const details = parseDetailPage(htmlWithSpecs);
+    expect(details.metadata?.buildingType).toBe('kamienica');
+    expect(details.metadata?.buildingMaterial).toBe('cegła');
+    expect(details.metadata?.heating).toBe('miejskie');
+    expect(details.metadata?.ownership).toBe('własność');
+    expect(details.metadata?.rentExtra).toBe(1200);
+    expect(details.metadata?.deposit).toBe(3500);
+    expect(details.metadata?.hasElevator).toBe(true);
+    expect(details.metadata?.hasBalcony).toBe(true);
+    expect(details.metadata?.hasParking).toBe(true);
   });
 
   it('handles empty or missing detail sections gracefully', () => {

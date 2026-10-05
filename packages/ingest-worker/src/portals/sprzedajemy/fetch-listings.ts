@@ -22,6 +22,7 @@ export interface FetchOptions {
 export interface FetchAllOptions {
   categoryPath?: string;
   maxPages?: number;
+  limit?: number;
   delayMs?: number;
   enrichDetails?: boolean;
   backendUrl?: string;
@@ -59,6 +60,7 @@ export async function fetchAllListings(options: FetchAllOptions = {}): Promise<S
   const {
     categoryPath = '/nieruchomosci',
     maxPages = 5,
+    limit,
     delayMs = 1000,
     enrichDetails = false,
     backendUrl,
@@ -71,6 +73,7 @@ export async function fetchAllListings(options: FetchAllOptions = {}): Promise<S
 
   // ponytail: sequential page fetch with 1s delay, upgrade to concurrent queue if scraping entire portal
   for (let page = 0; page < maxPages; page++) {
+    if (limit && allListings.length >= limit) break;
     const offset = page * PAGE_SIZE;
     const listings = await fetchListingsPage({ categoryPath, offset, fetchFn });
     if (listings.length === 0) break;
@@ -83,6 +86,7 @@ export async function fetchAllListings(options: FetchAllOptions = {}): Promise<S
 
     let addedCount = 0;
     for (const listing of listings) {
+      if (limit && allListings.length >= limit) break;
       if (!seenIds.has(listing.externalId)) {
         seenIds.add(listing.externalId);
 

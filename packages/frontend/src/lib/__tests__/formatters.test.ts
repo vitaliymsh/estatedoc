@@ -11,6 +11,7 @@ import {
   formatPropertyType,
   formatTransactionType,
   normalizeOfferImages,
+  formatDescriptionText,
 } from '../formatters'
 
 describe('Frontend Formatters', () => {
@@ -54,6 +55,7 @@ describe('Frontend Formatters', () => {
     expect(IGNORED_METADATA_KEYS.has('buildingType')).toBe(true)
     expect(IGNORED_METADATA_KEYS.has('yearBuilt')).toBe(true)
     expect(IGNORED_METADATA_KEYS.has('price')).toBe(true)
+    expect(IGNORED_METADATA_KEYS.has('category')).toBe(true)
   })
 
   it('formats metadata values', () => {
@@ -107,5 +109,13 @@ describe('Frontend Formatters', () => {
       'https://example.com/fallback.jpg',
     ])
     expect(normalizeOfferImages(null, null)).toEqual([])
+  })
+
+  it('formats description text with clean paragraph and list spacing', () => {
+    const raw = 'Mieszkanie na Mokotowie. BUDYNEK/OSIEDLE Mieszkanie na parterze. - Salon z kuchnią - Dwa pokoje'
+    const formatted = formatDescriptionText(raw)
+    expect(formatted).toContain('BUDYNEK/OSIEDLE')
+    expect(formatted).toContain('• Salon z kuchnią')
+    expect(formatted).toContain('• Dwa pokoje')
   })
 })

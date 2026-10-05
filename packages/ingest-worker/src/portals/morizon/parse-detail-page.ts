@@ -91,6 +91,76 @@ export function parseDetailPage(html: string): Partial<StandardListing> {
     }
   });
 
+  // Extract DOM information tables
+  $('.information-table__row, [data-cy="informationTableRow"]').each((_, el) => {
+    const label = $(el).find('.information-table__cell--label, [data-cy="informationTableLabel"]').first().text().trim().toLowerCase();
+    const val = $(el).find('.information-table__cell--value, [data-cy="informationTableValue"]').first().text().trim();
+    if (!label || !val) return;
+
+    if (label.includes('typ budynku')) {
+      const lower = val.toLowerCase();
+      if (lower.includes('kamienic')) metadata.buildingType = 'kamienica';
+      else if (lower.includes('blok')) metadata.buildingType = 'blok';
+      else if (lower.includes('apartament')) metadata.buildingType = 'apartamentowiec';
+      else if (lower.includes('dom')) metadata.buildingType = 'dom';
+      else metadata.buildingType = val;
+    } else if (label.includes('materiał')) {
+      metadata.buildingMaterial = val.toLowerCase();
+    } else if (label.includes('rok budowy')) {
+      const year = parseInt(val, 10);
+      if (!isNaN(year)) metadata.yearBuilt = year;
+    } else if (label.includes('rynek')) {
+      metadata.marketType = val.toLowerCase().includes('pierwotn') ? 'primary' : 'secondary';
+    } else if (label.includes('ogrzewanie')) {
+      metadata.heating = val.toLowerCase();
+    } else if (label.includes('forma własności')) {
+      metadata.ownership = val.toLowerCase();
+    } else if (label.includes('czynsz')) {
+      const cleanRent = val.replace(/\s+/g, '').match(/\d+/);
+      if (cleanRent) metadata.rentExtra = parseInt(cleanRent[0], 10);
+    } else if (label.includes('umowy') && val.toLowerCase().includes('wyłączność')) {
+      metadata.exclusiveOffer = true;
+    } else if (label.includes('piętro') && floor === null) {
+      const parsed = parseFloor(val);
+      floor = parsed.floor;
+      if (parsed.totalFloors !== null) totalFloors = parsed.totalFloors;
+    } else if (label.includes('liczba pięter') && totalFloors === null) {
+      const parsed = parseInt(val, 10);
+      if (!isNaN(parsed)) totalFloors = parsed;
+    }
+  });
+
+  // Extract amenities
+  $('.attribute-list__wrapper li, [data-cy="iconListTile"], .page-details__attribute-list li').each((_, el) => {
+    const text = $(el).text().trim();
+    if (!text) return;
+    const lower = text.toLowerCase();
+    if (lower.includes('winda')) metadata.hasElevator = true;
+    if (lower.includes('postojow') || lower.includes('parking') || lower.includes('garaż')) metadata.hasParking = true;
+    if (lower.includes('piwnica') || lower.includes('komórk')) metadata.hasBasement = true;
+    if (lower.includes('balkon') || lower.includes('taras') || lower.includes('loggi')) metadata.hasBalcony = true;
+    if (lower.includes('klimatyzacj')) metadata.hasAirConditioning = true;
+    if (lower.includes('umeblowan')) metadata.isFurnished = true;
+  });
+
+  // Extract tags
+  const tags: string[] = [];
+  $('.tags__list li, .page-details__details-tags-wrapper li').each((_, el) => {
+    const text = $(el).text().trim();
+    if (text && !tags.includes(text)) tags.push(text);
+  });
+  if (tags.length > 0) metadata.tags = tags;
+
+  // Extract environmental cards
+  $('.environmental-cards div, .page-details__environmental-cards div').each((_, el) => {
+    const text = $(el).text().trim();
+    if (text.includes('Jakość powietrza')) {
+      metadata.airQuality = text.split(':')[1]?.trim() || text.replace('Jakość powietrza', '').trim();
+    } else if (text.includes('Poziom hałasu')) {
+      metadata.noiseLevel = text.split(':')[1]?.trim() || text.replace('Poziom hałasu', '').trim();
+    }
+  });
+
   const images = cleanAndDeduplicateImages(rawImages, 'morizon');
   const location = extractCityAndDistrict(undefined, breadcrumbNames);
 

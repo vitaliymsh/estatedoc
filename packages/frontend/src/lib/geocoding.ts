@@ -319,6 +319,20 @@ const KNOWN_DISTRICTS_BY_CITY: Record<string, string[]> = {
   ],
 }
 
+const DISTRICT_PATTERNS_BY_CITY: Record<string, { name: string; re: RegExp }[]> =
+  Object.fromEntries(
+    Object.entries(KNOWN_DISTRICTS_BY_CITY).map(([city, districts]) => [
+      city,
+      districts.map((d) => ({ name: d, re: new RegExp(`\\b${d}\\b`, 'i') })),
+    ])
+  )
+
+const STREET_PREFIX_RE =
+  /(?:ul\.|ulica|al\.|aleja)\s+([A-ZĄĆĘŁŃÓŚŹŻa-ząćęłńóśźż\s-]+?)(?:,|\.|$|\s+(?:z|w|na|dla|blisko|przy|po|dom|mieszkanie)\b)/i
+
+const TRAILING_ADDRESS_RE =
+  /^[,-\s]+\s*([A-ZĄĆĘŁŃÓŚŹŻ][A-ZĄĆĘŁŃÓŚŹŻa-ząćęłńóśźż\s-]+?)(?:,|\.|$|\s+(?:z|w|na|dla|blisko|przy|po|dom|mieszkanie)\b)/i
+
 /**
  * Parses district and street names embedded in the listing title.
  */
@@ -328,22 +342,19 @@ export function extractLocationFromTitle(
 ): { district?: string; street?: string } {
   if (!title) return {}
   const normCity = city ? normalizeKey(city) : 'warszawa'
-  const knownDistricts = KNOWN_DISTRICTS_BY_CITY[normCity] || []
+  const cityDistricts = DISTRICT_PATTERNS_BY_CITY[normCity] || []
 
   let foundDistrict: string | undefined
-  for (const d of knownDistricts) {
-    const reg = new RegExp(`\\b${d}\\b`, 'i')
-    if (reg.test(title)) {
-      foundDistrict = d
+  for (const item of cityDistricts) {
+    if (item.re.test(title)) {
+      foundDistrict = item.name
       break
     }
   }
 
   let foundStreet: string | undefined
   // 1. Explicit street prefix: ul. / ulica / al. / aleja
-  const ulMatch = title.match(
-    /(?:ul\.|ulica|al\.|aleja)\s+([A-ZĄĆĘŁŃÓŚŹŻa-ząćęłńóśźż\s-]+?)(?:,|\.|$|\s+(?:z|w|na|dla|blisko|przy|po|dom|mieszkanie)\b)/i
-  )
+  const ulMatch = title.match(STREET_PREFIX_RE)
   if (ulMatch && ulMatch[1]) {
     foundStreet = ulMatch[1].trim()
   } else if (foundDistrict) {
@@ -351,9 +362,7 @@ export function extractLocationFromTitle(
     const districtPos = title.toLowerCase().indexOf(foundDistrict.toLowerCase())
     if (districtPos !== -1) {
       const remainder = title.slice(districtPos + foundDistrict.length).trim()
-      const afterMatch = remainder.match(
-        /^[,-\s]+\s*([A-ZĄĆĘŁŃÓŚŹŻ][A-ZĄĆĘŁŃÓŚŹŻa-ząćęłńóśźż\s-]+?)(?:,|\.|$|\s+(?:z|w|na|dla|blisko|przy|po|dom|mieszkanie)\b)/i
-      )
+      const afterMatch = remainder.match(TRAILING_ADDRESS_RE)
       if (afterMatch && afterMatch[1]) {
         const candidate = afterMatch[1].trim()
         if (

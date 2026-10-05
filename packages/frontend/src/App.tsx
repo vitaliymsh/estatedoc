@@ -1,11 +1,15 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 import { Header } from '@/components/Header'
 import { OfferGrid } from '@/components/OfferGrid'
 import { Pagination } from '@/components/Pagination'
 import { FilterModal } from '@/components/FilterModal'
-import { OfferDetailPage } from '@/components/OfferDetailPage'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useOffers, PAGE_SIZE } from '@/hooks/use-offers'
 import type { ListOffersFilter, SortBy } from '@/types/offer'
+
+const OfferDetailPage = lazy(() =>
+  import('@/components/OfferDetailPage').then((m) => ({ default: m.OfferDetailPage }))
+)
 
 function getInitialOfferId(): number | null {
   if (typeof window === 'undefined') return null
@@ -61,16 +65,13 @@ export default function App() {
     window.history.pushState(null, '', url.toString())
   }
 
-  const activeFiltersCount = useMemo(() => {
-    let count = 0
-    if (filter.prompt) count++
-    if (filter.city) count++
-    if (filter.portal) count++
-    if (filter.minPrice !== undefined) count++
-    if (filter.maxPrice !== undefined) count++
-    if (filter.sortBy !== 'newest') count++
-    return count
-  }, [filter])
+  const activeFiltersCount =
+    (filter.prompt ? 1 : 0) +
+    (filter.city ? 1 : 0) +
+    (filter.portal ? 1 : 0) +
+    (filter.minPrice !== undefined ? 1 : 0) +
+    (filter.maxPrice !== undefined ? 1 : 0) +
+    (filter.sortBy !== 'newest' ? 1 : 0)
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
@@ -114,7 +115,17 @@ export default function App() {
 
       {selectedOfferId !== null ? (
         <main>
-          <OfferDetailPage offerId={selectedOfferId} onBack={handleBackToList} />
+          <Suspense
+            fallback={
+              <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-6">
+                <Skeleton className="h-9 w-28 rounded-lg" />
+                <Skeleton className="h-10 w-2/3" />
+                <Skeleton className="h-[420px] w-full rounded-2xl" />
+              </div>
+            }
+          >
+            <OfferDetailPage offerId={selectedOfferId} onBack={handleBackToList} />
+          </Suspense>
         </main>
       ) : (
         <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">

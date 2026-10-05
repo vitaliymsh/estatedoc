@@ -1,19 +1,18 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState } from 'react'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from '@/components/ui/accordion'
 import {
   ArrowLeft,
-  ChevronLeft,
-  ChevronRight,
   Building2,
   MapPin,
   ExternalLink,
@@ -23,7 +22,6 @@ import {
   ShieldCheck,
   Building,
   Phone,
-  Grid,
   Share2,
   Check,
   Maximize2,
@@ -33,6 +31,7 @@ import {
   TreePine,
 } from 'lucide-react'
 import { useOfferDetail } from '../hooks/use-offer-detail'
+import { OfferGallery } from './OfferGallery'
 import {
   formatPrice,
   calculatePricePerSqm,
@@ -44,9 +43,9 @@ import {
   formatPropertyType,
   formatTransactionType,
   normalizeOfferImages,
+  formatDescriptionText,
   IGNORED_METADATA_KEYS,
 } from '../lib/formatters'
-import { prefetchImages } from '../lib/offer-prefetch'
 import { ListingMap } from './ListingMap'
 
 interface OfferDetailPageProps {
@@ -56,21 +55,20 @@ interface OfferDetailPageProps {
 
 export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
   const { offer, loading, error } = useOfferDetail(offerId)
-  const [isGalleryOpen, setIsGalleryOpen] = useState(false)
-  const [activeModalImageIndex, setActiveModalImageIndex] = useState(0)
   const [isCopied, setIsCopied] = useState(false)
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
+  const [failedImages, setFailedImages] = useState<Set<string>>(new Set())
 
-  const images = useMemo(() => {
-    if (!offer) return []
-    return normalizeOfferImages(offer.images, offer.metadata?.imageUrl)
-  }, [offer?.images, offer?.metadata?.imageUrl])
+  const rawImages = offer ? normalizeOfferImages(offer.images, offer.metadata?.imageUrl) : []
+  const images = rawImages.filter((img) => !failedImages.has(img))
 
-  useEffect(() => {
-    if (images.length > 0) {
-      prefetchImages(images)
-    }
-  }, [images])
+  const handleImageError = (imgUrl: string) => {
+    setFailedImages((prev) => {
+      const next = new Set(prev)
+      next.add(imgUrl)
+      return next
+    })
+  }
 
   const handleCopyLink = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
@@ -80,22 +78,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
     }
   }
 
-  const openGalleryAt = (index: number) => {
-    setActiveModalImageIndex(index)
-    setIsGalleryOpen(true)
-  }
-
-  const nextModalImage = () => {
-    if (images.length > 1) {
-      setActiveModalImageIndex((prev) => (prev + 1) % images.length)
-    }
-  }
-
-  const prevModalImage = () => {
-    if (images.length > 1) {
-      setActiveModalImageIndex((prev) => (prev - 1 + images.length) % images.length)
-    }
-  }
+  const formattedDescription = formatDescriptionText(offer?.description)
 
   if (loading && !offer) {
     return (
@@ -122,10 +105,14 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
 
   if (error || !offer) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-16 text-center">
-        <h2 className="text-xl font-bold tracking-tight text-foreground">Nie znaleziono oferty</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{error || 'Wybrana oferta nie istnieje lub została usunięta.'}</p>
-        <Button onClick={onBack} variant="outline" className="mt-6 gap-2">
+      <div className="mx-auto max-w-lg px-4 py-16 text-center space-y-6">
+        <Alert variant="destructive" className="text-left">
+          <AlertTitle className="font-semibold text-base">Nie znaleziono oferty</AlertTitle>
+          <AlertDescription className="mt-1">
+            {error || 'Wybrana oferta nie istnieje lub została usunięta.'}
+          </AlertDescription>
+        </Alert>
+        <Button onClick={onBack} variant="outline" className="gap-2 rounded-xl">
           <ArrowLeft className="size-4" />
           Wróć do listy ofert
         </Button>
@@ -151,73 +138,80 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
       )
     : []
 
-  const isLongDescription = (offer.description?.length || 0) > 350
+  const isLongDescription = (formattedDescription.length || 0) > 350
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
-      {/* Top Header & Action Row */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6 pb-20 sm:pb-8">
+      {/* Top Navigation Row */}
+      <div className="flex items-center justify-between gap-4">
         <Button
           variant="outline"
           size="sm"
           onClick={onBack}
-          className="gap-2 rounded-xl text-sm font-medium hover:bg-accent cursor-pointer"
+          className="gap-2 rounded-xl text-sm font-medium hover:bg-accent cursor-pointer shadow-2xs"
         >
           <ArrowLeft className="size-4" />
           Wróć do wyników
         </Button>
 
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleCopyLink}
-            className="gap-1.5 rounded-xl text-xs font-medium cursor-pointer"
-          >
-            {isCopied ? <Check className="size-3.5 text-emerald-500" /> : <Share2 className="size-3.5" />}
-            {isCopied ? 'Skopiowano link' : 'Udostępnij'}
-          </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleCopyLink}
+          className="gap-1.5 rounded-xl text-xs font-medium cursor-pointer shadow-2xs hover:bg-accent"
+        >
+          {isCopied ? <Check className="size-3.5 text-emerald-500" /> : <Share2 className="size-3.5" />}
+          {isCopied ? 'Skopiowano link' : 'Udostępnij'}
+        </Button>
+      </div>
 
+      {/* Classification Badges & Title Section */}
+      <div className="space-y-2.5">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <Badge
             variant="outline"
-            className="rounded-full bg-secondary/80 px-3 py-1 text-xs font-semibold text-foreground uppercase tracking-wide"
+            className="rounded-full bg-secondary/80 px-2.5 py-0.5 text-xs font-semibold text-foreground uppercase tracking-wider shadow-2xs"
           >
             {offer.portal}
           </Badge>
           <Badge
             variant="secondary"
-            className="rounded-full px-3 py-1 text-xs font-medium"
+            className="rounded-full px-2.5 py-0.5 text-xs font-medium"
           >
             {transactionTypeLabel}
           </Badge>
-          <Badge
-            variant="outline"
-            className="rounded-full px-3 py-1 text-xs font-medium"
-          >
-            {propertyTypeLabel}
-          </Badge>
+          {propertyTypeLabel && propertyTypeLabel !== 'Nieruchomość' && (
+            <Badge
+              variant="outline"
+              className="rounded-full px-2.5 py-0.5 text-xs font-medium text-muted-foreground border-border/70"
+            >
+              {propertyTypeLabel}
+            </Badge>
+          )}
           {sellerLabel && (
             <Badge
-              variant="secondary"
-              className="rounded-full px-3 py-1 text-xs font-medium"
+              variant="outline"
+              className={
+                sellerLabel.toLowerCase().includes('prywat') || sellerLabel.toLowerCase().includes('bez')
+                  ? 'rounded-full px-2.5 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25'
+                  : 'rounded-full px-2.5 py-0.5 text-xs font-medium text-muted-foreground bg-secondary/50 border-border/70'
+              }
             >
               {sellerLabel}
             </Badge>
           )}
         </div>
-      </div>
 
-      {/* Title & Location Header */}
-      <div className="space-y-1.5">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground leading-tight">
           {offer.title}
         </h1>
+
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <a
             href={googleMapsUrl}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-1 font-medium text-foreground underline underline-offset-4 hover:text-primary transition"
+            className="inline-flex items-center gap-1.5 font-medium text-foreground underline-offset-4 hover:underline hover:text-primary transition"
           >
             <MapPin className="size-4 text-primary shrink-0" />
             <span>
@@ -225,408 +219,354 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
               {district ? `, ${district}` : ''}
               {street ? `, ul. ${street}` : ''}
             </span>
-            <ExternalLink className="size-3 ml-0.5 opacity-70" />
+            <ExternalLink className="size-3 ml-0.5 opacity-60" />
           </a>
-          <span>•</span>
+          <span className="text-muted-foreground/50">•</span>
           <span>{relativeTime}</span>
         </div>
       </div>
 
-      {/* Airbnb-style Photo Mosaic Grid */}
-      <div className="relative overflow-hidden rounded-2xl border bg-muted/50 shadow-xs">
-        {images.length === 0 ? (
-          <div className="flex aspect-[16/7] w-full flex-col items-center justify-center gap-2 text-muted-foreground">
-            <Building2 className="size-16 stroke-1" />
-            <span className="text-sm">Brak zdjęć w ofercie</span>
-          </div>
-        ) : images.length === 1 ? (
-          <div
-            onClick={() => openGalleryAt(0)}
-            className="aspect-[16/7] w-full overflow-hidden cursor-pointer group"
-          >
-            <img
-              src={images[0]}
-              alt={offer.title}
-              referrerPolicy="no-referrer"
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-102"
-            />
-          </div>
-        ) : images.length === 2 ? (
-          <div className="grid grid-cols-2 gap-2 aspect-[16/8]">
-            {images.slice(0, 2).map((img, idx) => (
-              <div
-                key={idx}
-                onClick={() => openGalleryAt(idx)}
-                className="overflow-hidden cursor-pointer group"
-              >
-                <img
-                  src={img}
-                  alt={`${offer.title} ${idx + 1}`}
-                  referrerPolicy="no-referrer"
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-102"
-                />
-              </div>
-            ))}
-          </div>
-        ) : images.length === 3 ? (
-          <div className="grid grid-cols-3 gap-2 aspect-[16/8]">
-            <div
-              onClick={() => openGalleryAt(0)}
-              className="col-span-2 overflow-hidden cursor-pointer group"
-            >
-              <img
-                src={images[0]}
-                alt={`${offer.title} 1`}
-                referrerPolicy="no-referrer"
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-102"
-              />
-            </div>
-            <div className="grid grid-rows-2 gap-2 col-span-1">
-              {images.slice(1, 3).map((img, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => openGalleryAt(idx + 1)}
-                  className="overflow-hidden cursor-pointer group"
-                >
-                  <img
-                    src={img}
-                    alt={`${offer.title} ${idx + 2}`}
-                    referrerPolicy="no-referrer"
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-102"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          /* 4 or 5+ photos Airbnb Mosaic */
-          <div className="grid grid-cols-4 gap-2 aspect-[16/9] max-h-[460px]">
-            {/* Main large photo on left (2 cols) */}
-            <div
-              onClick={() => openGalleryAt(0)}
-              className="col-span-2 row-span-2 overflow-hidden cursor-pointer group relative"
-            >
-              <img
-                src={images[0]}
-                alt={`${offer.title} 1`}
-                referrerPolicy="no-referrer"
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-102"
-              />
-            </div>
-            {/* 4 smaller photos on right in 2x2 */}
-            <div className="col-span-2 grid grid-cols-2 grid-rows-2 gap-2 h-full">
-              {images.slice(1, 5).map((img, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => openGalleryAt(idx + 1)}
-                  className="overflow-hidden cursor-pointer group relative"
-                >
-                  <img
-                    src={img}
-                    alt={`${offer.title} ${idx + 2}`}
-                    referrerPolicy="no-referrer"
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-102"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+      {/* Offer Gallery & Lightbox */}
+      <OfferGallery images={images} title={offer.title} onImageError={handleImageError} />
 
-        {/* Floating "Show all photos" Button */}
-        {images.length > 1 && (
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setIsGalleryOpen(true)}
-            className="absolute bottom-4 right-4 gap-2 rounded-xl bg-background/90 font-medium text-foreground shadow-lg backdrop-blur-md hover:bg-background cursor-pointer"
-          >
-            <Grid className="size-4" />
-            Pokaż wszystkie zdjęcia ({images.length})
-          </Button>
+      {/* Quick Key Metrics Bar */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+        <div className="rounded-xl border bg-card/60 p-3 shadow-2xs">
+          <div className="text-[11px] font-medium text-muted-foreground">Cena całkowita</div>
+          <div className="text-base sm:text-lg font-bold text-foreground truncate mt-0.5">
+            {formatPrice(offer.price)}
+          </div>
+        </div>
+        {pricePerSqm && (
+          <div className="rounded-xl border bg-card/60 p-3 shadow-2xs">
+            <div className="text-[11px] font-medium text-muted-foreground">Cena za m²</div>
+            <div className="text-base sm:text-lg font-bold text-foreground truncate mt-0.5">
+              {pricePerSqm}
+            </div>
+          </div>
         )}
+        {offer.areaSqm && (
+          <div className="rounded-xl border bg-card/60 p-3 shadow-2xs">
+            <div className="text-[11px] font-medium text-muted-foreground">Powierzchnia</div>
+            <div className="text-base sm:text-lg font-bold text-foreground truncate mt-0.5">
+              {offer.areaSqm} m²
+            </div>
+          </div>
+        )}
+        {offer.roomsCount && (
+          <div className="rounded-xl border bg-card/60 p-3 shadow-2xs">
+            <div className="text-[11px] font-medium text-muted-foreground">Liczba pokoi</div>
+            <div className="text-base sm:text-lg font-bold text-foreground truncate mt-0.5">
+              {offer.roomsCount}
+            </div>
+          </div>
+        )}
+        {offer.metadata?.plotSqm ? (
+          <div className="rounded-xl border bg-card/60 p-3 shadow-2xs">
+            <div className="text-[11px] font-medium text-muted-foreground">Działka</div>
+            <div className="text-base sm:text-lg font-bold text-foreground truncate mt-0.5">
+              {String(offer.metadata.plotSqm)} m²
+            </div>
+          </div>
+        ) : floorText ? (
+          <div className="rounded-xl border bg-card/60 p-3 shadow-2xs">
+            <div className="text-[11px] font-medium text-muted-foreground">Piętro</div>
+            <div className="text-base sm:text-lg font-bold text-foreground truncate mt-0.5">
+              {floorText}
+            </div>
+          </div>
+        ) : null}
       </div>
 
-      {/* Full-Screen Gallery Modal */}
-      <Dialog open={isGalleryOpen} onOpenChange={setIsGalleryOpen}>
-        <DialogContent className="max-w-5xl p-0 overflow-hidden bg-background border rounded-2xl sm:max-w-4xl">
-          <DialogHeader className="p-4 pb-2 flex flex-row items-center justify-between border-b">
-            <DialogTitle className="text-base font-semibold">
-              Zdjęcia nieruchomości ({activeModalImageIndex + 1} z {images.length})
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="relative aspect-[16/10] w-full bg-black/95 flex items-center justify-center overflow-hidden">
-            {images.length > 0 && (
-              <img
-                src={images[activeModalImageIndex]}
-                alt={offer.title}
-                referrerPolicy="no-referrer"
-                className="h-full w-full object-contain"
-              />
-            )}
-
-            {images.length > 1 && (
-              <>
-                <button
-                  type="button"
-                  onClick={prevModalImage}
-                  aria-label="Poprzednie zdjęcie"
-                  className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-2.5 text-white shadow-lg backdrop-blur-md hover:bg-black/80 transition cursor-pointer"
-                >
-                  <ChevronLeft className="size-6" />
-                </button>
-                <button
-                  type="button"
-                  onClick={nextModalImage}
-                  aria-label="Następne zdjęcie"
-                  className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-black/60 p-2.5 text-white shadow-lg backdrop-blur-md hover:bg-black/80 transition cursor-pointer"
-                >
-                  <ChevronRight className="size-6" />
-                </button>
-              </>
-            )}
-          </div>
-
-          {/* Modal Thumbnail Strip */}
-          {images.length > 1 && (
-            <div className="flex gap-2 overflow-x-auto p-3 bg-muted/40 border-t">
-              {images.map((img, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setActiveModalImageIndex(idx)}
-                  className={`relative aspect-[4/3] w-16 shrink-0 overflow-hidden rounded-lg border-2 transition cursor-pointer ${
-                    idx === activeModalImageIndex
-                      ? 'border-primary ring-2 ring-primary/20 scale-105'
-                      : 'border-transparent opacity-60 hover:opacity-100'
-                  }`}
-                >
-                  <img src={img} alt="" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
-                </button>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
       {/* Main Content & Sidebar Layout */}
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-3 items-start">
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 items-start">
         {/* Left Column (2 Cols) */}
         <div className="space-y-6 lg:col-span-2">
-          {/* Key Highlight Features List */}
-          <div className="space-y-4">
-            <div className="flex items-start gap-4">
-              <MapPin className="size-5 text-primary shrink-0 mt-0.5" />
-              <div>
-                <div className="font-semibold text-foreground text-sm">Lokalizacja</div>
-                <p className="text-xs text-muted-foreground">
-                  {offer.city}{district ? `, dzielnica ${district}` : ''}{street ? `, ulica ${street}` : ''}.
-                </p>
-                <a
-                  href={googleMapsUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-primary font-medium underline underline-offset-2 mt-1 hover:opacity-80"
-                >
-                  Zobacz w Google Maps
-                  <ExternalLink className="size-3" />
-                </a>
+          {/* "Parametry nieruchomości" Card */}
+          <Card className="rounded-2xl border bg-card shadow-xs">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg font-bold text-foreground">
+                Parametry nieruchomości
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                {offer.areaSqm && (
+                  <div className="flex items-center gap-3 py-2 border-b border-border/50">
+                    <Maximize2 className="size-4 text-primary shrink-0" />
+                    <span className="text-muted-foreground">Powierzchnia:</span>
+                    <span className="font-medium text-foreground ml-auto">{offer.areaSqm} m²</span>
+                  </div>
+                )}
+
+                {offer.roomsCount && (
+                  <div className="flex items-center gap-3 py-2 border-b border-border/50">
+                    <Layers className="size-4 text-primary shrink-0" />
+                    <span className="text-muted-foreground">Liczba pokoi:</span>
+                    <span className="font-medium text-foreground ml-auto">{offer.roomsCount}</span>
+                  </div>
+                )}
+
+                {floorText && (
+                  <div className="flex items-center gap-3 py-2 border-b border-border/50">
+                    <Building className="size-4 text-primary shrink-0" />
+                    <span className="text-muted-foreground">Piętro:</span>
+                    <span className="font-medium text-foreground ml-auto">{floorText}</span>
+                  </div>
+                )}
+
+                {offer.metadata?.buildingType && (
+                  <div className="flex items-center gap-3 py-2 border-b border-border/50">
+                    <Building2 className="size-4 text-primary shrink-0" />
+                    <span className="text-muted-foreground">Rodzaj zabudowy:</span>
+                    <span className="font-medium text-foreground ml-auto truncate max-w-[160px] text-right">
+                      {String(offer.metadata.buildingType)}
+                    </span>
+                  </div>
+                )}
+
+                {offer.metadata?.buildingMaterial && (
+                  <div className="flex items-center gap-3 py-2 border-b border-border/50">
+                    <Layers className="size-4 text-primary shrink-0" />
+                    <span className="text-muted-foreground">Materiał:</span>
+                    <span className="font-medium text-foreground ml-auto capitalize truncate max-w-[160px] text-right">
+                      {String(offer.metadata.buildingMaterial)}
+                    </span>
+                  </div>
+                )}
+
+                {offer.metadata?.yearBuilt && (
+                  <div className="flex items-center gap-3 py-2 border-b border-border/50">
+                    <Calendar className="size-4 text-primary shrink-0" />
+                    <span className="text-muted-foreground">Rok budowy:</span>
+                    <span className="font-medium text-foreground ml-auto">{String(offer.metadata.yearBuilt)}</span>
+                  </div>
+                )}
+
+                {offer.metadata?.marketType && (
+                  <div className="flex items-center gap-3 py-2 border-b border-border/50">
+                    <Tag className="size-4 text-primary shrink-0" />
+                    <span className="text-muted-foreground">Rynek:</span>
+                    <span className="font-medium text-foreground ml-auto">
+                      {offer.metadata.marketType === 'primary'
+                        ? 'Pierwotny'
+                        : offer.metadata.marketType === 'secondary'
+                          ? 'Wtórny'
+                          : String(offer.metadata.marketType)}
+                    </span>
+                  </div>
+                )}
+
+                {offer.metadata?.condition && (
+                  <div className="flex items-center gap-3 py-2 border-b border-border/50">
+                    <Sparkles className="size-4 text-primary shrink-0" />
+                    <span className="text-muted-foreground">Stan wykończenia:</span>
+                    <span className="font-medium text-foreground ml-auto">{String(offer.metadata.condition)}</span>
+                  </div>
+                )}
+
+                {offer.metadata?.heating && (
+                  <div className="flex items-center gap-3 py-2 border-b border-border/50">
+                    <Flame className="size-4 text-primary shrink-0" />
+                    <span className="text-muted-foreground">Ogrzewanie:</span>
+                    <span className="font-medium text-foreground ml-auto truncate max-w-[160px] text-right capitalize">
+                      {String(offer.metadata.heating)}
+                    </span>
+                  </div>
+                )}
+
+                {offer.metadata?.ownership && (
+                  <div className="flex items-center gap-3 py-2 border-b border-border/50">
+                    <FileText className="size-4 text-primary shrink-0" />
+                    <span className="text-muted-foreground">Forma własności:</span>
+                    <span className="font-medium text-foreground ml-auto truncate max-w-[160px] text-right capitalize">
+                      {String(offer.metadata.ownership)}
+                    </span>
+                  </div>
+                )}
+
+                {offer.metadata?.rentExtra && (
+                  <div className="flex items-center gap-3 py-2 border-b border-border/50">
+                    <Tag className="size-4 text-primary shrink-0" />
+                    <span className="text-muted-foreground">Czynsz administracyjny:</span>
+                    <span className="font-medium text-foreground ml-auto">{offer.metadata.rentExtra} zł</span>
+                  </div>
+                )}
+
+                {offer.metadata?.deposit !== undefined && (
+                  <div className="flex items-center gap-3 py-2 border-b border-border/50">
+                    <ShieldCheck className="size-4 text-primary shrink-0" />
+                    <span className="text-muted-foreground">Kaucja:</span>
+                    <span className="font-medium text-foreground ml-auto">
+                      {offer.metadata.deposit === 0 ? '0 zł (brak kaucji)' : `${offer.metadata.deposit} zł`}
+                    </span>
+                  </div>
+                )}
+
+                {offer.metadata?.plotSqm && (
+                  <div className="flex items-center gap-3 py-2 border-b border-border/50">
+                    <TreePine className="size-4 text-primary shrink-0" />
+                    <span className="text-muted-foreground">Działka:</span>
+                    <span className="font-medium text-foreground ml-auto">{String(offer.metadata.plotSqm)} m²</span>
+                  </div>
+                )}
               </div>
-            </div>
 
-            {(offer.metadata?.buildingType || offer.metadata?.yearBuilt || offer.metadata?.condition || floorText) && (
-              <div className="flex items-start gap-4">
-                <Building className="size-5 text-primary shrink-0 mt-0.5" />
-                <div>
-                  <div className="font-semibold text-foreground text-sm">Budynek i stan techniczny</div>
-                  <p className="text-xs text-muted-foreground">
-                    {[
-                      offer.metadata?.buildingType ? `Typ zabudowy: ${offer.metadata.buildingType}` : null,
-                      floorText ? floorText : null,
-                      offer.metadata?.yearBuilt ? `Rok budowy: ${offer.metadata.yearBuilt}` : null,
-                      offer.metadata?.condition ? `Stan: ${offer.metadata.condition}` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' • ')}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {(offer.metadata?.heating || offer.metadata?.ownership || offer.metadata?.marketType) && (
-              <div className="flex items-start gap-4">
-                <Flame className="size-5 text-primary shrink-0 mt-0.5" />
-                <div>
-                  <div className="font-semibold text-foreground text-sm">Szczegóły transakcji i media</div>
-                  <p className="text-xs text-muted-foreground">
-                    {[
-                      offer.metadata?.marketType ? `Rynek ${String(offer.metadata.marketType).toLowerCase()}` : null,
-                      offer.metadata?.heating ? `Ogrzewanie: ${offer.metadata.heating}` : null,
-                      offer.metadata?.ownership ? `Własność: ${offer.metadata.ownership}` : null,
-                    ]
-                      .filter(Boolean)
-                      .join(' • ')}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <Separator />
-
-          {/* Description Section */}
-          <div className="space-y-3">
-            <h3 className="text-lg font-bold text-foreground">O tej nieruchomości</h3>
-            <div className={`relative ${!isDescriptionExpanded && isLongDescription ? 'max-h-48 overflow-hidden' : ''}`}>
-              <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
-                {offer.description || 'Brak dodatkowego opisu dla tego ogłoszenia.'}
-              </p>
-              {!isDescriptionExpanded && isLongDescription && (
-                <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background to-transparent pointer-events-none" />
-              )}
-            </div>
-
-            {isLongDescription && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setIsDescriptionExpanded((prev) => !prev)}
-                className="rounded-xl text-xs font-semibold cursor-pointer"
-              >
-                {isDescriptionExpanded ? 'Zwiń opis' : 'Pokaż więcej opisu'}
-              </Button>
-            )}
-          </div>
-
-          <Separator />
-
-          {/* "Parametry i wyposażenie" (Clean 2-column specs grid, no internal IDs) */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-bold text-foreground">Parametry nieruchomości</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-              {offer.areaSqm && (
-                <div className="flex items-center gap-3 py-2 border-b border-border/50">
-                  <Maximize2 className="size-4 text-primary shrink-0" />
-                  <span className="text-muted-foreground">Powierzchnia:</span>
-                  <span className="font-medium text-foreground ml-auto">{offer.areaSqm} m²</span>
+              {/* Extra Dynamic Metadata Tags */}
+              {metadataEntries.length > 0 && (
+                <div className="pt-2 border-t border-border/40">
+                  <Accordion defaultValue={['metadata']} className="w-full">
+                    <AccordionItem value="metadata" className="border-none">
+                      <AccordionTrigger className="py-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:no-underline cursor-pointer">
+                        Inne informacje ze źródła ({metadataEntries.length})
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-2">
+                        <div className="flex flex-wrap gap-2">
+                          {metadataEntries.map(([key, val]) => (
+                            <Badge
+                              key={key}
+                              variant="secondary"
+                              className="rounded-lg px-3 py-1 font-normal text-xs bg-muted text-muted-foreground"
+                            >
+                              {formatMetadataValue(key, val)}
+                            </Badge>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
                 </div>
               )}
+            </CardContent>
+          </Card>
 
-              {offer.roomsCount && (
-                <div className="flex items-center gap-3 py-2 border-b border-border/50">
-                  <Layers className="size-4 text-primary shrink-0" />
-                  <span className="text-muted-foreground">Liczba pokoi:</span>
-                  <span className="font-medium text-foreground ml-auto">{offer.roomsCount}</span>
-                </div>
-              )}
-
-              {floorText && (
-                <div className="flex items-center gap-3 py-2 border-b border-border/50">
-                  <Building className="size-4 text-primary shrink-0" />
-                  <span className="text-muted-foreground">Piętro:</span>
-                  <span className="font-medium text-foreground ml-auto">{floorText}</span>
-                </div>
-              )}
-
-              {offer.metadata?.buildingType && (
-                <div className="flex items-center gap-3 py-2 border-b border-border/50">
-                  <Building2 className="size-4 text-primary shrink-0" />
-                  <span className="text-muted-foreground">Rodzaj zabudowy:</span>
-                  <span className="font-medium text-foreground ml-auto truncate max-w-[160px] text-right">
-                    {String(offer.metadata.buildingType)}
-                  </span>
-                </div>
-              )}
-
-              {offer.metadata?.yearBuilt && (
-                <div className="flex items-center gap-3 py-2 border-b border-border/50">
-                  <Calendar className="size-4 text-primary shrink-0" />
-                  <span className="text-muted-foreground">Rok budowy:</span>
-                  <span className="font-medium text-foreground ml-auto">{String(offer.metadata.yearBuilt)}</span>
-                </div>
-              )}
-
-              {offer.metadata?.marketType && (
-                <div className="flex items-center gap-3 py-2 border-b border-border/50">
-                  <Tag className="size-4 text-primary shrink-0" />
-                  <span className="text-muted-foreground">Rynek:</span>
-                  <span className="font-medium text-foreground ml-auto">{String(offer.metadata.marketType)}</span>
-                </div>
-              )}
-
-              {offer.metadata?.condition && (
-                <div className="flex items-center gap-3 py-2 border-b border-border/50">
-                  <Sparkles className="size-4 text-primary shrink-0" />
-                  <span className="text-muted-foreground">Stan wykończenia:</span>
-                  <span className="font-medium text-foreground ml-auto">{String(offer.metadata.condition)}</span>
-                </div>
-              )}
-
-              {offer.metadata?.heating && (
-                <div className="flex items-center gap-3 py-2 border-b border-border/50">
-                  <Flame className="size-4 text-primary shrink-0" />
-                  <span className="text-muted-foreground">Ogrzewanie:</span>
-                  <span className="font-medium text-foreground ml-auto truncate max-w-[160px] text-right">
-                    {String(offer.metadata.heating)}
-                  </span>
-                </div>
-              )}
-
-              {offer.metadata?.ownership && (
-                <div className="flex items-center gap-3 py-2 border-b border-border/50">
-                  <FileText className="size-4 text-primary shrink-0" />
-                  <span className="text-muted-foreground">Forma własności:</span>
-                  <span className="font-medium text-foreground ml-auto truncate max-w-[160px] text-right">
-                    {String(offer.metadata.ownership)}
-                  </span>
-                </div>
-              )}
-
-              {offer.metadata?.plotSqm && (
-                <div className="flex items-center gap-3 py-2 border-b border-border/50">
-                  <TreePine className="size-4 text-primary shrink-0" />
-                  <span className="text-muted-foreground">Działka:</span>
-                  <span className="font-medium text-foreground ml-auto">{String(offer.metadata.plotSqm)} m²</span>
-                </div>
-              )}
-            </div>
-
-            {/* Extra Dynamic Metadata Tags */}
-            {metadataEntries.length > 0 && (
-              <div className="pt-3 space-y-2">
-                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Inne informacje ze źródła
-                </div>
+          {/* Amenities & Feature Pills */}
+          {(offer.metadata?.hasElevator ||
+            offer.metadata?.hasBalcony ||
+            offer.metadata?.hasParking ||
+            offer.metadata?.hasBasement ||
+            offer.metadata?.hasAirConditioning ||
+            offer.metadata?.isFurnished ||
+            offer.metadata?.isPetFriendly ||
+            (offer.metadata?.tags && offer.metadata.tags.length > 0) ||
+            offer.metadata?.airQuality ||
+            offer.metadata?.noiseLevel) && (
+            <Card className="rounded-2xl border bg-card shadow-xs">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-bold text-foreground">
+                  Udogodnienia i atuty
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="flex flex-wrap gap-2">
-                  {metadataEntries.map(([key, val]) => (
-                    <Badge
-                      key={key}
-                      variant="secondary"
-                      className="rounded-lg px-3 py-1 font-normal text-xs bg-muted text-muted-foreground"
-                    >
-                      {formatMetadataValue(key, val)}
+                  {offer.metadata?.hasElevator ? (
+                    <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium">
+                      <Building className="size-3.5 text-primary" /> Winda w budynku
                     </Badge>
-                  ))}
+                  ) : null}
+                  {offer.metadata?.hasBalcony ? (
+                    <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium">
+                      <Check className="size-3.5 text-primary" /> Balkon / Taras
+                    </Badge>
+                  ) : null}
+                  {offer.metadata?.hasParking ? (
+                    <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium">
+                      <Check className="size-3.5 text-primary" /> Parking / Garaż
+                    </Badge>
+                  ) : null}
+                  {offer.metadata?.hasBasement ? (
+                    <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium">
+                      <Check className="size-3.5 text-primary" /> Piwnica / Komórka
+                    </Badge>
+                  ) : null}
+                  {offer.metadata?.hasAirConditioning ? (
+                    <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium">
+                      <Sparkles className="size-3.5 text-primary" /> Klimatyzacja
+                    </Badge>
+                  ) : null}
+                  {offer.metadata?.isFurnished ? (
+                    <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium">
+                      <Check className="size-3.5 text-primary" /> Umeblowane
+                    </Badge>
+                  ) : null}
+                  {offer.metadata?.isPetFriendly ? (
+                    <Badge variant="secondary" className="gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium">
+                      <Check className="size-3.5 text-primary" /> Przyjazne zwierzętom
+                    </Badge>
+                  ) : null}
                 </div>
-              </div>
-            )}
-          </div>
 
-          <Separator />
+                {((offer.metadata?.tags && Array.isArray(offer.metadata.tags) && offer.metadata.tags.length > 0) ||
+                  offer.metadata?.airQuality ||
+                  offer.metadata?.noiseLevel) && (
+                  <div className="pt-3 border-t border-border/40 flex flex-wrap gap-2 items-center">
+                    {Array.isArray(offer.metadata?.tags) &&
+                      offer.metadata.tags.map((t, idx) => (
+                        <Badge
+                          key={idx}
+                          variant="outline"
+                          className="rounded-lg px-2.5 py-1 text-xs text-muted-foreground border-primary/20 bg-primary/5"
+                        >
+                          #{String(t)}
+                        </Badge>
+                      ))}
+                    {offer.metadata?.airQuality && (
+                      <Badge
+                        variant="outline"
+                        className="rounded-lg px-2.5 py-1 text-xs text-emerald-600 dark:text-emerald-400 border-emerald-500/20 bg-emerald-500/5"
+                      >
+                        Jakość powietrza: {String(offer.metadata.airQuality)}
+                      </Badge>
+                    )}
+                    {offer.metadata?.noiseLevel && (
+                      <Badge
+                        variant="outline"
+                        className="rounded-lg px-2.5 py-1 text-xs text-sky-600 dark:text-sky-400 border-sky-500/20 bg-sky-500/5"
+                      >
+                        Poziom hałasu: {String(offer.metadata.noiseLevel)}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-          {/* Interactive Map Section */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-bold text-foreground">Lokalizacja na mapie</h3>
-                <p className="text-xs text-muted-foreground">
-                  {offer.city}{district ? `, dzielnica ${district}` : ''}{street ? `, ul. ${street}` : ''}
-                </p>
-              </div>
-            </div>
-            <ListingMap offer={offer} height="380px" />
-          </div>
+          {/* Description Card (only rendered if description is present) */}
+          {offer.description?.trim() && (
+            <Card className="rounded-2xl border bg-card shadow-xs">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg font-bold text-foreground">
+                  O tej nieruchomości
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div
+                  className={`relative ${
+                    !isDescriptionExpanded && isLongDescription ? 'max-h-48 overflow-hidden' : ''
+                  }`}
+                >
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                    {formatDescriptionText(offer.description)}
+                  </p>
+                  {!isDescriptionExpanded && isLongDescription && (
+                    <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+                  )}
+                </div>
+
+                {isLongDescription && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsDescriptionExpanded((prev) => !prev)}
+                    className="rounded-xl text-xs font-semibold cursor-pointer"
+                  >
+                    {isDescriptionExpanded ? 'Zwiń opis' : 'Pokaż więcej opisu'}
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Right Column (1 Col Sticky Sidebar Card) */}
@@ -665,7 +605,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                 </p>
               </div>
 
-              {/* Agency / Seller Contact Box (Only if agency name or phone available) */}
+              {/* Agency / Seller Contact Box */}
               {(offer.metadata?.agencyName || offer.metadata?.agencyPhone) && (
                 <>
                   <Separator />
@@ -719,6 +659,64 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
             </Card>
           </div>
         </div>
+      </div>
+
+      <Separator />
+
+      {/* Full-Width Interactive Map Section */}
+      <div className="space-y-4 pt-1">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 className="text-xl font-bold tracking-tight text-foreground">Lokalizacja i okolica</h3>
+            <p className="text-sm text-muted-foreground">
+              {offer.city}{district ? `, dzielnica ${district}` : ''}{street ? `, ul. ${street}` : ''}
+            </p>
+          </div>
+          <a
+            href={googleMapsUrl}
+            target="_blank"
+            rel="noreferrer"
+            className={buttonVariants({
+              variant: 'outline',
+              size: 'sm',
+              className: 'gap-2 rounded-xl text-xs font-medium cursor-pointer',
+            })}
+          >
+            <MapPin className="size-3.5 text-primary" />
+            Otwórz w Google Maps
+            <ExternalLink className="size-3 opacity-70" />
+          </a>
+        </div>
+
+        <div className="overflow-hidden rounded-2xl border bg-muted/20 shadow-xs">
+          <ListingMap offer={offer} height="480px" />
+        </div>
+      </div>
+
+      {/* Mobile Floating Bottom Action Bar */}
+      <div className="fixed bottom-0 inset-x-0 sm:hidden bg-background/95 backdrop-blur-md border-t px-4 py-3 z-40 flex items-center justify-between gap-3 shadow-lg">
+        <div className="min-w-0">
+          <div className="text-xs font-semibold text-foreground truncate">
+            {formatPrice(offer.price)}
+          </div>
+          {pricePerSqm && (
+            <div className="text-[10px] text-muted-foreground truncate">
+              {pricePerSqm}
+            </div>
+          )}
+        </div>
+        <a
+          href={offer.url}
+          target="_blank"
+          rel="noreferrer"
+          className={buttonVariants({
+            size: 'sm',
+            className: 'gap-1.5 rounded-xl text-xs font-semibold shrink-0 cursor-pointer',
+          })}
+        >
+          Przejdź do oferty
+          <ExternalLink className="size-3.5" />
+        </a>
       </div>
     </div>
   )

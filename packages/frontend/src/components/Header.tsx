@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { SlidersHorizontal, X, ArrowUpDown, RefreshCw, Sparkles } from 'lucide-react'
 import type { ListOffersFilter, SortBy } from '../types/offer'
 
@@ -50,17 +51,23 @@ export function Header({
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-xl font-bold tracking-tight text-primary">EstatePlanner</h1>
           {onSync && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onSync}
-              disabled={isSyncing}
-              className="h-7 gap-1.5 rounded-full text-xs px-2.5 font-medium cursor-pointer"
-              title="Pobierz nowe oferty ze scrapera"
-            >
-              <RefreshCw className={`size-3 ${isSyncing ? 'animate-spin text-primary' : ''}`} />
-              <span className="hidden sm:inline">{isSyncing ? 'Pobieranie...' : 'Pobierz oferty'}</span>
-            </Button>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onSync}
+                    disabled={isSyncing}
+                    className="h-7 gap-1.5 rounded-full text-xs px-2.5 font-medium cursor-pointer"
+                  />
+                }
+              >
+                <RefreshCw className={`size-3 ${isSyncing ? 'animate-spin text-primary' : ''}`} />
+                <span className="hidden sm:inline">{isSyncing ? 'Pobieranie...' : 'Pobierz oferty'}</span>
+              </TooltipTrigger>
+              <TooltipContent>Pobierz nowe oferty ze scrapera</TooltipContent>
+            </Tooltip>
           )}
         </div>
 

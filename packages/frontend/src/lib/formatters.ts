@@ -47,17 +47,34 @@ export const IGNORED_METADATA_KEYS = new Set([
   'transactionType',
   'plotSqm',
   'buildingType',
+  'buildingMaterial',
   'marketType',
   'yearBuilt',
   'condition',
   'heating',
   'ownership',
+  'rentExtra',
+  'deposit',
+  'exclusiveOffer',
+  'hasElevator',
+  'hasBalcony',
+  'hasParking',
+  'hasBasement',
+  'hasAirConditioning',
+  'isFurnished',
+  'isPetFriendly',
+  'tags',
+  'airQuality',
+  'noiseLevel',
   'agencyName',
   'agencyPhone',
   'areaSqm',
   'roomsCount',
   'price',
   'currency',
+  'category',
+  'viewCount',
+  'sourceId',
 ])
 
 export function formatMetadataValue(key: string, val: unknown): string {
@@ -155,5 +172,15 @@ export function normalizeOfferImages(images: unknown, metadataImageUrl?: unknown
   }
   return []
 }
+
+const SECTION_SPLIT_RE =
+  /([.!?])\s*(BUDYNEK\/OSIEDLE|NIERUCHOMOŚĆ|OKOLICA|STANDARD|LOKALIZACJA|DODATKOWE INFORMACJE|ROZKŁAD POMIESZCZEŃ|STAN PRAWNY|KOMUNIKACJA)/gi
+const LIST_BULLET_RE = /\s*-\s+/g
+
+export function formatDescriptionText(text: string | null | undefined): string {
+  if (!text) return ''
+  return text.replace(SECTION_SPLIT_RE, '$1\n\n$2').replace(LIST_BULLET_RE, '\n• ').trim()
+}
+
 
 

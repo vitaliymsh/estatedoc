@@ -1,18 +1,23 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+  SheetDescription,
+} from '@/components/ui/sheet'
+import { Slider } from '@/components/ui/slider'
 import type { ListOffersFilter, SortBy } from '../types/offer'
 
-const PORTALS = ['sprzedajemy', 'otodom', 'olx', 'gratka']
+const PORTALS = ['morizon', 'sprzedajemy', 'otodom', 'olx', 'gratka']
+const SLIDER_MIN = 0
+const SLIDER_MAX = 3000000
+const SLIDER_STEP = 25000
 
 interface FilterModalProps {
   open: boolean
@@ -21,22 +26,18 @@ interface FilterModalProps {
   onApply: (draft: Partial<ListOffersFilter>) => void
 }
 
-export function FilterModal({ open, onOpenChange, filter, onApply }: FilterModalProps) {
+function FilterForm({
+  filter,
+  onApply,
+}: {
+  filter: ListOffersFilter
+  onApply: (draft: Partial<ListOffersFilter>) => void
+}) {
   const [city, setCity] = useState(filter.city || '')
   const [portal, setPortal] = useState(filter.portal || '')
   const [minPrice, setMinPrice] = useState(filter.minPrice?.toString() || '')
   const [maxPrice, setMaxPrice] = useState(filter.maxPrice?.toString() || '')
   const [sortBy, setSortBy] = useState<SortBy>(filter.sortBy)
-
-  useEffect(() => {
-    if (open) {
-      setCity(filter.city || '')
-      setPortal(filter.portal || '')
-      setMinPrice(filter.minPrice?.toString() || '')
-      setMaxPrice(filter.maxPrice?.toString() || '')
-      setSortBy(filter.sortBy)
-    }
-  }, [open, filter])
 
   const handleApply = () => {
     onApply({
@@ -47,7 +48,6 @@ export function FilterModal({ open, onOpenChange, filter, onApply }: FilterModal
       sortBy,
       page: 1,
     })
-    onOpenChange(false)
   }
 
   const handleClear = () => {
@@ -58,14 +58,29 @@ export function FilterModal({ open, onOpenChange, filter, onApply }: FilterModal
     setSortBy('newest')
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Filtry</DialogTitle>
-        </DialogHeader>
+  const sliderValue = [
+    minPrice ? Math.max(SLIDER_MIN, Math.min(Number(minPrice), SLIDER_MAX)) : SLIDER_MIN,
+    maxPrice ? Math.max(SLIDER_MIN, Math.min(Number(maxPrice), SLIDER_MAX)) : SLIDER_MAX,
+  ]
 
-        <div className="space-y-5 py-2">
+  const handleSliderChange = (val: number | readonly number[]) => {
+    if (Array.isArray(val) && val.length >= 2) {
+      setMinPrice(val[0] > SLIDER_MIN ? String(val[0]) : '')
+      setMaxPrice(val[1] < SLIDER_MAX ? String(val[1]) : '')
+    }
+  }
+
+  return (
+    <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto flex flex-col justify-between p-6">
+      <div>
+        <SheetHeader className="p-0 pb-4 border-b">
+          <SheetTitle>Filtry</SheetTitle>
+          <SheetDescription className="sr-only">
+            Dostosuj kryteria wyszukiwania nieruchomości
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="space-y-5 py-4">
           {/* City Input */}
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold">Miasto</Label>
@@ -114,7 +129,7 @@ export function FilterModal({ open, onOpenChange, filter, onApply }: FilterModal
           </div>
 
           {/* Price Range */}
-          <div className="space-y-1.5">
+          <div className="space-y-3">
             <Label className="text-xs font-semibold">Zakres cenowy (PLN)</Label>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -136,6 +151,20 @@ export function FilterModal({ open, onOpenChange, filter, onApply }: FilterModal
                   value={maxPrice}
                   onChange={(e) => setMaxPrice(e.target.value)}
                 />
+              </div>
+            </div>
+            <div className="pt-2 px-1">
+              <Slider
+                min={SLIDER_MIN}
+                max={SLIDER_MAX}
+                step={SLIDER_STEP}
+                value={sliderValue}
+                onValueChange={handleSliderChange}
+              />
+              <div className="flex justify-between text-[10px] text-muted-foreground pt-1.5">
+                <span>0 PLN</span>
+                <span>1.5M PLN</span>
+                <span>3M+ PLN</span>
               </div>
             </div>
           </div>
@@ -180,16 +209,32 @@ export function FilterModal({ open, onOpenChange, filter, onApply }: FilterModal
             </ToggleGroup>
           </div>
         </div>
+      </div>
 
-        <DialogFooter className="flex items-center justify-between sm:justify-between">
-          <Button variant="ghost" size="sm" onClick={handleClear}>
-            Wyczyść
-          </Button>
-          <Button size="sm" onClick={handleApply}>
-            Pokaż oferty
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <SheetFooter className="p-0 pt-4 border-t flex flex-row items-center justify-between sm:justify-between">
+        <Button variant="ghost" size="sm" onClick={handleClear}>
+          Wyczyść
+        </Button>
+        <Button size="sm" onClick={handleApply}>
+          Pokaż oferty
+        </Button>
+      </SheetFooter>
+    </SheetContent>
+  )
+}
+
+export function FilterModal({ open, onOpenChange, filter, onApply }: FilterModalProps) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      {open ? (
+        <FilterForm
+          filter={filter}
+          onApply={(draft) => {
+            onApply(draft)
+            onOpenChange(false)
+          }}
+        />
+      ) : null}
+    </Sheet>
   )
 }
