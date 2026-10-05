@@ -1,5 +1,11 @@
 import { z } from 'zod';
 
+const booleanQueryParam = z.preprocess((val) => {
+  if (val === 'true' || val === true || val === '1' || val === 1) return true;
+  if (val === 'false' || val === false || val === '0' || val === 0) return false;
+  return undefined;
+}, z.boolean().optional());
+
 export const listOffersQuerySchema = z.object({
   q: z.string().trim().optional(),
   city: z.string().trim().optional(),
@@ -9,9 +15,23 @@ export const listOffersQuerySchema = z.object({
   transactionType: z.enum(['sale', 'rent']).optional(),
   minPrice: z.coerce.number().min(0).optional(),
   maxPrice: z.coerce.number().min(0).optional(),
+  minArea: z.coerce.number().min(0).optional(),
+  maxArea: z.coerce.number().min(0).optional(),
   minRooms: z.coerce.number().int().min(1).optional(),
   maxRooms: z.coerce.number().int().min(1).optional(),
-  sortBy: z.enum(['newest', 'price_asc', 'price_desc']).default('newest'),
+  minFloor: z.coerce.number().int().optional(),
+  maxFloor: z.coerce.number().int().optional(),
+  sellerType: z.enum(['private', 'company', 'agency', 'developer', 'verified']).optional(),
+  marketType: z.enum(['primary', 'secondary']).optional(),
+  hasElevator: booleanQueryParam,
+  hasBalcony: booleanQueryParam,
+  hasParking: booleanQueryParam,
+  hasAirConditioning: booleanQueryParam,
+  isFurnished: booleanQueryParam,
+  hasBasement: booleanQueryParam,
+  sortBy: z
+    .enum(['newest', 'price_asc', 'price_desc', 'area_asc', 'area_desc', 'price_sqm_asc', 'price_sqm_desc'])
+    .default('newest'),
   limit: z.coerce.number().min(1).max(100).default(20),
   offset: z.coerce.number().min(0).default(0),
 });
@@ -25,20 +45,20 @@ export const batchOfferItemSchema = z.object({
   externalId: z.string().min(1).max(128),
   url: z.string().url(),
   title: z.string().min(1).max(255),
-  price: z.coerce.number().nullable().optional(),
-  areaSqm: z.coerce.number().nullable().optional(),
-  roomsCount: z.coerce.number().int().nullable().optional(),
-  floor: z.coerce.number().int().nullable().optional(),
-  totalFloors: z.coerce.number().int().nullable().optional(),
-  propertyType: z.enum(['apartment', 'house', 'land', 'commercial', 'garage', 'other']).nullable().optional(),
-  transactionType: z.enum(['sale', 'rent']).nullable().optional(),
+  price: z.coerce.number().nullish(),
+  areaSqm: z.coerce.number().nullish(),
+  roomsCount: z.coerce.number().int().nullish(),
+  floor: z.coerce.number().int().nullish(),
+  totalFloors: z.coerce.number().int().nullish(),
+  propertyType: z.enum(['apartment', 'house', 'land', 'commercial', 'garage', 'other']).nullish(),
+  transactionType: z.enum(['sale', 'rent']).nullish(),
   city: z.string().min(1).max(64),
-  district: z.string().max(64).nullable().optional(),
-  street: z.string().max(128).nullable().optional(),
-  sellerType: z.enum(['private', 'company', 'agency', 'developer', 'verified']).nullable().optional(),
-  images: z.array(z.string().url().or(z.string().min(1))).nullable().optional(),
-  description: z.string().nullable().optional(),
-  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  district: z.string().max(64).nullish(),
+  street: z.string().max(128).nullish(),
+  sellerType: z.enum(['private', 'company', 'agency', 'developer', 'verified']).nullish(),
+  images: z.array(z.string().min(1)).nullish(),
+  description: z.string().nullish(),
+  metadata: z.record(z.string(), z.unknown()).nullish(),
 });
 
 export const batchIngestOffersSchema = z.array(batchOfferItemSchema).min(1).max(500);

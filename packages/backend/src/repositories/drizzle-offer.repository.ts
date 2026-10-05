@@ -47,15 +47,42 @@ export class DrizzleOfferRepository implements IOfferRepository {
     if (query.maxPrice !== undefined) {
       conditions.push(lte(offers.price, String(query.maxPrice)));
     }
+    if (query.minArea !== undefined) {
+      conditions.push(gte(offers.areaSqm, String(query.minArea)));
+    }
+    if (query.maxArea !== undefined) {
+      conditions.push(lte(offers.areaSqm, String(query.maxArea)));
+    }
+    if (query.minFloor !== undefined) {
+      conditions.push(gte(offers.floor, query.minFloor));
+    }
+    if (query.maxFloor !== undefined) {
+      conditions.push(lte(offers.floor, query.maxFloor));
+    }
+    if (query.sellerType) {
+      conditions.push(eq(offers.sellerType, query.sellerType));
+    }
+    if (query.marketType) {
+      conditions.push(sql`JSON_UNQUOTE(JSON_EXTRACT(${offers.metadata}, '$.marketType')) = ${query.marketType}`);
+    }
+    const metaBools = ['hasElevator', 'hasBalcony', 'hasParking', 'hasAirConditioning', 'isFurnished', 'hasBasement'] as const;
+    for (const key of metaBools) {
+      if (query[key] !== undefined) {
+        conditions.push(sql`JSON_EXTRACT(${offers.metadata}, '$.${sql.raw(key)}') = ${query[key]}`);
+      }
+    }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-    let orderByClause = desc(offers.createdAt);
-    if (query.sortBy === 'price_asc') {
-      orderByClause = asc(offers.price);
-    } else if (query.sortBy === 'price_desc') {
-      orderByClause = desc(offers.price);
-    }
+    const sortMap: Record<string, ReturnType<typeof asc>> = {
+      price_asc: asc(offers.price),
+      price_desc: desc(offers.price),
+      area_asc: asc(offers.areaSqm),
+      area_desc: desc(offers.areaSqm),
+      price_sqm_asc: asc(sql`(${offers.price} / NULLIF(${offers.areaSqm}, 0))`),
+      price_sqm_desc: desc(sql`(${offers.price} / NULLIF(${offers.areaSqm}, 0))`),
+    };
+    const orderByClause = (query.sortBy && sortMap[query.sortBy]) || desc(offers.createdAt);
 
     const [countResult] = await this.db
       .select({ total: count() })
