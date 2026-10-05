@@ -88,4 +88,37 @@ describe('LLMQueryParser', () => {
       sortBy: 'price_asc',
     });
   });
+
+  it('maps implied life requirements to booleans and sorts while leaving q empty', async () => {
+    const mockProvider: LLMProvider = {
+      generate: vi.fn().mockResolvedValue(
+        JSON.stringify({
+          city: 'Warszawa',
+          propertyType: 'apartment',
+          transactionType: 'rent',
+          hasAirConditioning: true,
+          hasBalcony: true,
+          maxFloor: 3,
+          sortBy: 'price_desc',
+          q: null,
+        })
+      ),
+    };
+
+    const parser = new LLMQueryParser(mockProvider);
+    const result = await parser.parse(
+      'rent apartment in Warsaw, hot summer, scared of heights, need fresh air, budget is unlimited'
+    );
+
+    expect(result).toEqual({
+      city: 'Warszawa',
+      propertyType: 'apartment',
+      transactionType: 'rent',
+      hasAirConditioning: true,
+      hasBalcony: true,
+      maxFloor: 3,
+      sortBy: 'price_desc',
+    });
+  });
 });
+

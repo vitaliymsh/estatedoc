@@ -67,11 +67,26 @@ Your task is to parse unstructured user search prompts (in Polish, English, or m
 
 ### DISAMBIGUATION & EXTRACTION RULES:
 1. Metric "m" Disambiguation: "m" when referring to area or property size ("40m", "mieszkanie 50m", "ok. 45m") represents square meters (minArea/maxArea). Only treat "m" as million when accompanied by price/currency context (e.g. "1.5m PLN", "do 2m zł").
-2. Filter Out Subjective & Filler Words: Drop generic conversational greetings/requests ("I want", "szukam", "proszę") and subjective quality descriptors ("nice", "ładne", "dobre", "super", "piękne"). Do not put them in "q".
-3. Relative Price Terms: Map "cheap" / "tani" to sortBy="price_asc" and "expensive" to sortBy="price_desc" rather than putting them in "q".
-4. Floor vs Rooms: "na 3 piętrze" / "3rd floor" -> floor=3 (do NOT set minRooms=3).
-5. Price per sqm: "12k/m2" -> set sortBy="price_sqm_asc" or keep in "q" (do NOT set maxPrice=12000).
-6. Missing Fields: Output null for unmentioned criteria. Never fabricate values.`;
+2. Priority Implied / Lifestyle Intent Mapping:
+   - "hot summer" / "warm days" / "cooling" / "climate control" -> hasAirConditioning=true.
+   - "scared of heights / high floors" / "low floor" / "ground floor" -> maxFloor=3.
+   - "living alone" / "single" -> minRooms=1 (or do not restrict if propertyType=apartment is set).
+   - "work from home" / "home office" -> if no rooms specified, suggest minRooms=2 (or do not filter if strict rooms given).
+   - "ready to move in" / "turnkey" -> isFurnished=true.
+   - "store bikes" / "extra storage" / "tenant locker" -> hasBasement=true.
+   - "sit outside" / "fresh air" / "outdoor space" -> hasBalcony=true.
+   - "money not problem" / "luxury" / "no budget limit" -> sortBy="price_desc".
+   - "budget" / "cheap" / "affordable" -> sortBy="price_asc".
+3. Strict "q" Keyword Policy:
+   - Never put generic conversational reasons ("work from home", "living alone", "fast internet", "summer", "alone") into "q".
+   - Never use "q" for amenities or features already handled by boolean filters (balcony, ac, elevator, parking, basement).
+   - "q" must ONLY contain specific named entities (e.g. street names, specific landmarks like "Port Praski", building materials like "kamienica", "cegła", "loft") when explicitly mentioned.
+   - If in doubt, set "q": null to prevent over-filtering.
+4. Filter Out Subjective & Filler Words: Drop generic conversational greetings/requests ("I want", "szukam", "proszę") and subjective quality descriptors ("nice", "ładne", "dobre", "super", "piękne"). Do not put them in "q".
+5. Relative Price Terms: Map "cheap" / "tani" to sortBy="price_asc" and "expensive" to sortBy="price_desc" rather than putting them in "q".
+6. Floor vs Rooms: "na 3 piętrze" / "3rd floor" -> floor=3 / maxFloor=3 (do NOT set minRooms=3).
+7. Price per sqm: "12k/m2" -> set sortBy="price_sqm_asc" or keep in "q" (do NOT set maxPrice=12000).
+8. Missing Fields: Output null for unmentioned criteria. Never fabricate values.`;
 
 export class LLMQueryParser implements IQueryParser {
   constructor(private readonly provider: LLMProvider) {}
@@ -98,7 +113,7 @@ export class LLMQueryParser implements IQueryParser {
       for (const k of ['q', 'city', 'district'] as const) {
         if (typeof parsed[k] === 'string' && (parsed[k] as string).trim()) result[k] = (parsed[k] as string).trim();
       }
-      for (const k of ['minPrice', 'maxPrice', 'minArea', 'maxArea', 'minRooms', 'maxRooms'] as const) {
+      for (const k of ['minPrice', 'maxPrice', 'minArea', 'maxArea', 'minRooms', 'maxRooms', 'minFloor', 'maxFloor'] as const) {
         if (typeof parsed[k] === 'number' && !Number.isNaN(parsed[k])) result[k] = parsed[k] as number;
       }
       for (const k of ['hasElevator', 'hasBalcony', 'hasParking', 'hasAirConditioning', 'isFurnished', 'hasBasement'] as const) {
