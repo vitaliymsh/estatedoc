@@ -2,6 +2,7 @@ import { useState, lazy, Suspense } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip'
 import { Building2, MapPin, Map } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { Offer } from '../types/offer'
 import {
   formatPrice,
@@ -9,6 +10,11 @@ import {
   formatFloor,
   formatSellerType,
   formatMetadataValue,
+  formatPortal,
+  formatArea,
+  formatRooms,
+  formatStreet,
+  sanitizeTitle,
   normalizeOfferImages,
   IGNORED_METADATA_KEYS,
 } from '../lib/formatters'
@@ -33,18 +39,33 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
   const imageUrl = !imgError && normalizedImages.length > 0 ? normalizedImages[0] : undefined
 
   const district = offer.district || offer.metadata?.district
-  const street = offer.street || (offer.metadata?.street as string | undefined)
+  const formattedStreet = formatStreet(offer.street || (offer.metadata?.street as string | undefined))
   const sellerLabel = formatSellerType(
     offer.sellerType || (offer.metadata?.sellerType as string | undefined),
     lang
   )
   const floorText = formatFloor(offer.floor, offer.totalFloors, lang)
+  const portalInfo = formatPortal(offer.portal)
+  const cleanTitle = sanitizeTitle(offer.title)
+  const areaText = formatArea(offer.areaSqm)
+  const roomsText = formatRooms(offer.roomsCount, lang)
 
   const metadataEntries = offer.metadata
     ? Object.entries(offer.metadata).filter(
         ([key, val]) => !IGNORED_METADATA_KEYS.has(key) && val !== null && val !== undefined
       )
     : []
+
+  const badges: string[] = []
+  if (offer.metadata?.buildingType) badges.push(String(offer.metadata.buildingType))
+  if (offer.metadata?.hasElevator) badges.push(t('elevator'))
+  if (offer.metadata?.hasBalcony) badges.push(t('balcony_terrace'))
+  if (offer.metadata?.hasParking) badges.push(t('parking_garage'))
+  for (const [key, val] of metadataEntries) {
+    badges.push(formatMetadataValue(key, val, lang))
+  }
+  const visibleBadges = badges.slice(0, 3)
+  const overflowCount = badges.length - visibleBadges.length
 
   const handleMouseEnter = () => {
     prefetchOffer(offer)
@@ -98,13 +119,16 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
         <div className="absolute top-3 left-3 z-10">
           <Badge
             variant="outline"
-            className="rounded-full border-none bg-white/90 px-2.5 py-0.5 text-xs font-semibold text-neutral-900 shadow-xs backdrop-blur-md dark:bg-black/80 dark:text-neutral-100"
+            className={cn(
+              "rounded-full px-2.5 py-0.5 text-xs font-semibold shadow-2xs backdrop-blur-md border",
+              portalInfo.badgeClassName
+            )}
           >
-            {offer.portal}
+            {portalInfo.name}
           </Badge>
         </div>
 
-        {/* Top Right Badges & Map Toggle */}
+        {/* Top Right Badges & Desktop Map Toggle */}
         <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
           {sellerLabel && !showMapPreview ? (
             <Badge
@@ -115,27 +139,29 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
             </Badge>
           ) : null}
 
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    setShowMapPreview((prev) => !prev)
-                  }}
-                  aria-label={showMapPreview ? t('show_photos') : t('map_preview')}
-                  className="rounded-full bg-background/90 p-1.5 text-foreground shadow-xs backdrop-blur-md transition hover:scale-110 hover:bg-background cursor-pointer"
-                />
-              }
-            >
-              {showMapPreview ? <Building2 className="size-3.5" /> : <Map className="size-3.5" />}
-            </TooltipTrigger>
-            <TooltipContent>
-              {showMapPreview ? t('show_photos') : t('map_preview')}
-            </TooltipContent>
-          </Tooltip>
+          <div className="hidden sm:inline-flex">
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      setShowMapPreview((prev) => !prev)
+                    }}
+                    aria-label={showMapPreview ? t('show_photos') : t('map_preview')}
+                    className="rounded-full bg-background/90 p-1.5 text-foreground shadow-xs backdrop-blur-md transition hover:scale-110 hover:bg-background cursor-pointer"
+                  />
+                }
+              >
+                {showMapPreview ? <Building2 className="size-3.5" /> : <Map className="size-3.5" />}
+              </TooltipTrigger>
+              <TooltipContent>
+                {showMapPreview ? t('show_photos') : t('map_preview')}
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
       </div>
 
@@ -148,26 +174,28 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
             <span className="truncate">
               {offer.city}
               {district ? `, ${district}` : ''}
-              {street ? `, ul. ${street}` : ''}
+              {formattedStreet ? `, ${formattedStreet}` : ''}
             </span>
           </span>
-          {offer.roomsCount != null && offer.roomsCount > 0 ? (
+          {roomsText ? (
             <span className="shrink-0 text-xs font-medium text-muted-foreground ml-2">
-              {offer.roomsCount} {t('rooms')}
+              {roomsText}
             </span>
           ) : null}
         </div>
 
-        {/* Title */}
-        <p className="line-clamp-1 text-muted-foreground text-xs font-normal">
-          {offer.title}
-        </p>
+        {/* Sanitized Title */}
+        {cleanTitle ? (
+          <p className="line-clamp-1 text-muted-foreground text-xs font-normal">
+            {cleanTitle}
+          </p>
+        ) : null}
 
         {/* Area & Floor */}
-        {offer.areaSqm || floorText ? (
+        {areaText || floorText ? (
           <div className="text-xs text-muted-foreground flex items-center gap-1.5">
-            {offer.areaSqm ? <span>{offer.areaSqm} m²</span> : null}
-            {offer.areaSqm && floorText ? <span>•</span> : null}
+            {areaText ? <span>{areaText}</span> : null}
+            {areaText && floorText ? <span>•</span> : null}
             {floorText ? <span>{floorText}</span> : null}
           </div>
         ) : null}
@@ -175,45 +203,35 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
         {/* Price */}
         <div className="mt-1 flex items-baseline gap-1.5">
           <span className="font-semibold text-foreground underline decoration-1 underline-offset-2">
-            {formatPrice(offer.price, lang)}
+            {formatPrice(offer.price, lang, offer.transactionType)}
           </span>
           {pricePerSqm ? (
             <span className="text-xs text-muted-foreground">({pricePerSqm})</span>
           ) : null}
         </div>
 
-        {/* Quick Feature Badges */}
-        <div className="mt-2 flex flex-wrap gap-1.5">
-          {offer.metadata?.buildingType && (
-            <Badge variant="secondary" className="rounded-md font-normal text-[11px] px-2 py-0.5 bg-muted text-muted-foreground capitalize">
-              {String(offer.metadata.buildingType)}
-            </Badge>
-          )}
-          {offer.metadata?.hasElevator && (
-            <Badge variant="secondary" className="rounded-md font-normal text-[11px] px-2 py-0.5 bg-muted text-muted-foreground">
-              {t('elevator')}
-            </Badge>
-          )}
-          {offer.metadata?.hasBalcony && (
-            <Badge variant="secondary" className="rounded-md font-normal text-[11px] px-2 py-0.5 bg-muted text-muted-foreground">
-              {t('balcony_terrace')}
-            </Badge>
-          )}
-          {offer.metadata?.hasParking && (
-            <Badge variant="secondary" className="rounded-md font-normal text-[11px] px-2 py-0.5 bg-muted text-muted-foreground">
-              {t('parking_garage')}
-            </Badge>
-          )}
-          {metadataEntries.slice(0, 2).map(([key, val]) => (
-            <Badge
-              key={key}
-              variant="secondary"
-              className="rounded-md font-normal text-[11px] px-2 py-0.5 bg-muted text-muted-foreground"
-            >
-              {formatMetadataValue(key, val, lang)}
-            </Badge>
-          ))}
-        </div>
+        {/* Quick Feature Badges (Max 3 + Overflow) */}
+        {visibleBadges.length > 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {visibleBadges.map((badge, idx) => (
+              <Badge
+                key={idx}
+                variant="secondary"
+                className="rounded-md font-normal text-[11px] px-2 py-0.5 bg-muted text-muted-foreground capitalize"
+              >
+                {badge}
+              </Badge>
+            ))}
+            {overflowCount > 0 && (
+              <Badge
+                variant="secondary"
+                className="rounded-md font-normal text-[10px] px-1.5 py-0.5 bg-muted/60 text-muted-foreground"
+              >
+                +{overflowCount}
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
     </a>
   )

@@ -30,6 +30,7 @@ import {
   Sparkles,
   TreePine,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { useOfferDetail } from '../hooks/use-offer-detail'
 import { OfferGallery } from './OfferGallery'
 import {
@@ -38,6 +39,9 @@ import {
   formatFloor,
   formatSellerType,
   formatMetadataValue,
+  formatPortal,
+  formatArea,
+  formatStreet,
   formatRelativeTime,
   buildGoogleMapsUrl,
   formatPropertyType,
@@ -127,11 +131,14 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
   const pricePerSqm = calculatePricePerSqm(offer.price, offer.areaSqm, lang)
   const district = offer.district || (offer.metadata?.district as string | undefined)
   const street = offer.street || (offer.metadata?.street as string | undefined)
+  const formattedStreet = formatStreet(street)
   const sellerLabel = formatSellerType(
     offer.sellerType || (offer.metadata?.sellerType as string | undefined),
     lang
   )
   const floorText = formatFloor(offer.floor, offer.totalFloors, lang)
+  const portalInfo = formatPortal(offer.portal)
+  const areaText = formatArea(offer.areaSqm)
   const relativeTime = formatRelativeTime(offer.createdAt, lang)
   const googleMapsUrl = buildGoogleMapsUrl(offer.city, district, street)
   const propertyTypeLabel = formatPropertyType(offer.propertyType, lang)
@@ -210,7 +217,9 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
       <div className="order-2 md:order-2 space-y-2">
         {/* Unified Subtle Metadata Line (Replaces 4 redundant pill badges) */}
         <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          <span className="text-foreground font-bold">{offer.portal}</span>
+          <span className={cn("inline-flex items-center rounded-md px-2 py-0.5 text-xs font-bold border", portalInfo.badgeClassName)}>
+            {portalInfo.name}
+          </span>
           <span>•</span>
           <span>{sellerLabel || transactionTypeLabel}</span>
           {propertyTypeLabel && propertyTypeLabel !== 'Nieruchomość' && (
@@ -238,7 +247,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
             <span>
               {offer.city}
               {district ? `, ${district}` : ''}
-              {street ? `, ul. ${street}` : ''}
+              {formattedStreet ? `, ${formattedStreet}` : ''}
             </span>
             <ExternalLink className="size-3 ml-0.5 opacity-60" />
           </a>
@@ -246,10 +255,10 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
 
         {/* Universal Key Highlights Badge Strip (Mobile, Tablet, Desktop) */}
         <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-1">
-          {offer.areaSqm && (
+          {areaText && (
             <span className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/80 px-2.5 py-1 text-xs sm:text-sm font-semibold text-foreground">
               <Maximize2 className="size-3.5 text-primary" />
-              {offer.areaSqm} m²
+              {areaText}
             </span>
           )}
           {offer.roomsCount && (
@@ -661,7 +670,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                 <div className="space-y-1">
                   <span className="text-xs font-medium text-muted-foreground">{t('total_price')}</span>
                   <div className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-                    {formatPrice(offer.price, lang)}
+                    {formatPrice(offer.price, lang, offer.transactionType)}
                   </div>
                   {pricePerSqm && (
                     <div className="text-xs font-medium text-muted-foreground">
@@ -693,7 +702,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                         className: 'w-full gap-2 rounded-xl font-medium shadow-2xs cursor-pointer hover:bg-accent',
                       })}
                     >
-                      {t('view_on_portal', { portal: offer.portal })}
+                      {t('view_on_portal', { portal: portalInfo.name })}
                       <ExternalLink className="size-3.5 opacity-70" />
                     </a>
                   </div>
@@ -708,7 +717,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
                         className: 'w-full gap-2 rounded-xl font-semibold shadow-xs cursor-pointer',
                       })}
                     >
-                      {t('view_on_portal', { portal: offer.portal })}
+                      {t('view_on_portal', { portal: portalInfo.name })}
                       <ExternalLink className="size-4" />
                     </a>
                     <p className="text-center text-[11px] text-muted-foreground">
@@ -793,7 +802,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
       <div className="fixed bottom-0 inset-x-0 md:hidden bg-background/95 backdrop-blur-md border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex items-center justify-between gap-3 shadow-lg">
         <div className="min-w-0">
           <div className="text-base font-bold text-foreground truncate leading-none">
-            {formatPrice(offer.price, lang)}
+            {formatPrice(offer.price, lang, offer.transactionType)}
           </div>
           {pricePerSqm && (
             <div className="text-[11px] font-medium text-muted-foreground truncate mt-0.5">
