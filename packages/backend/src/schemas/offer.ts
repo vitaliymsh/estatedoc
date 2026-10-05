@@ -48,8 +48,15 @@ export const checkExistingOffersSchema = z.object({
   externalIds: z.array(z.string().min(1).max(128)).max(1000),
 });
 
+export const aiSearchSchema = z.object({
+  prompt: z.string().trim().min(1).max(500),
+  limit: z.coerce.number().min(1).max(100).default(20),
+  offset: z.coerce.number().min(0).default(0),
+});
+
 export type ListOffersQuery = z.infer<typeof listOffersQuerySchema>;
 export type GetOfferParams = z.infer<typeof getOfferParamsSchema>;
 export type BatchOfferItem = z.infer<typeof batchOfferItemSchema>;
 export type BatchIngestOffersInput = z.infer<typeof batchIngestOffersSchema>;
 export type CheckExistingOffersInput = z.infer<typeof checkExistingOffersSchema>;
+export type AiSearchInput = z.infer<typeof aiSearchSchema>;

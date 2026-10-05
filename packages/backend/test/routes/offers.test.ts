@@ -157,5 +157,72 @@ describe('Offers Routes', () => {
     expect(conditionalRes.statusCode).toBe(304);
     expect(conditionalRes.body).toBe('');
   });
+
+  it('POST /api/offers/search parses prompt and returns filtered offers', async () => {
+    await repo.upsertBatch([
+      {
+        portal: 'sprzedajemy',
+        externalId: 'ext-krk-1',
+        url: 'https://sprzedajemy.pl/krk-1',
+        title: '3 pokoje Krowodrza',
+        city: 'Kraków',
+        price: 550000,
+        roomsCount: 3,
+      },
+      {
+        portal: 'sprzedajemy',
+        externalId: 'ext-waw-1',
+        url: 'https://sprzedajemy.pl/waw-1',
+        title: 'Kawalerka Mokotów',
+        city: 'Warszawa',
+        price: 400000,
+        roomsCount: 1,
+      },
+    ]);
+
+    const mockParser = {
+      parse: async () => ({
+        city: 'Kraków',
+        minRooms: 3,
+        maxRooms: 3,
+        maxPrice: 600000,
+      }),
+    };
+
+    const aiApp = Fastify();
+    await aiApp.register(offersRoutes, { prefix: '/api/offers', repository: repo, queryParser: mockParser });
+    await aiApp.ready();
+
+    const res = await aiApp.inject({
+      method: 'POST',
+      url: '/api/offers/search',
+      payload: {
+        prompt: '3 pokoje w Krakowie do 600k',
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.total).toBe(1);
+    expect(body.items[0].city).toBe('Kraków');
+    expect(body.items[0].roomsCount).toBe(3);
+    expect(body.parsedFilters).toEqual({
+      city: 'Kraków',
+      minRooms: 3,
+      maxRooms: 3,
+      maxPrice: 600000,
+    });
+  });
+
+  it('POST /api/offers/search rejects empty prompt', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/offers/search',
+      payload: {
+        prompt: '',
+      },
+    });
+    expect(res.statusCode).toBe(400);
+  });
 });
 

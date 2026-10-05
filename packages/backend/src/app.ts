@@ -7,10 +7,12 @@ import { offersRoutes } from './routes/offers.js';
 import { devRoutes } from './routes/dev.js';
 import { ProcessIngestRunner, type IIngestRunner } from './services/ingest-runner.js';
 import type { IOfferRepository } from './repositories/offer.repository.js';
+import type { IQueryParser } from './services/query-parser.js';
 
 export interface BuildAppOptions {
   repository?: IOfferRepository;
   runner?: IIngestRunner;
+  queryParser?: IQueryParser;
   logger?: boolean;
   rateLimitMax?: number;
   rateLimitTimeWindow?: string | number;
@@ -44,7 +46,7 @@ export async function buildApp(options: BuildAppOptions = {}): Promise<FastifyIn
   });
 
   const repository = options.repository ?? new DrizzleOfferRepository(db);
-  await app.register(offersRoutes, { prefix: '/api/offers', repository });
+  await app.register(offersRoutes, { prefix: '/api/offers', repository, queryParser: options.queryParser });
 
   const runner = options.runner ?? new ProcessIngestRunner();
   await app.register(devRoutes, { prefix: '/api/dev', runner });

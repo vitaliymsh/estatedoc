@@ -6,7 +6,11 @@ import {
   getOfferParamsSchema,
   batchIngestOffersSchema,
   checkExistingOffersSchema,
+  aiSearchSchema,
 } from '../schemas/offer.js';
+import type { IQueryParser } from '../services/query-parser.js';
+import { LLMQueryParser } from '../services/query-parser.js';
+import { GeminiLLMProvider } from '../services/llm/gemini-llm-provider.js';
 
 function computeETag(data: unknown): string {
   return `"${createHash('sha1').update(JSON.stringify(data)).digest('hex')}"`;
@@ -14,10 +18,12 @@ function computeETag(data: unknown): string {
 
 export interface OffersRoutesOptions {
   repository: IOfferRepository;
+  queryParser?: IQueryParser;
 }
 
 export const offersRoutes: FastifyPluginAsync<OffersRoutesOptions> = async (fastify, opts) => {
   const repo = opts.repository;
+  const parser = opts.queryParser ?? new LLMQueryParser(new GeminiLLMProvider());
 
   fastify.get('/', async (request, reply) => {
     const parsed = listOffersQuerySchema.safeParse(request.query);
@@ -101,5 +107,28 @@ export const offersRoutes: FastifyPluginAsync<OffersRoutesOptions> = async (fast
     }));
     const result = await repo.upsertBatch(normalizedOffers);
     return reply.status(201).send(result);
+  });
+
+  fastify.post('/search', async (request, reply) => {
+    const parsed = aiSearchSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: 'Invalid search payload', details: parsed.error.issues });
+    }
+
+    const filters = await parser.parse(parsed.data.prompt);
+    const result = await repo.findAll({
+      ...filters,
+      limit: parsed.data.limit,
+      offset: parsed.data.offset,
+      sortBy: filters.sortBy ?? 'newest',
+    });
+
+    return {
+      items: result.items,
+      total: result.total,
+      limit: parsed.data.limit,
+      offset: parsed.data.offset,
+      parsedFilters: filters,
+    };
   });
 };

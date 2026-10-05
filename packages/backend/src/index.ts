@@ -1,8 +1,5 @@
-import dotenv from 'dotenv';
-import { resolve } from 'path';
+import 'dotenv/config';
 import { buildApp } from './app.js';
-
-dotenv.config({ path: resolve(process.cwd(), '../../.env') });
 
 const port = Number(process.env.PORT) || 4000;
 const host = process.env.HOST || '0.0.0.0';
