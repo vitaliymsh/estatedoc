@@ -1,5 +1,6 @@
 import { RefreshCw, Database } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import type { IngestOptions } from '@/hooks/use-offers'
 
 interface IngestWorkerButtonProps {
@@ -21,9 +22,7 @@ export function IngestWorkerButton({ isSyncing, onSync }: IngestWorkerButtonProp
     >
       <Database className="size-3.5 text-primary" />
       <span>{isSyncing ? 'Pobieranie...' : 'Run Ingest Worker'}</span>
-      <div className={isSyncing ? 'animate-spin inline-flex shrink-0' : 'inline-flex shrink-0'}>
-        <RefreshCw className="size-3 text-muted-foreground" />
-      </div>
+      <RefreshCw className={cn("size-3 text-muted-foreground shrink-0", isSyncing && "animate-spin")} />
     </Button>
   )
 }

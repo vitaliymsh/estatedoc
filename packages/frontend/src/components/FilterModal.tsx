@@ -97,9 +97,9 @@ function FilterForm({
     const maxRoomsVal = rooms === '5+' ? undefined : minRoomsVal
 
     const parseRange = (minStr: string, maxStr: string) => {
-      let min = minStr ? Number(minStr) : undefined
-      let max = maxStr ? Number(maxStr) : undefined
-      if (min !== undefined && max !== undefined && min > max) [min, max] = [max, min]
+      const min = minStr ? Number(minStr) : undefined
+      const max = maxStr ? Number(maxStr) : undefined
+      if (min !== undefined && max !== undefined) return [Math.min(min, max), Math.max(min, max)]
       return [min, max]
     }
 
@@ -622,31 +622,7 @@ function FilterForm({
 export function FilterModal({ open, onOpenChange, filter, parsedFilters, onApply }: FilterModalProps) {
   const effectiveFilter = useMemo(() => {
     if (filter.prompt && parsedFilters) {
-      return {
-        ...filter,
-        city: (parsedFilters.city as string) ?? filter.city,
-        district: (parsedFilters.district as string) ?? filter.district,
-        propertyType: (parsedFilters.propertyType as ListOffersFilter['propertyType']) ?? filter.propertyType,
-        transactionType: (parsedFilters.transactionType as ListOffersFilter['transactionType']) ?? filter.transactionType,
-        minPrice: (parsedFilters.minPrice as number) ?? filter.minPrice,
-        maxPrice: (parsedFilters.maxPrice as number) ?? filter.maxPrice,
-        minArea: (parsedFilters.minArea as number) ?? filter.minArea,
-        maxArea: (parsedFilters.maxArea as number) ?? filter.maxArea,
-        minRooms: (parsedFilters.minRooms as number) ?? filter.minRooms,
-        maxRooms: (parsedFilters.maxRooms as number) ?? filter.maxRooms,
-        minFloor: (parsedFilters.minFloor as number) ?? filter.minFloor,
-        maxFloor: (parsedFilters.maxFloor as number) ?? filter.maxFloor,
-        sellerType: (parsedFilters.sellerType as ListOffersFilter['sellerType']) ?? filter.sellerType,
-        marketType: (parsedFilters.marketType as ListOffersFilter['marketType']) ?? filter.marketType,
-        hasElevator: (parsedFilters.hasElevator as boolean) ?? filter.hasElevator,
-        hasBalcony: (parsedFilters.hasBalcony as boolean) ?? filter.hasBalcony,
-        hasParking: (parsedFilters.hasParking as boolean) ?? filter.hasParking,
-        hasAirConditioning: (parsedFilters.hasAirConditioning as boolean) ?? filter.hasAirConditioning,
-        isFurnished: (parsedFilters.isFurnished as boolean) ?? filter.isFurnished,
-        hasBasement: (parsedFilters.hasBasement as boolean) ?? filter.hasBasement,
-        sortBy: (parsedFilters.sortBy as SortBy) ?? filter.sortBy,
-        q: (parsedFilters.q as string) ?? filter.q,
-      }
+      return { ...filter, ...parsedFilters } as ListOffersFilter
     }
     return filter
   }, [filter, parsedFilters])

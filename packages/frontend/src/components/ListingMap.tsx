@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useId, useMemo } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { Navigation, RefreshCw } from 'lucide-react'
@@ -63,15 +63,13 @@ export function ListingMap({
   showPopup = true,
 }: ListingMapProps) {
   const { lang } = useTranslation()
+
   const containerRef = useRef<HTMLDivElement | null>(null)
+
   const mapInstanceRef = useRef<L.Map | null>(null)
   const markersLayerRef = useRef<L.LayerGroup | null>(null)
-  const mapId = useId()
 
-  const directCoords = useMemo(
-    () => (offer ? extractCoordinates(offer) : null),
-    [offer?.id, offer?.latitude, offer?.longitude, offer?.city, offer?.district, offer?.street]
-  )
+  const directCoords = offer ? extractCoordinates(offer) : null
   const [asyncCoords, setAsyncCoords] = useState<Coordinates | null>(null)
   const [isLoadingCoords, setIsLoadingCoords] = useState<boolean>(() => !directCoords && Boolean(offer))
 
@@ -185,7 +183,6 @@ export function ListingMap({
     >
       {/* Map Container */}
       <div
-        id={`map-${mapId}`}
         ref={containerRef}
         className="h-full w-full z-0 font-sans"
         aria-label={lang === 'en' ? 'Interactive location map' : 'Interaktywna mapa lokalizacji'}

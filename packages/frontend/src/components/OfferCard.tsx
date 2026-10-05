@@ -9,11 +9,11 @@ import {
   formatPricePerSqm,
   formatFloor,
   formatSellerType,
-  formatMetadataValue,
   formatPortal,
   formatArea,
   formatRooms,
-  IGNORED_METADATA_KEYS,
+  formatRelativeTime,
+  getOfferBadges,
 } from '../lib/formatters'
 import { prefetchOffer } from '../lib/offer-prefetch'
 import { useTranslation } from '@/lib/i18n'
@@ -34,32 +34,19 @@ export const OfferCard = memo(function OfferCard({ offer, onSelect }: OfferCardP
   const pricePerSqm = formatPricePerSqm(offer.pricePerSqm, lang)
   const imageUrl = !imgError && offer.images?.[0] ? offer.images[0] : undefined
 
-  const district = offer.district
-  const street = offer.street
   const sellerLabel = formatSellerType(offer.sellerType, lang)
   const floorText = formatFloor(offer.floor, offer.totalFloors, lang)
   const portalInfo = formatPortal(offer.portal)
   const areaText = formatArea(offer.areaSqm)
   const roomsText = formatRooms(offer.roomsCount, lang)
 
-
-  const badges: string[] = []
-  if (offer.metadata?.buildingType) badges.push(String(offer.metadata.buildingType))
-  if (offer.metadata?.hasElevator) badges.push(t('elevator'))
-  if (offer.metadata?.hasBalcony) badges.push(t('balcony_terrace'))
-  if (offer.metadata?.hasParking) badges.push(t('parking_garage'))
-  if (offer.metadata) {
-    for (const [key, val] of Object.entries(offer.metadata)) {
-      if (!IGNORED_METADATA_KEYS.has(key) && val !== null && val !== undefined) {
-        badges.push(formatMetadataValue(key, val, lang))
-      }
-    }
-  }
+  const badges = getOfferBadges(offer.metadata, t, lang)
   const visibleBadges = badges.slice(0, 3)
   const overflowCount = Math.max(0, badges.length - 3)
 
   const handleMouseEnter = () => {
     prefetchOffer(offer)
+    import('./OfferDetailPage')
   }
 
   const handleClick = (e: React.MouseEvent) => {
@@ -164,8 +151,8 @@ export const OfferCard = memo(function OfferCard({ offer, onSelect }: OfferCardP
             <MapPin className="size-3.5 text-muted-foreground shrink-0" />
             <span className="truncate">
               {offer.city}
-              {district ? `, ${district}` : ''}
-              {street ? `, ${street}` : ''}
+              {offer.district ? `, ${offer.district}` : ''}
+              {offer.street ? `, ${offer.street}` : ''}
             </span>
           </span>
           {roomsText ? (
@@ -191,14 +178,19 @@ export const OfferCard = memo(function OfferCard({ offer, onSelect }: OfferCardP
           </div>
         ) : null}
 
-        {/* Price */}
-        <div className="mt-1 flex items-baseline gap-1.5">
-          <span className="font-semibold text-foreground underline decoration-1 underline-offset-2">
-            {formatPrice(offer.price, lang, offer.transactionType)}
+        {/* Price & Freshness */}
+        <div className="mt-1 flex items-baseline justify-between gap-1.5">
+          <div className="flex items-baseline gap-1.5">
+            <span className="font-semibold text-foreground underline decoration-1 underline-offset-2">
+              {formatPrice(offer.price, lang, offer.transactionType)}
+            </span>
+            {pricePerSqm ? (
+              <span className="text-xs text-muted-foreground">({pricePerSqm})</span>
+            ) : null}
+          </div>
+          <span className="text-[11px] text-muted-foreground shrink-0">
+            {formatRelativeTime((offer.metadata?.postedAt as string) || offer.createdAt, lang)}
           </span>
-          {pricePerSqm ? (
-            <span className="text-xs text-muted-foreground">({pricePerSqm})</span>
-          ) : null}
         </div>
 
         {/* Quick Feature Badges (Max 3 + Overflow) */}
