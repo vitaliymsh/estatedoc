@@ -16,6 +16,8 @@ export default function App() {
     offers,
     total,
     loading,
+    isSyncing,
+    triggerSync,
     resetFilters,
   } = useOffers()
 
@@ -44,6 +46,8 @@ export default function App() {
         onSortChange={(sortBy: SortBy) => setFilter((prev) => ({ ...prev, sortBy, page: 1 }))}
         onOpenFilterModal={() => setIsFilterModalOpen(true)}
         activeFiltersCount={activeFiltersCount}
+        isSyncing={isSyncing}
+        onSync={() => triggerSync(1)}
       />
 
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">

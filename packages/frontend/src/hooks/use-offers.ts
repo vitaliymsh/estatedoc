@@ -85,6 +85,31 @@ export function useOffers() {
   const [offers, setOffers] = useState<Offer[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [refreshCount, setRefreshCount] = useState(0)
+  const [isSyncing, setIsSyncing] = useState(false)
+
+  const refetch = () => setRefreshCount((c) => c + 1)
+
+  const triggerSync = async (maxPages: number = 1) => {
+    setIsSyncing(true)
+    try {
+      const res = await fetch('/api/dev/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ maxPages }),
+      })
+      if (!res.ok) {
+        throw new Error('Ingestion failed')
+      }
+      refetch()
+      return { ok: true }
+    } catch (err) {
+      console.error('Sync error:', err)
+      return { ok: false, error: err }
+    } finally {
+      setIsSyncing(false)
+    }
+  }
 
   // URL Query sync
   useEffect(() => {
@@ -148,7 +173,7 @@ export function useOffers() {
     return () => {
       isCancelled = true
     }
-  }, [filter])
+  }, [filter, refreshCount])
 
   const resetFilters = () => {
     setSearchInput('')
@@ -164,6 +189,9 @@ export function useOffers() {
     offers,
     total,
     loading,
+    refetch,
+    isSyncing,
+    triggerSync,
     resetFilters,
   }
 }

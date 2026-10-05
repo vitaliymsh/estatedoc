@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Search, SlidersHorizontal, X, ArrowUpDown } from 'lucide-react'
+import { Search, SlidersHorizontal, X, ArrowUpDown, RefreshCw } from 'lucide-react'
 import type { ListOffersFilter, SortBy } from '../types/offer'
 
 const QUICK_CITIES = ['Warszawa', 'Kraków', 'Gdańsk', 'Wrocław', 'Poznań', 'Łódź']
@@ -14,6 +14,8 @@ interface HeaderProps {
   onSortChange: (sortBy: SortBy) => void
   onOpenFilterModal: () => void
   activeFiltersCount: number
+  isSyncing?: boolean
+  onSync?: () => void
 }
 
 export function Header({
@@ -25,12 +27,27 @@ export function Header({
   onSortChange,
   onOpenFilterModal,
   activeFiltersCount,
+  isSyncing = false,
+  onSync,
 }: HeaderProps) {
   return (
     <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-3">
           <h1 className="text-xl font-bold tracking-tight text-primary">EstatePlanner</h1>
+          {onSync && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onSync}
+              disabled={isSyncing}
+              className="h-7 gap-1.5 rounded-full text-xs px-2.5 font-medium cursor-pointer"
+              title="Pobierz nowe oferty ze scrapera"
+            >
+              <RefreshCw className={`size-3 ${isSyncing ? 'animate-spin text-primary' : ''}`} />
+              <span className="hidden sm:inline">{isSyncing ? 'Pobieranie...' : 'Pobierz oferty'}</span>
+            </Button>
+          )}
         </div>
 
         {/* Airbnb Center Search Capsule */}
