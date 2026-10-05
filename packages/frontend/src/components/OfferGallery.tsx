@@ -13,7 +13,9 @@ import {
   ArrowLeft,
   Share2,
   Check,
+  X,
 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface OfferGalleryProps {
   images: string[]
@@ -73,23 +75,6 @@ export function OfferGallery({
     window.addEventListener('keydown', handleKeyDown, true)
     return () => window.removeEventListener('keydown', handleKeyDown, true)
   }, [isOpen, images.length])
-
-  // Preload adjacent images
-  useEffect(() => {
-    if (!isOpen || images.length <= 1) return
-
-    const nextIdx = (activeIndex + 1) % images.length
-    const prevIdx = (activeIndex - 1 + images.length) % images.length
-
-    if (images[nextIdx]) {
-      const img = new Image()
-      img.src = images[nextIdx]
-    }
-    if (images[prevIdx]) {
-      const img = new Image()
-      img.src = images[prevIdx]
-    }
-  }, [isOpen, activeIndex, images])
 
   // Auto-scroll active thumbnail into view
   useEffect(() => {
@@ -174,150 +159,105 @@ export function OfferGallery({
         </div>
 
         {/* Desktop Mosaic View */}
-        <div className="hidden sm:block h-[340px] md:h-[400px] lg:h-[440px] w-full">
-          {images.length === 1 ? (
-            <div
+        {images.length === 1 ? (
+          <div className="hidden sm:block h-[340px] md:h-[400px] lg:h-[440px] w-full">
+            <PhotoTile
+              src={images[0]}
+              alt={title}
               onClick={() => openAt(0)}
-              className="h-full w-full overflow-hidden cursor-pointer group"
-            >
-              <img
-                src={images[0]}
-                alt={title}
-                referrerPolicy="no-referrer"
-                onError={() => onImageError?.(images[0])}
-                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-102"
+              onError={() => onImageError?.(images[0])}
+              className="h-full w-full"
+            />
+          </div>
+        ) : images.length === 2 ? (
+          <div className="hidden sm:grid grid-cols-2 gap-2 h-[340px] md:h-[400px] lg:h-[440px] w-full">
+            {images.slice(0, 2).map((img, idx) => (
+              <PhotoTile
+                key={idx}
+                src={img}
+                alt={`${title} ${idx + 1}`}
+                onClick={() => openAt(idx)}
+                onError={() => onImageError?.(img)}
+                className="h-full w-full"
               />
-            </div>
-          ) : images.length === 2 ? (
-            <div className="grid grid-cols-2 gap-2 h-full w-full">
-              {images.slice(0, 2).map((img, idx) => (
-                <div
+            ))}
+          </div>
+        ) : images.length === 3 ? (
+          <div className="hidden sm:grid grid-cols-3 gap-2 h-[340px] md:h-[400px] lg:h-[440px] w-full">
+            <PhotoTile
+              src={images[0]}
+              alt={`${title} 1`}
+              onClick={() => openAt(0)}
+              onError={() => onImageError?.(images[0])}
+              className="col-span-2 h-full w-full"
+            />
+            <div className="grid grid-rows-2 gap-2 col-span-1 h-full min-h-0">
+              {images.slice(1, 3).map((img, idx) => (
+                <PhotoTile
                   key={idx}
-                  onClick={() => openAt(idx)}
-                  className="h-full w-full overflow-hidden cursor-pointer group"
-                >
-                  <img
-                    src={img}
-                    alt={`${title} ${idx + 1}`}
-                    referrerPolicy="no-referrer"
-                    onError={() => onImageError?.(img)}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-102"
-                  />
-                </div>
+                  src={img}
+                  alt={`${title} ${idx + 2}`}
+                  onClick={() => openAt(idx + 1)}
+                  onError={() => onImageError?.(img)}
+                  className="h-full w-full"
+                />
               ))}
             </div>
-          ) : images.length === 3 ? (
-            <div className="grid grid-cols-3 gap-2 h-full w-full">
-              <div
-                onClick={() => openAt(0)}
-                className="col-span-2 h-full w-full overflow-hidden cursor-pointer group"
-              >
-                <img
-                  src={images[0]}
-                  alt={`${title} 1`}
-                  referrerPolicy="no-referrer"
-                  onError={() => onImageError?.(images[0])}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-102"
-                />
-              </div>
-              <div className="grid grid-rows-2 gap-2 col-span-1 h-full">
-                {images.slice(1, 3).map((img, idx) => (
-                  <div
+          </div>
+        ) : images.length === 4 ? (
+          <div className="hidden sm:grid grid-cols-4 gap-2 h-[340px] md:h-[400px] lg:h-[440px] w-full">
+            <PhotoTile
+              src={images[0]}
+              alt={`${title} 1`}
+              onClick={() => openAt(0)}
+              onError={() => onImageError?.(images[0])}
+              className="col-span-2 h-full w-full"
+            />
+            <div className="grid grid-rows-2 gap-2 col-span-2 h-full min-h-0">
+              <PhotoTile
+                src={images[1]}
+                alt={`${title} 2`}
+                onClick={() => openAt(1)}
+                onError={() => onImageError?.(images[1])}
+                className="h-full w-full"
+              />
+              <div className="grid grid-cols-2 gap-2 h-full min-h-0">
+                {images.slice(2, 4).map((img, idx) => (
+                  <PhotoTile
                     key={idx}
-                    onClick={() => openAt(idx + 1)}
-                    className="h-full w-full overflow-hidden cursor-pointer group"
-                  >
-                    <img
-                      src={img}
-                      alt={`${title} ${idx + 2}`}
-                      referrerPolicy="no-referrer"
-                      onError={() => onImageError?.(img)}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-102"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : images.length === 4 ? (
-            <div className="grid grid-cols-4 gap-2 h-full w-full">
-              <div
-                onClick={() => openAt(0)}
-                className="col-span-2 h-full w-full overflow-hidden cursor-pointer group"
-              >
-                <img
-                  src={images[0]}
-                  alt={`${title} 1`}
-                  referrerPolicy="no-referrer"
-                  onError={() => onImageError?.(images[0])}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-102"
-                />
-              </div>
-              <div className="grid grid-rows-2 gap-2 col-span-2 h-full">
-                <div
-                  onClick={() => openAt(1)}
-                  className="h-full w-full overflow-hidden cursor-pointer group"
-                >
-                  <img
-                    src={images[1]}
-                    alt={`${title} 2`}
-                    referrerPolicy="no-referrer"
-                    onError={() => onImageError?.(images[1])}
-                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-102"
+                    src={img}
+                    alt={`${title} ${idx + 3}`}
+                    onClick={() => openAt(idx + 2)}
+                    onError={() => onImageError?.(img)}
+                    className="h-full w-full"
                   />
-                </div>
-                <div className="grid grid-cols-2 gap-2 h-full">
-                  {images.slice(2, 4).map((img, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => openAt(idx + 2)}
-                      className="h-full w-full overflow-hidden cursor-pointer group"
-                    >
-                      <img
-                        src={img}
-                        alt={`${title} ${idx + 3}`}
-                        referrerPolicy="no-referrer"
-                        onError={() => onImageError?.(img)}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-102"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-4 gap-2 h-full w-full">
-              <div
-                onClick={() => openAt(0)}
-                className="col-span-2 h-full w-full overflow-hidden cursor-pointer group relative"
-              >
-                <img
-                  src={images[0]}
-                  alt={`${title} 1`}
-                  referrerPolicy="no-referrer"
-                  onError={() => onImageError?.(images[0])}
-                  className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-102"
-                />
-              </div>
-              <div className="col-span-2 grid grid-cols-2 grid-rows-2 gap-2 h-full">
-                {images.slice(1, 5).map((img, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => openAt(idx + 1)}
-                    className="h-full w-full overflow-hidden cursor-pointer group relative"
-                  >
-                    <img
-                      src={img}
-                      alt={`${title} ${idx + 2}`}
-                      referrerPolicy="no-referrer"
-                      onError={() => onImageError?.(img)}
-                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-102"
-                    />
-                  </div>
                 ))}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          <div className="hidden sm:grid grid-cols-4 gap-2 h-[340px] md:h-[400px] lg:h-[440px] w-full">
+            <PhotoTile
+              src={images[0]}
+              alt={`${title} 1`}
+              onClick={() => openAt(0)}
+              onError={() => onImageError?.(images[0])}
+              className="col-span-2 h-full w-full"
+            />
+            <div className="col-span-2 grid grid-cols-2 grid-rows-2 gap-2 h-full min-h-0">
+              {images.slice(1, 5).map((img, idx) => (
+                <PhotoTile
+                  key={idx}
+                  src={img}
+                  alt={`${title} ${idx + 2}`}
+                  onClick={() => openAt(idx + 1)}
+                  onError={() => onImageError?.(img)}
+                  className="h-full w-full"
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Floating "Show all photos" Button */}
         {images.length > 1 && (
@@ -337,16 +277,26 @@ export function OfferGallery({
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent
           className="p-0 gap-0 fixed inset-0 top-0 left-0 w-screen h-dvh max-w-none max-h-none translate-x-0 translate-y-0 rounded-none border-0 bg-black sm:fixed sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[95vw] sm:max-w-5xl md:max-w-6xl sm:h-auto sm:max-h-[92vh] sm:rounded-2xl sm:border sm:border-zinc-800/80 sm:bg-zinc-950 sm:shadow-2xl flex flex-col overflow-hidden"
-          showCloseButton={true}
+          showCloseButton={false}
         >
           <DialogTitle className="sr-only">
             Zdjęcia nieruchomości ({activeIndex + 1} z {images.length})
           </DialogTitle>
 
           {/* Floating Image Counter */}
-          <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 rounded-full bg-black/60 px-3 py-1 text-xs font-medium text-zinc-200 backdrop-blur-md border border-white/10 select-none">
+          <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-30 rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium text-zinc-200 backdrop-blur-md border border-white/10 select-none">
             {activeIndex + 1} / {images.length}
           </div>
+
+          {/* Floating Close Button */}
+          <button
+            type="button"
+            onClick={() => setIsOpen(false)}
+            aria-label="Zamknij galerię"
+            className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 flex size-9 sm:size-10 items-center justify-center rounded-full bg-black/60 hover:bg-black/90 text-white backdrop-blur-md transition cursor-pointer border border-white/15 focus:outline-none focus:ring-2 focus:ring-primary shadow-lg"
+          >
+            <X className="size-5 pointer-events-none" />
+          </button>
 
           {/* Main Photo View */}
           <div
@@ -429,3 +379,36 @@ export function OfferGallery({
     </>
   )
 }
+
+function PhotoTile({
+  src,
+  alt,
+  onClick,
+  onError,
+  className,
+}: {
+  src: string
+  alt: string
+  onClick: () => void
+  onError?: () => void
+  className?: string
+}) {
+  return (
+    <div
+      onClick={onClick}
+      className={cn(
+        "overflow-hidden cursor-pointer group relative min-h-0",
+        className
+      )}
+    >
+      <img
+        src={src}
+        alt={alt}
+        referrerPolicy="no-referrer"
+        onError={onError}
+        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-102"
+      />
+    </div>
+  )
+}
+
