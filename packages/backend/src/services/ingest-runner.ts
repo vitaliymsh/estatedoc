@@ -1,11 +1,11 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
-import { resolve } from 'path';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+import { resolve } from 'node:path';
 
 const execAsync = promisify(exec);
 
 export interface IngestRunOptions {
-  portal?: 'sprzedajemy' | 'morizon' | 'all';
+  portal?: 'sprzedajemy' | 'morizon' | 'otodom' | 'gratka' | 'all';
   maxPages?: number;
   categoryPath?: string;
 }
@@ -30,10 +30,8 @@ export class ProcessIngestRunner implements IIngestRunner {
         ...process.env,
         SCRAPE_PORTAL: portal,
         SCRAPE_PAGES: String(maxPages),
+        ...(options.categoryPath ? { SCRAPE_CATEGORY: options.categoryPath } : {}),
       };
-      if (options.categoryPath) {
-        env.SCRAPE_CATEGORY = options.categoryPath;
-      }
 
       const { stdout } = await execAsync('npm run ingest --workspace=packages/ingest-worker', {
         cwd: rootDir,

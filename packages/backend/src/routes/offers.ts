@@ -16,6 +16,16 @@ function computeETag(data: unknown): string {
   return `"${createHash('sha1').update(JSON.stringify(data)).digest('hex')}"`;
 }
 
+function replyWithEtag(request: { headers: Record<string, string | string[] | undefined> }, reply: { header: (k: string, v: string) => void; status: (c: number) => { send: () => void } }, data: unknown) {
+  const etag = computeETag(data);
+  reply.header('Cache-Control', 'public, max-age=60');
+  reply.header('ETag', etag);
+  if (request.headers['if-none-match'] === etag) {
+    return reply.status(304).send();
+  }
+  return data;
+}
+
 export interface OffersRoutesOptions {
   repository: IOfferRepository;
   queryParser?: IQueryParser;
@@ -31,22 +41,12 @@ export const offersRoutes: FastifyPluginAsync<OffersRoutesOptions> = async (fast
       return reply.status(400).send({ error: 'Invalid query parameters', details: parsed.error.issues });
     }
     const result = await repo.findAll(parsed.data);
-    const body = {
+    return replyWithEtag(request, reply, {
       items: result.items,
       total: result.total,
       limit: parsed.data.limit,
       offset: parsed.data.offset,
-    };
-
-    const etag = computeETag(body);
-    reply.header('Cache-Control', 'public, max-age=60');
-    reply.header('ETag', etag);
-
-    if (request.headers['if-none-match'] === etag) {
-      return reply.status(304).send();
-    }
-
-    return body;
+    });
   });
 
   fastify.get('/:id', async (request, reply) => {
@@ -59,17 +59,8 @@ export const offersRoutes: FastifyPluginAsync<OffersRoutesOptions> = async (fast
       return reply.status(404).send({ error: 'Offer not found' });
     }
 
-    const etag = computeETag(offer);
-    reply.header('Cache-Control', 'public, max-age=60');
-    reply.header('ETag', etag);
-
-    if (request.headers['if-none-match'] === etag) {
-      return reply.status(304).send();
-    }
-
-    return offer;
+    return replyWithEtag(request, reply, offer);
   });
-
 
   fastify.post('/check-existing', async (request, reply) => {
     const parsed = checkExistingOffersSchema.safeParse(request.body);
@@ -86,18 +77,14 @@ export const offersRoutes: FastifyPluginAsync<OffersRoutesOptions> = async (fast
       return reply.status(400).send({ error: 'Invalid batch payload', details: parsed.error.issues });
     }
     const normalizedOffers = parsed.data.map((item) => ({
-      portal: item.portal,
-      externalId: item.externalId,
-      url: item.url,
-      title: item.title,
-      price: item.price !== undefined && item.price !== null ? String(item.price) : null,
-      areaSqm: item.areaSqm !== undefined && item.areaSqm !== null ? String(item.areaSqm) : null,
+      ...item,
+      price: item.price != null ? String(item.price) : null,
+      areaSqm: item.areaSqm != null ? String(item.areaSqm) : null,
       roomsCount: item.roomsCount ?? null,
       floor: item.floor ?? null,
       totalFloors: item.totalFloors ?? null,
       propertyType: item.propertyType ?? null,
       transactionType: item.transactionType ?? null,
-      city: item.city,
       district: item.district ?? null,
       street: item.street ?? null,
       sellerType: item.sellerType ?? null,

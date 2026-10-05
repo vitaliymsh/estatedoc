@@ -83,46 +83,28 @@ export class LLMQueryParser implements IQueryParser {
       const parsed = JSON.parse(rawText) as Record<string, unknown>;
       const result: Partial<ListOffersQuery> = {};
 
-      if (typeof parsed.q === 'string' && parsed.q.trim()) result.q = parsed.q.trim();
-      if (typeof parsed.city === 'string' && parsed.city.trim()) result.city = parsed.city.trim();
-      if (typeof parsed.district === 'string' && parsed.district.trim()) result.district = parsed.district.trim();
-      if (typeof parsed.minPrice === 'number' && !isNaN(parsed.minPrice)) result.minPrice = parsed.minPrice;
-      if (typeof parsed.maxPrice === 'number' && !isNaN(parsed.maxPrice)) result.maxPrice = parsed.maxPrice;
-      if (typeof parsed.minArea === 'number' && !isNaN(parsed.minArea)) result.minArea = parsed.minArea;
-      if (typeof parsed.maxArea === 'number' && !isNaN(parsed.maxArea)) result.maxArea = parsed.maxArea;
-      if (typeof parsed.minRooms === 'number' && !isNaN(parsed.minRooms)) result.minRooms = parsed.minRooms;
-      if (typeof parsed.maxRooms === 'number' && !isNaN(parsed.maxRooms)) result.maxRooms = parsed.maxRooms;
-
-      if (typeof parsed.hasElevator === 'boolean') result.hasElevator = parsed.hasElevator;
-      if (typeof parsed.hasBalcony === 'boolean') result.hasBalcony = parsed.hasBalcony;
-      if (typeof parsed.hasParking === 'boolean') result.hasParking = parsed.hasParking;
-      if (typeof parsed.hasAirConditioning === 'boolean') result.hasAirConditioning = parsed.hasAirConditioning;
-      if (typeof parsed.isFurnished === 'boolean') result.isFurnished = parsed.isFurnished;
-      if (typeof parsed.hasBasement === 'boolean') result.hasBasement = parsed.hasBasement;
-
-      const validPropertyTypes = ['apartment', 'house', 'land', 'commercial', 'garage', 'other'] as const;
-      if (typeof parsed.propertyType === 'string' && (validPropertyTypes as readonly string[]).includes(parsed.propertyType)) {
-        result.propertyType = parsed.propertyType as ListOffersQuery['propertyType'];
+      for (const k of ['q', 'city', 'district'] as const) {
+        if (typeof parsed[k] === 'string' && (parsed[k] as string).trim()) result[k] = (parsed[k] as string).trim();
+      }
+      for (const k of ['minPrice', 'maxPrice', 'minArea', 'maxArea', 'minRooms', 'maxRooms'] as const) {
+        if (typeof parsed[k] === 'number' && !Number.isNaN(parsed[k])) result[k] = parsed[k] as number;
+      }
+      for (const k of ['hasElevator', 'hasBalcony', 'hasParking', 'hasAirConditioning', 'isFurnished', 'hasBasement'] as const) {
+        if (typeof parsed[k] === 'boolean') result[k] = parsed[k] as boolean;
       }
 
-      const validTransactionTypes = ['sale', 'rent'] as const;
-      if (typeof parsed.transactionType === 'string' && (validTransactionTypes as readonly string[]).includes(parsed.transactionType)) {
-        result.transactionType = parsed.transactionType as ListOffersQuery['transactionType'];
-      }
+      const enums = {
+        propertyType: ['apartment', 'house', 'land', 'commercial', 'garage', 'other'],
+        transactionType: ['sale', 'rent'],
+        sellerType: ['private', 'company', 'agency', 'developer', 'verified'],
+        marketType: ['primary', 'secondary'],
+        sortBy: ['newest', 'price_asc', 'price_desc', 'area_asc', 'area_desc', 'price_sqm_asc', 'price_sqm_desc'],
+      } as const;
 
-      const validSellerTypes = ['private', 'company', 'agency', 'developer', 'verified'] as const;
-      if (typeof parsed.sellerType === 'string' && (validSellerTypes as readonly string[]).includes(parsed.sellerType)) {
-        result.sellerType = parsed.sellerType as ListOffersQuery['sellerType'];
-      }
-
-      const validMarketTypes = ['primary', 'secondary'] as const;
-      if (typeof parsed.marketType === 'string' && (validMarketTypes as readonly string[]).includes(parsed.marketType)) {
-        result.marketType = parsed.marketType as ListOffersQuery['marketType'];
-      }
-
-      const validSort = ['newest', 'price_asc', 'price_desc', 'area_asc', 'area_desc', 'price_sqm_asc', 'price_sqm_desc'] as const;
-      if (typeof parsed.sortBy === 'string' && (validSort as readonly string[]).includes(parsed.sortBy)) {
-        result.sortBy = parsed.sortBy as ListOffersQuery['sortBy'];
+      for (const [k, valid] of Object.entries(enums)) {
+        if (typeof parsed[k] === 'string' && (valid as readonly string[]).includes(parsed[k] as string)) {
+          (result as Record<string, unknown>)[k] = parsed[k];
+        }
       }
 
       return Object.keys(result).length > 0 ? result : { q: trimmed };
