@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import type { Offer, OffersResponse, ListOffersFilter, SortBy } from '../types/offer'
-import { SAMPLE_OFFERS } from '../mocks/offers'
+import { cacheOffers } from '../lib/offer-prefetch'
 
 export const PAGE_SIZE = 12
 
@@ -22,61 +22,18 @@ export function parseUrlFilters(): ListOffersFilter {
 }
 
 export function syncUrlFilters(filter: ListOffersFilter) {
-  const params = new URLSearchParams()
-  if (filter.q) params.set('q', filter.q)
-  if (filter.city) params.set('city', filter.city)
-  if (filter.portal) params.set('portal', filter.portal)
-  if (filter.minPrice !== undefined) params.set('minPrice', String(filter.minPrice))
-  if (filter.maxPrice !== undefined) params.set('maxPrice', String(filter.maxPrice))
-  if (filter.sortBy !== 'newest') params.set('sortBy', filter.sortBy)
-  if (filter.page > 1) params.set('page', String(filter.page))
+  const params = new URLSearchParams(window.location.search)
+  if (filter.q) params.set('q', filter.q); else params.delete('q')
+  if (filter.city) params.set('city', filter.city); else params.delete('city')
+  if (filter.portal) params.set('portal', filter.portal); else params.delete('portal')
+  if (filter.minPrice !== undefined) params.set('minPrice', String(filter.minPrice)); else params.delete('minPrice')
+  if (filter.maxPrice !== undefined) params.set('maxPrice', String(filter.maxPrice)); else params.delete('maxPrice')
+  if (filter.sortBy !== 'newest') params.set('sortBy', filter.sortBy); else params.delete('sortBy')
+  if (filter.page > 1) params.set('page', String(filter.page)); else params.delete('page')
 
   const queryString = params.toString()
   const newUrl = queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname
-  window.history.replaceState(null, '', newUrl)
-}
-
-function filterMockOffers(offers: Offer[], filter: ListOffersFilter): { items: Offer[]; total: number } {
-  let result = [...offers]
-
-  if (filter.q) {
-    const qLower = filter.q.toLowerCase()
-    result = result.filter(
-      (o) =>
-        o.title.toLowerCase().includes(qLower) ||
-        o.city.toLowerCase().includes(qLower) ||
-        (o.description && o.description.toLowerCase().includes(qLower))
-    )
-  }
-
-  if (filter.city) {
-    result = result.filter((o) => o.city.toLowerCase() === filter.city!.toLowerCase())
-  }
-
-  if (filter.portal) {
-    result = result.filter((o) => o.portal.toLowerCase() === filter.portal!.toLowerCase())
-  }
-
-  if (filter.minPrice !== undefined) {
-    result = result.filter((o) => o.price && Number(o.price) >= filter.minPrice!)
-  }
-
-  if (filter.maxPrice !== undefined) {
-    result = result.filter((o) => o.price && Number(o.price) <= filter.maxPrice!)
-  }
-
-  if (filter.sortBy === 'price_asc') {
-    result.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0))
-  } else if (filter.sortBy === 'price_desc') {
-    result.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0))
-  } else {
-    result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-  }
-
-  const total = result.length
-  const offset = (filter.page - 1) * PAGE_SIZE
-  const items = result.slice(offset, offset + PAGE_SIZE)
-  return { items, total }
+  window.history.replaceState(window.history.state, '', newUrl)
 }
 
 export function useOffers() {
@@ -132,7 +89,7 @@ export function useOffers() {
     setFilter((prev) => ({ ...prev, q: undefined, page: 1 }))
   }
 
-  // Fetch from backend API / fallback
+  // Fetch from backend API
   useEffect(() => {
     let isCancelled = false
     setLoading(true)
@@ -154,17 +111,16 @@ export function useOffers() {
         if (data && typeof data.total === 'number') {
           setOffers(data.items)
           setTotal(data.total)
+          cacheOffers(data.items)
         } else {
-          const mockResult = filterMockOffers(SAMPLE_OFFERS, filter)
-          setOffers(mockResult.items)
-          setTotal(mockResult.total)
+          setOffers([])
+          setTotal(0)
         }
       })
       .catch(() => {
         if (isCancelled) return
-        const mockResult = filterMockOffers(SAMPLE_OFFERS, filter)
-        setOffers(mockResult.items)
-        setTotal(mockResult.total)
+        setOffers([])
+        setTotal(0)
       })
       .finally(() => {
         if (!isCancelled) setLoading(false)
