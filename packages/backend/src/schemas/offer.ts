@@ -36,7 +36,8 @@ export const batchOfferItemSchema = z.object({
   district: z.string().max(64).nullable().optional(),
   street: z.string().max(128).nullable().optional(),
   sellerType: z.enum(['private', 'company', 'agency', 'developer', 'verified']).nullable().optional(),
-  images: z.array(z.string().url().or(z.string().min(1))).nullable().optional(),
+  pricePerSqm: z.coerce.number().int().nullish(),
+  images: z.array(z.string().url()).nullish(),
   description: z.string().nullable().optional(),
   metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 });

@@ -19,6 +19,7 @@ export const offers = mysqlTable(
     district: varchar('district', { length: 64 }),
     street: varchar('street', { length: 128 }),
     sellerType: varchar('seller_type', { length: 32 }),
+    pricePerSqm: int('price_sqm'),
     images: json('images').$type<string[]>(),
     description: text('description'),
     metadata: json('metadata').$type<Record<string, unknown>>(),
@@ -30,6 +31,7 @@ export const offers = mysqlTable(
     index('city_price_idx').on(table.city, table.price),
     index('city_district_idx').on(table.city, table.district),
     index('type_idx').on(table.propertyType, table.transactionType),
+    index('price_sqm_idx').on(table.pricePerSqm),
   ]
 );
 
