@@ -396,15 +396,8 @@ export function getEffectiveLocation(offer: Partial<Offer> | null | undefined): 
   const city = offer.city || 'Warszawa'
   const parsed = extractLocationFromTitle(offer.title, city)
 
-  const district =
-    offer.district ||
-    (offer.metadata?.district as string | undefined) ||
-    parsed.district
-
-  const street =
-    offer.street ||
-    (offer.metadata?.street as string | undefined) ||
-    parsed.street
+  const district = offer.district || parsed.district
+  const street = offer.street || parsed.street
 
   return {
     city,

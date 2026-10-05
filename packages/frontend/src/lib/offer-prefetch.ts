@@ -33,11 +33,7 @@ export function prefetchImages(urls: (string | null | undefined)[]) {
 export function prefetchOffer(offerOrId: Offer | number): void {
   if (typeof offerOrId === 'object' && offerOrId !== null) {
     offerCache.set(offerOrId.id, offerOrId)
-    const images = offerOrId.images?.length
-      ? offerOrId.images
-      : offerOrId.metadata?.imageUrl
-        ? [offerOrId.metadata.imageUrl]
-        : []
+    const images = offerOrId.images?.length ? offerOrId.images : []
     prefetchImages(images)
     return
   }
@@ -45,11 +41,7 @@ export function prefetchOffer(offerOrId: Offer | number): void {
   const id = offerOrId
   if (offerCache.has(id)) {
     const cached = offerCache.get(id)!
-    const images = cached.images?.length
-      ? cached.images
-      : cached.metadata?.imageUrl
-        ? [cached.metadata.imageUrl]
-        : []
+    const images = cached.images?.length ? cached.images : []
     prefetchImages(images)
     return
   }
@@ -60,11 +52,7 @@ export function prefetchOffer(offerOrId: Offer | number): void {
     .then((offer: Offer | null) => {
       if (offer) {
         offerCache.set(offer.id, offer)
-        const images = offer.images?.length
-          ? offer.images
-          : offer.metadata?.imageUrl
-            ? [offer.metadata.imageUrl]
-            : []
+        const images = offer.images?.length ? offer.images : []
         prefetchImages(images)
       }
     })
