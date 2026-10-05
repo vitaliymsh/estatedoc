@@ -1,0 +1,431 @@
+import { useEffect, useRef, useState, useId } from 'react'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
+import { MapPin, Navigation, ExternalLink, RefreshCw } from 'lucide-react'
+import type { Offer } from '../types/offer'
+import { formatPrice, calculatePricePerSqm, buildGoogleMapsUrl } from '../lib/formatters'
+import {
+  resolveOfferCoordinates,
+  extractCoordinates,
+  getEffectiveLocation,
+  type Coordinates,
+  POLAND_CENTER_COORDINATES,
+} from '../lib/geocoding'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+
+export interface ListingMapProps {
+  offer?: Partial<Offer> | null
+  offers?: Partial<Offer>[]
+  coordinates?: Coordinates
+  zoom?: number
+  height?: string | number
+  className?: string
+  interactive?: boolean
+  showControls?: boolean
+  showPopup?: boolean
+  tileProvider?: 'osm' | 'voyager' | 'positron' | 'esri'
+  apiKey?: string
+  onMarkerClick?: (offer: Partial<Offer>) => void
+}
+
+const TILE_CONFIGS = {
+  osm: {
+    url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+    subdomains: 'abc',
+    maxZoom: 19,
+  },
+  esri: {
+    url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+    attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ',
+    subdomains: '',
+    maxZoom: 19,
+  },
+  voyager: {
+    url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19,
+  },
+  positron: {
+    url: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors, &copy; <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19,
+  },
+}
+
+function createMarkerIcon(priceText: string, isSelected = false): L.DivIcon {
+  return L.divIcon({
+    className: 'leaflet-custom-badge-icon',
+    html: `
+      <div class="relative flex flex-col items-center group cursor-pointer" style="transform: translate(-50%, -100%);">
+        <div class="absolute -bottom-1 size-5 rounded-full bg-primary/20 animate-ping pointer-events-none"></div>
+        <div class="relative flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold text-white shadow-md transition-all duration-200 group-hover:scale-105 group-hover:shadow-lg ${
+          isSelected
+            ? 'bg-neutral-900 ring-2 ring-amber-400 dark:bg-neutral-900'
+            : 'bg-neutral-900 ring-2 ring-white/90 dark:bg-neutral-900 dark:ring-neutral-700'
+        }">
+          <svg class="size-3.5 shrink-0 text-amber-400" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+          </svg>
+          <span class="whitespace-nowrap tracking-tight font-semibold">${priceText}</span>
+        </div>
+        <div class="size-2 -mt-1 rotate-45 shadow-xs ${
+          isSelected ? 'bg-neutral-900 ring-1 ring-amber-400/50' : 'bg-neutral-900 ring-1 ring-white/40 dark:bg-neutral-900'
+        }"></div>
+      </div>
+    `,
+    iconSize: [0, 0],
+    iconAnchor: [0, 0],
+    popupAnchor: [0, -34],
+  })
+}
+
+export function ListingMap({
+  offer,
+  offers,
+  coordinates: customCoordinates,
+  zoom = 14,
+  height = '380px',
+  className = '',
+  interactive = true,
+  showControls = true,
+  showPopup = true,
+  tileProvider = 'esri',
+  apiKey,
+  onMarkerClick,
+}: ListingMapProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const mapInstanceRef = useRef<L.Map | null>(null)
+  const markersLayerRef = useRef<L.LayerGroup | null>(null)
+  const mapId = useId()
+
+  const [resolvedCoords, setResolvedCoords] = useState<Coordinates | null>(() => {
+    if (customCoordinates) return customCoordinates
+    if (offer) {
+      const extracted = extractCoordinates(offer)
+      if (extracted) return extracted
+    }
+    if (offers && offers.length > 0) return POLAND_CENTER_COORDINATES
+    return null
+  })
+  const [isLoadingCoords, setIsLoadingCoords] = useState<boolean>(() => {
+    if (customCoordinates) return false
+    if (offer && extractCoordinates(offer)) return false
+    if (offers && offers.length > 0) return false
+    return Boolean(offer)
+  })
+
+  // 1. Resolve coordinates for single offer
+  useEffect(() => {
+    if (customCoordinates) {
+      setResolvedCoords(customCoordinates)
+      setIsLoadingCoords(false)
+      return
+    }
+
+    if (offer) {
+      const direct = extractCoordinates(offer)
+      if (direct) {
+        setResolvedCoords(direct)
+        setIsLoadingCoords(false)
+        return
+      }
+
+      let isMounted = true
+      setIsLoadingCoords(true)
+
+      resolveOfferCoordinates(offer).then((coords) => {
+        if (isMounted) {
+          setResolvedCoords(coords)
+          setIsLoadingCoords(false)
+        }
+      })
+
+      return () => {
+        isMounted = false
+      }
+    } else if (offers && offers.length > 0) {
+      setResolvedCoords(POLAND_CENTER_COORDINATES)
+      setIsLoadingCoords(false)
+    }
+  }, [offer, customCoordinates, offers])
+
+  // 2. Initialize and manage Leaflet Map lifecycle
+  useEffect(() => {
+    if (!containerRef.current || !resolvedCoords) return
+
+    // Create map instance once
+    if (!mapInstanceRef.current) {
+      const map = L.map(containerRef.current, {
+        center: [resolvedCoords.lat, resolvedCoords.lng],
+        zoom: zoom,
+        zoomControl: false,
+        dragging: interactive,
+        scrollWheelZoom: interactive ? 'center' : false,
+        touchZoom: interactive,
+        doubleClickZoom: interactive,
+      })
+
+      // Tile Layer configuration
+      const config = TILE_CONFIGS[tileProvider] || TILE_CONFIGS.osm
+      const cartoKey =
+        apiKey ||
+        (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CARTO_API_KEY)
+      const tileUrl =
+        cartoKey && (tileProvider === 'voyager' || tileProvider === 'positron')
+          ? `${config.url}?api_key=${cartoKey}`
+          : config.url
+
+      L.tileLayer(tileUrl, {
+        subdomains: config.subdomains,
+        maxZoom: config.maxZoom,
+        attribution: config.attribution,
+      }).addTo(map)
+
+      const markersGroup = L.layerGroup().addTo(map)
+      markersLayerRef.current = markersGroup
+      mapInstanceRef.current = map
+
+      // Invalidate size to ensure clean tile rendering after layout
+      setTimeout(() => {
+        map.invalidateSize()
+      }, 150)
+    } else {
+      // Map exists, pan to newly resolved coordinates
+      mapInstanceRef.current.setView([resolvedCoords.lat, resolvedCoords.lng], zoom, {
+        animate: true,
+      })
+    }
+
+    return () => {
+      // Cleanup map on unmount
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove()
+        mapInstanceRef.current = null
+        markersLayerRef.current = null
+      }
+    }
+  }, [resolvedCoords, zoom, interactive, tileProvider])
+
+  // 3. Render markers
+  useEffect(() => {
+    const map = mapInstanceRef.current
+    const markersGroup = markersLayerRef.current
+    if (!map || !markersGroup || !resolvedCoords) return
+
+    markersGroup.clearLayers()
+
+    // Multiple offers list
+    if (offers && offers.length > 0) {
+      const bounds = L.latLngBounds([])
+
+      offers.forEach((item) => {
+        const itemCoords = resolveSyncCoordinates(item)
+        if (!itemCoords) return
+
+        bounds.extend([itemCoords.lat, itemCoords.lng])
+        const priceLabel = formatPrice(item.price ?? null)
+        const marker = L.marker([itemCoords.lat, itemCoords.lng], {
+          icon: createMarkerIcon(priceLabel),
+        })
+
+        if (showPopup) {
+          marker.bindPopup(buildPopupHtml(item, itemCoords), {
+            autoPan: true,
+            autoPanPadding: [28, 28],
+            maxWidth: 280,
+            minWidth: 240,
+            closeButton: false,
+          })
+        }
+
+        if (onMarkerClick) {
+          marker.on('click', () => onMarkerClick(item))
+        }
+
+        markersGroup.addLayer(marker)
+      })
+
+      if (bounds.isValid() && offers.length > 1) {
+        map.fitBounds(bounds, { padding: [30, 30] })
+      }
+      return
+    }
+
+    // Single offer detail
+    if (offer) {
+      const priceLabel = formatPrice(offer.price ?? null)
+      const marker = L.marker([resolvedCoords.lat, resolvedCoords.lng], {
+        icon: createMarkerIcon(priceLabel, true),
+      })
+
+      if (showPopup) {
+        marker.bindPopup(buildPopupHtml(offer, resolvedCoords), {
+          autoPan: true,
+          autoPanPadding: [28, 28],
+          maxWidth: 280,
+          minWidth: 240,
+          closeButton: false,
+        })
+      }
+
+      markersGroup.addLayer(marker)
+    }
+  }, [offers, offer, resolvedCoords, showPopup, onMarkerClick])
+
+  const handleRecenter = () => {
+    if (mapInstanceRef.current && resolvedCoords) {
+      mapInstanceRef.current.setView([resolvedCoords.lat, resolvedCoords.lng], zoom, {
+        animate: true,
+      })
+    }
+  }
+
+  const effectiveLoc = getEffectiveLocation(offer)
+  const district = effectiveLoc.district
+  const street = effectiveLoc.street
+  const city = effectiveLoc.city
+  const gmapsUrl = buildGoogleMapsUrl(city, district, street)
+
+  return (
+    <div
+      className={`relative overflow-hidden rounded-2xl border border-border bg-muted/40 shadow-xs group/map ${className}`}
+      style={{ height }}
+    >
+      {/* Map Container */}
+      <div
+        id={`map-${mapId}`}
+        ref={containerRef}
+        className="h-full w-full z-0 font-sans"
+        aria-label="Interaktywna mapa lokalizacji"
+      />
+
+      {/* Loading Overlay */}
+      {isLoadingCoords && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-xs">
+          <div className="flex items-center gap-2 rounded-xl bg-background/90 px-4 py-2 text-xs font-medium text-muted-foreground shadow-md border">
+            <RefreshCw className="size-3.5 animate-spin text-primary" />
+            <span>Wczytywanie lokalizacji...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Top Map Action Bar */}
+      {showControls && (
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 pointer-events-auto">
+          {resolvedCoords && (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={handleRecenter}
+              title="Wycentruj mapę"
+              className="size-8 p-0 rounded-xl bg-background/90 shadow-md backdrop-blur-md hover:bg-background cursor-pointer"
+            >
+              <Navigation className="size-3.5 text-foreground" />
+            </Button>
+          )}
+
+          {gmapsUrl && (
+            <a
+              href={gmapsUrl}
+              target="_blank"
+              rel="noreferrer"
+              title="Otwórz w Google Maps"
+              className="inline-flex items-center gap-1 h-8 rounded-xl bg-background/90 px-2.5 text-xs font-medium text-foreground shadow-md backdrop-blur-md hover:bg-background border border-border/50"
+            >
+              <MapPin className="size-3 text-primary" />
+              <span>Google Maps</span>
+              <ExternalLink className="size-2.5 opacity-60 ml-0.5" />
+            </a>
+          )}
+        </div>
+      )}
+
+      {/* Bottom Address Indicator */}
+      {city && (
+        <div className="absolute bottom-3 left-3 z-10 pointer-events-none">
+          <Badge
+            variant="secondary"
+            className="rounded-xl bg-background/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-md backdrop-blur-md border border-border/50 flex items-center gap-1.5"
+          >
+            <MapPin className="size-3.5 text-primary shrink-0" />
+            <span className="truncate max-w-[240px]">
+              {city}
+              {district ? `, ${district}` : ''}
+              {street ? `, ul. ${street}` : ''}
+            </span>
+          </Badge>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function resolveSyncCoordinates(item: Partial<Offer>): Coordinates | null {
+  return extractCoordinates(item)
+}
+
+function buildPopupHtml(item: Partial<Offer>, coords: Coordinates): string {
+  const price = formatPrice(item.price ?? null)
+  const priceSqm = calculatePricePerSqm(item.price ?? null, item.areaSqm ?? null)
+  const effectiveLoc = getEffectiveLocation(item)
+  const district = effectiveLoc.district
+  const street = effectiveLoc.street
+  const city = effectiveLoc.city
+  const thumbnail = item.images?.[0] || (item.metadata?.imageUrl as string | undefined)
+  const locationText = [street ? `ul. ${street}` : null, district, city]
+    .filter(Boolean)
+    .join(', ')
+  const gmapsUrl = city
+    ? buildGoogleMapsUrl(city, district, street)
+    : `https://www.google.com/maps/search/?api=1&query=${coords.lat},${coords.lng}`
+
+  return `
+    <div class="overflow-hidden rounded-2xl bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 font-sans shadow-xl w-[260px]">
+      ${
+        thumbnail
+          ? `<div class="relative aspect-[16/9] w-full overflow-hidden bg-zinc-100 dark:bg-zinc-900">
+              <img src="${thumbnail}" alt="" class="h-full w-full object-cover" />
+            </div>`
+          : ''
+      }
+      <div class="p-3.5 space-y-2">
+        <div class="flex items-baseline justify-between gap-1.5">
+          <span class="text-base font-bold tracking-tight text-zinc-900 dark:text-zinc-50">${price}</span>
+          ${priceSqm ? `<span class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">${priceSqm}</span>` : ''}
+        </div>
+        ${
+          item.title
+            ? `<div class="text-xs text-zinc-600 dark:text-zinc-300 line-clamp-2 leading-snug">${item.title}</div>`
+            : ''
+        }
+        <div class="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400 pt-0.5">
+          <svg class="size-3.5 text-zinc-700 dark:text-zinc-300 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+          <span class="truncate">${locationText}</span>
+        </div>
+        <a
+          href="${gmapsUrl}"
+          target="_blank"
+          rel="noreferrer"
+          class="leaflet-popup-btn flex items-center justify-center gap-1.5 w-full rounded-xl px-3 py-2 text-xs font-semibold shadow-xs transition mt-2.5 cursor-pointer"
+        >
+          <span style="color: inherit;">Nawiguj w Google Maps</span>
+          <svg class="size-3.5 shrink-0 opacity-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M7 7h10v10"/>
+            <path d="M7 17 17 7"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+  `
+}
