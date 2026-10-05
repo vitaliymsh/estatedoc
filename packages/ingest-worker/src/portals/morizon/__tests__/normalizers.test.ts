@@ -89,7 +89,7 @@ describe('Morizon normalizers', () => {
       );
       expect(result.city).toBe('Warszawa');
       expect(result.district).toBe('Praga-Północ');
-      expect(result.street).toBe('Wileńska');
+      expect(result.street).toBe('ul. Wileńska');
     });
 
     it('extracts district from addressLocality when city is known from breadcrumbs', () => {
@@ -109,7 +109,7 @@ describe('Morizon normalizers', () => {
         'Mieszkanie na sprzedaż Nowa Praga'
       );
       expect(result.city).toBe('Warszawa');
-      expect(result.street).toBe('Wileńska');
+      expect(result.street).toBe('ul. Wileńska');
     });
 
     it('falls back to addressLocality or Polska', () => {
@@ -121,7 +121,7 @@ describe('Morizon normalizers', () => {
   describe('cleanDescriptionHtml', () => {
     it('strips html tags and cleans whitespace', () => {
       const html = '<p>Adres: Wileńska 18</p><p>Powierzchnia: 42,90 m2&nbsp;</p>';
-      expect(cleanDescriptionHtml(html)).toBe('Adres: Wileńska 18 Powierzchnia: 42,90 m2');
+      expect(cleanDescriptionHtml(html)).toBe('Adres: Wileńska 18\n\nPowierzchnia: 42,90 m2');
     });
 
     it('returns null on empty input', () => {

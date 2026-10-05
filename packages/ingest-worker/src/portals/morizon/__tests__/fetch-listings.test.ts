@@ -91,7 +91,7 @@ describe('Morizon fetch-listings', () => {
       mockFetch as unknown as typeof fetch
     );
 
-    expect(details.description).toBe('Pełny opis lokalu Piętro: 3/5');
+    expect(details.description).toBe('Pełny opis lokalu\n\nPiętro: 3/5');
     expect(details.sellerType).toBe('agency');
     expect(details.floor).toBe(3);
     expect(details.totalFloors).toBe(5);
@@ -122,7 +122,7 @@ describe('Morizon fetch-listings', () => {
 
     expect(listings).toHaveLength(1);
     expect(listings[0].externalId).toBe('mzn111');
-    expect(listings[0].description).toBe('Pełny opis lokalu Piętro: 3/5');
+    expect(listings[0].description).toBe('Pełny opis lokalu\n\nPiętro: 3/5');
     expect(listings[0].sellerType).toBe('agency');
     expect(listings[0].floor).toBe(3);
   });

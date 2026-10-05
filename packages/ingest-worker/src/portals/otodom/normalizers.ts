@@ -12,6 +12,11 @@ import {
   buildOfferUrl,
   extractImageUrls,
 } from './parsers.js';
+import {
+  sanitizeTitle,
+  sanitizeStreet,
+  sanitizeDescription,
+} from '../../utils/sanitizers.js';
 
 export function normalizePropertyType(estate?: string): PropertyType {
   if (!estate) return 'apartment';
@@ -85,7 +90,7 @@ export function normalizeSearchItem(item: OtodomSearchItem): StandardListing {
     portal: 'otodom',
     externalId: String(item.id),
     url: buildOfferUrl(item.slug),
-    title: item.title,
+    title: sanitizeTitle(item.title),
     price: item.totalPrice?.value ?? null,
     pricePerSqm: item.pricePerSquareMeter?.value ?? null,
     areaSqm: item.areaInSquareMeters ?? null,
@@ -96,9 +101,9 @@ export function normalizeSearchItem(item: OtodomSearchItem): StandardListing {
     propertyType,
     city,
     district,
-    street,
+    street: sanitizeStreet(street) ?? undefined,
     sellerType,
-    description: item.shortDescription || null,
+    description: sanitizeDescription(item.shortDescription),
     images,
     postedAt: item.createdAtFirst || item.dateCreated,
     metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
@@ -161,7 +166,7 @@ export function enrichListingFromDetail(
 
   return {
     ...listing,
-    description: ad.description || listing.description,
+    description: sanitizeDescription(ad.description) || listing.description,
     totalFloors,
     images: finalImages,
     metadata: Object.keys(meta).length > 0 ? meta : undefined,

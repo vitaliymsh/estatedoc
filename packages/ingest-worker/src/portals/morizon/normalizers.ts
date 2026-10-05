@@ -1,4 +1,5 @@
 import type { TransactionType, PropertyType, MorizonJsonLdAddress } from './types.js';
+import { sanitizeStreet, sanitizeDescription } from '../../utils/sanitizers.js';
 
 export { calculatePricePerSqm } from '../../utils/parsers.js';
 
@@ -65,7 +66,7 @@ export function extractCityAndDistrict(
 
   if (address?.streetAddress) {
     if (address.streetAddress.toLowerCase() !== city.toLowerCase()) {
-      street = address.streetAddress;
+      street = sanitizeStreet(address.streetAddress) ?? undefined;
     }
   }
 
@@ -80,17 +81,5 @@ export function extractCityAndDistrict(
 }
 
 export function cleanDescriptionHtml(htmlOrText: string | null | undefined): string | null {
-  if (!htmlOrText) return null;
-  const stripped = htmlOrText
-    .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<\/p>/gi, ' ')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  return stripped.length > 0 ? stripped : null;
+  return sanitizeDescription(htmlOrText);
 }

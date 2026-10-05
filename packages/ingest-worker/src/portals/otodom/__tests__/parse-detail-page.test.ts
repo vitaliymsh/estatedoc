@@ -62,7 +62,7 @@ describe('parseOtodomDetailPage', () => {
 
     const enriched = parseOtodomDetailPage(html, baseListing);
 
-    expect(enriched.description).toBe('<p>Pełny opis lokalu po remoncie.</p>');
+    expect(enriched.description).toBe('Pełny opis lokalu po remoncie.');
     expect(enriched.totalFloors).toBe(8);
     expect(enriched.images).toEqual([
       'https://img.cdn/detail1.jpg',
