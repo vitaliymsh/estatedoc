@@ -10,22 +10,36 @@ export const POLAND_CENTER_COORDINATES: Coordinates = {
   lng: 19.4803,
 }
 
-// In-memory cache to prevent redundant Nominatim requests
+// In-memory bounded cache to prevent redundant Nominatim requests and memory leaks
+const MAX_GEOCODE_CACHE_SIZE = 500
 const geocodeCache = new Map<string, Coordinates | null>()
 
 export function clearGeocodeCache(): void {
   geocodeCache.clear()
 }
 
+function setGeocodeCache(key: string, coords: Coordinates | null): void {
+  if (geocodeCache.size >= MAX_GEOCODE_CACHE_SIZE) {
+    const firstKey = geocodeCache.keys().next().value
+    if (firstKey) geocodeCache.delete(firstKey)
+  }
+  geocodeCache.set(key, coords)
+}
+
+const L_STROKE_RE = /ł/g
+const DIACRITICS_RE = /[\u0300-\u036f]/g
+const NON_ALPHANUMERIC_RE = /[^a-z0-9]/g
+
 function normalizeKey(str: string): string {
   return str
     .toLowerCase()
     .trim()
-    .replace(/ł/g, 'l')
+    .replace(L_STROKE_RE, 'l')
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]/g, '')
+    .replace(DIACRITICS_RE, '')
+    .replace(NON_ALPHANUMERIC_RE, '')
 }
+
 
 // Static coordinate lookup for major Polish cities and key districts
 const STATIC_CITIES: Record<string, Coordinates> = {
@@ -104,20 +118,18 @@ const STATIC_DISTRICTS: Record<string, Coordinates> = {
 }
 
 function parseNumber(val: unknown): number | null {
-  if (typeof val === 'number' && !Number.isNaN(val) && Number.isFinite(val)) {
-    return val
-  }
-  if (typeof val === 'string' && val.trim() !== '') {
-    const parsed = Number.parseFloat(val)
-    if (!Number.isNaN(parsed) && Number.isFinite(parsed)) {
-      return parsed
-    }
-  }
-  return null
+  const n = typeof val === 'string' && val.trim() ? Number.parseFloat(val) : typeof val === 'number' ? val : NaN
+  return Number.isFinite(n) ? n : null
 }
 
 function isValidCoordinates(lat: number, lng: number): boolean {
   return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && (lat !== 0 || lng !== 0)
+}
+
+function toCoords(latVal: unknown, lngVal: unknown): Coordinates | null {
+  const lat = parseNumber(latVal)
+  const lng = parseNumber(lngVal)
+  return lat !== null && lng !== null && isValidCoordinates(lat, lng) ? { lat, lng } : null
 }
 
 /**
@@ -126,40 +138,20 @@ function isValidCoordinates(lat: number, lng: number): boolean {
 export function extractCoordinates(offer: Partial<Offer> | null | undefined): Coordinates | null {
   if (!offer) return null
 
-  // 1. Direct fields on Offer
   const offerAny = offer as Record<string, unknown>
-  const directLat = parseNumber(offerAny.latitude ?? offerAny.lat)
-  const directLng = parseNumber(offerAny.longitude ?? offerAny.lng)
-  if (directLat !== null && directLng !== null && isValidCoordinates(directLat, directLng)) {
-    return { lat: directLat, lng: directLng }
-  }
+  const direct = toCoords(offerAny.latitude ?? offerAny.lat, offerAny.longitude ?? offerAny.lng)
+  if (direct) return direct
 
-  // 2. Metadata properties
-  const meta = offer.metadata
+  const meta = offer.metadata as Record<string, unknown> | undefined
   if (meta && typeof meta === 'object') {
-    const metaLat = parseNumber(meta.lat ?? meta.latitude)
-    const metaLng = parseNumber(meta.lng ?? meta.longitude ?? meta.lon)
-    if (metaLat !== null && metaLng !== null && isValidCoordinates(metaLat, metaLng)) {
-      return { lat: metaLat, lng: metaLng }
-    }
+    const metaDirect = toCoords(meta.lat ?? meta.latitude, meta.lng ?? meta.longitude ?? meta.lon)
+    if (metaDirect) return metaDirect
 
-    // Coordinates array or object in metadata
-    const coords = meta.coordinates ?? meta.location ?? meta.geo
-    if (coords && typeof coords === 'object') {
-      if (Array.isArray(coords) && coords.length >= 2) {
-        const c0 = parseNumber(coords[0])
-        const c1 = parseNumber(coords[1])
-        if (c0 !== null && c1 !== null && isValidCoordinates(c0, c1)) {
-          return { lat: c0, lng: c1 }
-        }
-      } else {
-        const cObj = coords as Record<string, unknown>
-        const cLat = parseNumber(cObj.lat ?? cObj.latitude)
-        const cLng = parseNumber(cObj.lng ?? cObj.longitude ?? cObj.lon)
-        if (cLat !== null && cLng !== null && isValidCoordinates(cLat, cLng)) {
-          return { lat: cLat, lng: cLng }
-        }
-      }
+    const raw = (meta.coordinates ?? meta.location ?? meta.geo) as unknown
+    if (Array.isArray(raw) && raw.length >= 2) return toCoords(raw[0], raw[1])
+    if (raw && typeof raw === 'object') {
+      const obj = raw as Record<string, unknown>
+      return toCoords(obj.lat ?? obj.latitude, obj.lng ?? obj.longitude ?? obj.lon)
     }
   }
 
@@ -216,7 +208,7 @@ export async function geocodeWithNominatim(
     })
 
     if (!res.ok) {
-      geocodeCache.set(cacheKey, null)
+      setGeocodeCache(cacheKey, null)
       return null
     }
 
@@ -226,17 +218,17 @@ export async function geocodeWithNominatim(
       const lng = parseNumber(data[0]?.lon)
       if (lat !== null && lng !== null && isValidCoordinates(lat, lng)) {
         const coords: Coordinates = { lat, lng }
-        geocodeCache.set(cacheKey, coords)
+        setGeocodeCache(cacheKey, coords)
         return coords
       }
     }
 
-    geocodeCache.set(cacheKey, null)
+    setGeocodeCache(cacheKey, null)
     return null
   } catch {
     // Gracefully handle network errors
     // ponytail: memory cache avoids repeated failing requests during session
-    geocodeCache.set(cacheKey, null)
+    setGeocodeCache(cacheKey, null)
     return null
   }
 }

@@ -389,40 +389,43 @@ export const translations = {
 
 export type TranslationKey = keyof typeof translations.pl
 
+const TEMPLATE_PARAM_RE = /\{(\w+)\}/g
+
 export function getTranslation(
   lang: Language,
-  key: TranslationKey,
+  key: TranslationKey | (string & {}),
   params?: Record<string, string | number>
 ): string {
   const dict = translations[lang] || translations.en || translations.pl
-  let text: string = dict[key] || translations.en[key] || (key as string)
-  if (params) {
-    for (const [k, v] of Object.entries(params)) {
-      text = text.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v))
-    }
-  }
-  return text
+  const text: string = dict[key as TranslationKey] || translations.en[key as TranslationKey] || (key as string)
+  return params ? text.replace(TEMPLATE_PARAM_RE, (_, k) => String(params[k] ?? `{${k}}`)) : text
 }
 
-interface LanguageContextType {
+export interface LanguageContextType {
   lang: Language
   setLang: (lang: Language) => void
-  t: (key: TranslationKey, params?: Record<string, string | number>) => string
+  t: (key: TranslationKey | (string & {}), params?: Record<string, string | number>) => string
 }
 
-const LanguageContext = createContext<LanguageContextType>({
+const DEFAULT_CONTEXT_VALUE: LanguageContextType = {
   lang: 'en',
   setLang: () => {},
   t: (key, params) => getTranslation('en', key, params),
-})
+}
+
+const LanguageContext = createContext<LanguageContextType>(DEFAULT_CONTEXT_VALUE)
 
 const STORAGE_KEY = 'estatedoc_lang'
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Language>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(STORAGE_KEY)
-      if (saved === 'en' || saved === 'pl') return saved
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY)
+        if (saved === 'en' || saved === 'pl') return saved
+      } catch {
+        // Ignore localStorage access failures in restricted environments
+      }
     }
     return 'en'
   })
@@ -430,12 +433,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const setLang = useCallback((nextLang: Language) => {
     setLangState(nextLang)
     if (typeof window !== 'undefined') {
-      localStorage.setItem(STORAGE_KEY, nextLang)
+      try {
+        localStorage.setItem(STORAGE_KEY, nextLang)
+      } catch {
+        // Ignore storage write quota or security errors
+      }
     }
   }, [])
 
   const t = useCallback(
-    (key: TranslationKey, params?: Record<string, string | number>) =>
+    (key: TranslationKey | (string & {}), params?: Record<string, string | number>) =>
       getTranslation(lang, key, params),
     [lang]
   )
@@ -452,3 +459,4 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 export function useTranslation() {
   return useContext(LanguageContext)
 }
+

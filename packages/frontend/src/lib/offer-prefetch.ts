@@ -1,56 +1,58 @@
 import type { Offer } from '../types/offer'
-import { apiUrl } from './api-config'
+
+const MAX_OFFER_CACHE_SIZE = 500
+const MAX_IMAGE_CACHE_SIZE = 1000
 
 export const offerCache = new Map<number, Offer>()
 const prefetchedImageUrls = new Set<string>()
 
-export function clearOfferCache() {
+export function clearOfferCache(): void {
   offerCache.clear()
   prefetchedImageUrls.clear()
 }
 
-export function cacheOffers(offers: Offer[]) {
-  for (const offer of offers) {
-    offerCache.set(offer.id, offer)
+function setCachedOffer(offer: Offer): void {
+  if (offerCache.size >= MAX_OFFER_CACHE_SIZE) {
+    const firstKey = offerCache.keys().next().value
+    if (firstKey !== undefined) offerCache.delete(firstKey)
+  }
+  offerCache.set(offer.id, offer)
+}
+
+export function cacheOffers(offers: Offer[]): void {
+  for (let i = 0; i < offers.length; i++) {
+    const offer = offers[i]
+    if (offer) setCachedOffer(offer)
   }
 }
 
-export function getCachedOffer(id: number): Offer | undefined {
-  return offerCache.get(id)
-}
+export const getCachedOffer = (id: number): Offer | undefined => offerCache.get(id)
 
-export function prefetchImages(urls: (string | null | undefined)[]) {
+export function prefetchImages(urls: (string | null | undefined)[]): void {
   if (typeof window === 'undefined') return
-  for (const url of urls) {
+  for (let i = 0; i < urls.length; i++) {
+    const url = urls[i]
     if (url && !prefetchedImageUrls.has(url)) {
+      if (prefetchedImageUrls.size >= MAX_IMAGE_CACHE_SIZE) {
+        const firstUrl = prefetchedImageUrls.values().next().value
+        if (firstUrl) prefetchedImageUrls.delete(firstUrl)
+      }
       prefetchedImageUrls.add(url)
       const img = new Image()
       img.referrerPolicy = 'no-referrer'
+      img.decoding = 'async'
       img.src = url
     }
   }
 }
 
 export function prefetchOffer(offerOrId: Offer | number): void {
-  if (typeof offerOrId === 'object' && offerOrId !== null) {
-    offerCache.set(offerOrId.id, offerOrId)
-    prefetchImages(offerOrId.images || [])
-    return
+  const offer = typeof offerOrId === 'object' && offerOrId !== null ? offerOrId : offerCache.get(offerOrId)
+  if (offer) {
+    setCachedOffer(offer)
+    if (offer.images && offer.images.length > 0) {
+      prefetchImages(offer.images)
+    }
   }
-
-  const cached = offerCache.get(offerOrId)
-  if (cached) {
-    prefetchImages(cached.images || [])
-    return
-  }
-
-  fetch(apiUrl(`/api/offers/${offerOrId}`))
-    .then((res) => (res.ok ? res.json() : null))
-    .then((offer: Offer | null) => {
-      if (offer) {
-        offerCache.set(offer.id, offer)
-        prefetchImages(offer.images || [])
-      }
-    })
-    .catch(() => {})
 }
+
