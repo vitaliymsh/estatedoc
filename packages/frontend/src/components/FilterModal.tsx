@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -11,7 +11,6 @@ import {
   SheetFooter,
   SheetDescription,
 } from '@/components/ui/sheet'
-import { Slider } from '@/components/ui/slider'
 import {
   Select,
   SelectContent,
@@ -21,13 +20,14 @@ import {
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { useTranslation } from '@/lib/i18n'
-import type {
-  ListOffersFilter,
-  SortBy,
-  TransactionType,
-  PropertyType,
-  SellerType,
-  MarketType,
+import {
+  SORT_OPTIONS,
+  type ListOffersFilter,
+  type SortBy,
+  type TransactionType,
+  type PropertyType,
+  type SellerType,
+  type MarketType,
 } from '../types/offer'
 
 const PORTALS = ['morizon', 'sprzedajemy', 'otodom', 'olx', 'gratka']
@@ -39,14 +39,19 @@ const PROPERTY_TYPES: { value: PropertyType; labelPl: string; labelEn: string }[
   { value: 'garage', labelPl: 'Garaż', labelEn: 'Garage' },
 ]
 
-const SLIDER_MIN = 0
-const SLIDER_MAX = 3000000
-const SLIDER_STEP = 25000
+const PRICE_PRESETS = [
+  { label: '< 500k', min: '', max: '500000' },
+  { label: '500k - 1M', min: '500000', max: '1000000' },
+  { label: '1M - 1.5M', min: '1000000', max: '1500000' },
+  { label: '1.5M - 2.5M', min: '1500000', max: '2500000' },
+  { label: '2.5M+', min: '2500000', max: '' },
+]
 
 interface FilterModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   filter: ListOffersFilter
+  parsedFilters?: Record<string, unknown> | null
   onApply: (draft: Partial<ListOffersFilter>) => void
 }
 
@@ -87,13 +92,20 @@ function FilterForm({
   const [sortBy, setSortBy] = useState<SortBy>(filter.sortBy)
 
   const handleApply = () => {
-    let minRoomsVal: number | undefined
-    let maxRoomsVal: number | undefined
-    if (rooms === '1') { minRoomsVal = 1; maxRoomsVal = 1 }
-    else if (rooms === '2') { minRoomsVal = 2; maxRoomsVal = 2 }
-    else if (rooms === '3') { minRoomsVal = 3; maxRoomsVal = 3 }
-    else if (rooms === '4') { minRoomsVal = 4; maxRoomsVal = 4 }
-    else if (rooms === '5+') { minRoomsVal = 5 }
+    const r = Number(rooms)
+    const minRoomsVal = rooms === '5+' ? 5 : r || undefined
+    const maxRoomsVal = rooms === '5+' ? undefined : minRoomsVal
+
+    const parseRange = (minStr: string, maxStr: string) => {
+      let min = minStr ? Number(minStr) : undefined
+      let max = maxStr ? Number(maxStr) : undefined
+      if (min !== undefined && max !== undefined && min > max) [min, max] = [max, min]
+      return [min, max]
+    }
+
+    const [minP, maxP] = parseRange(minPrice, maxPrice)
+    const [minA, maxA] = parseRange(minArea, maxArea)
+    const [minF, maxF] = parseRange(minFloor, maxFloor)
 
     onApply({
       transactionType: transactionType || undefined,
@@ -101,14 +113,14 @@ function FilterForm({
       city: city.trim() || undefined,
       district: district.trim() || undefined,
       portal: portal || undefined,
-      minPrice: minPrice ? Number(minPrice) : undefined,
-      maxPrice: maxPrice ? Number(maxPrice) : undefined,
-      minArea: minArea ? Number(minArea) : undefined,
-      maxArea: maxArea ? Number(maxArea) : undefined,
+      minPrice: minP,
+      maxPrice: maxP,
+      minArea: minA,
+      maxArea: maxA,
       minRooms: minRoomsVal,
       maxRooms: maxRoomsVal,
-      minFloor: minFloor !== '' ? Number(minFloor) : undefined,
-      maxFloor: maxFloor !== '' ? Number(maxFloor) : undefined,
+      minFloor: minF,
+      maxFloor: maxF,
       marketType: marketType || undefined,
       sellerType: sellerType || undefined,
       hasElevator: hasElevator || undefined,
@@ -146,29 +158,16 @@ function FilterForm({
     setSortBy('newest')
   }
 
-  const sliderValue = [
-    minPrice ? Math.max(SLIDER_MIN, Math.min(Number(minPrice), SLIDER_MAX)) : SLIDER_MIN,
-    maxPrice ? Math.max(SLIDER_MIN, Math.min(Number(maxPrice), SLIDER_MAX)) : SLIDER_MAX,
-  ]
-
-  const handleSliderChange = (val: number | readonly number[]) => {
-    if (Array.isArray(val) && val.length >= 2) {
-      setMinPrice(val[0] > SLIDER_MIN ? String(val[0]) : '')
-      setMaxPrice(val[1] < SLIDER_MAX ? String(val[1]) : '')
-    }
-  }
-
   return (
-    <SheetContent side="right" className="w-full sm:max-w-lg overflow-y-auto flex flex-col justify-between p-6">
-      <div>
-        <SheetHeader className="p-0 pb-4 border-b">
-          <SheetTitle>{t('filter_modal_title')}</SheetTitle>
-          <SheetDescription className="sr-only">
-            {t('filter_modal_desc')}
-          </SheetDescription>
-        </SheetHeader>
+    <SheetContent side="right" className="w-full sm:max-w-md md:max-w-lg lg:max-w-xl h-full flex flex-col justify-between p-0 gap-0">
+      <SheetHeader className="p-4 sm:p-6 pb-3 border-b shrink-0">
+        <SheetTitle>{t('filter_modal_title')}</SheetTitle>
+        <SheetDescription className="sr-only">
+          {t('filter_modal_desc')}
+        </SheetDescription>
+      </SheetHeader>
 
-        <div className="space-y-6 py-4">
+      <div className="space-y-6 p-4 sm:p-6 py-4 overflow-y-auto flex-1 overscroll-contain">
           {/* 1. Transaction & Property Type */}
           <div className="space-y-3">
             <div className="space-y-1.5">
@@ -291,19 +290,30 @@ function FilterForm({
                   />
                 </div>
               </div>
-              <div className="pt-2 px-1">
-                <Slider
-                  min={SLIDER_MIN}
-                  max={SLIDER_MAX}
-                  step={SLIDER_STEP}
-                  value={sliderValue}
-                  onValueChange={handleSliderChange}
-                />
-                <div className="flex justify-between text-[10px] text-muted-foreground pt-1.5">
-                  <span>0 PLN</span>
-                  <span>1.5M PLN</span>
-                  <span>3M+ PLN</span>
-                </div>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {PRICE_PRESETS.map((preset) => {
+                  const isSelected = minPrice === preset.min && maxPrice === preset.max
+                  return (
+                    <Button
+                      key={preset.label}
+                      type="button"
+                      variant={isSelected ? 'default' : 'outline'}
+                      size="xs"
+                      onClick={() => {
+                        if (isSelected) {
+                          setMinPrice('')
+                          setMaxPrice('')
+                        } else {
+                          setMinPrice(preset.min)
+                          setMaxPrice(preset.max)
+                        }
+                      }}
+                      className="rounded-full text-[11px] h-6 px-2.5 cursor-pointer font-medium"
+                    >
+                      {preset.label}
+                    </Button>
+                  )
+                })}
               </div>
             </div>
 
@@ -579,28 +589,29 @@ function FilterForm({
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold">{t('filter_sort_label')}</Label>
             <Select value={sortBy} onValueChange={(val) => setSortBy(val as SortBy)}>
-              <SelectTrigger className="w-full text-xs h-9">
-                <SelectValue />
+              <SelectTrigger className="w-full text-xs h-9 cursor-pointer">
+                <SelectValue>
+                  {(val: SortBy) =>
+                    t(SORT_OPTIONS.find((o) => o.value === (val ?? sortBy))?.labelKey ?? 'sort_newest')
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="newest">{t('sort_newest')}</SelectItem>
-                <SelectItem value="price_asc">{t('sort_price_asc')}</SelectItem>
-                <SelectItem value="price_desc">{t('sort_price_desc')}</SelectItem>
-                <SelectItem value="price_sqm_asc">{t('sort_price_sqm_asc')}</SelectItem>
-                <SelectItem value="price_sqm_desc">{t('sort_price_sqm_desc')}</SelectItem>
-                <SelectItem value="area_asc">{t('sort_area_asc')}</SelectItem>
-                <SelectItem value="area_desc">{t('sort_area_desc')}</SelectItem>
+                {SORT_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {t(opt.labelKey)}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
         </div>
-      </div>
 
-      <SheetFooter className="p-0 pt-4 border-t flex flex-row items-center justify-between sm:justify-between">
-        <Button variant="ghost" size="sm" onClick={handleClear}>
+      <SheetFooter className="p-4 sm:p-6 border-t flex flex-row items-center justify-between shrink-0 bg-background/95 backdrop-blur-md sticky bottom-0 z-10">
+        <Button variant="ghost" size="sm" onClick={handleClear} className="cursor-pointer">
           {t('filter_reset_btn')}
         </Button>
-        <Button size="sm" onClick={handleApply}>
+        <Button size="sm" onClick={handleApply} className="cursor-pointer px-5">
           {t('filter_apply_btn')}
         </Button>
       </SheetFooter>
@@ -608,12 +619,43 @@ function FilterForm({
   )
 }
 
-export function FilterModal({ open, onOpenChange, filter, onApply }: FilterModalProps) {
+export function FilterModal({ open, onOpenChange, filter, parsedFilters, onApply }: FilterModalProps) {
+  const effectiveFilter = useMemo(() => {
+    if (filter.prompt && parsedFilters) {
+      return {
+        ...filter,
+        city: (parsedFilters.city as string) ?? filter.city,
+        district: (parsedFilters.district as string) ?? filter.district,
+        propertyType: (parsedFilters.propertyType as ListOffersFilter['propertyType']) ?? filter.propertyType,
+        transactionType: (parsedFilters.transactionType as ListOffersFilter['transactionType']) ?? filter.transactionType,
+        minPrice: (parsedFilters.minPrice as number) ?? filter.minPrice,
+        maxPrice: (parsedFilters.maxPrice as number) ?? filter.maxPrice,
+        minArea: (parsedFilters.minArea as number) ?? filter.minArea,
+        maxArea: (parsedFilters.maxArea as number) ?? filter.maxArea,
+        minRooms: (parsedFilters.minRooms as number) ?? filter.minRooms,
+        maxRooms: (parsedFilters.maxRooms as number) ?? filter.maxRooms,
+        minFloor: (parsedFilters.minFloor as number) ?? filter.minFloor,
+        maxFloor: (parsedFilters.maxFloor as number) ?? filter.maxFloor,
+        sellerType: (parsedFilters.sellerType as ListOffersFilter['sellerType']) ?? filter.sellerType,
+        marketType: (parsedFilters.marketType as ListOffersFilter['marketType']) ?? filter.marketType,
+        hasElevator: (parsedFilters.hasElevator as boolean) ?? filter.hasElevator,
+        hasBalcony: (parsedFilters.hasBalcony as boolean) ?? filter.hasBalcony,
+        hasParking: (parsedFilters.hasParking as boolean) ?? filter.hasParking,
+        hasAirConditioning: (parsedFilters.hasAirConditioning as boolean) ?? filter.hasAirConditioning,
+        isFurnished: (parsedFilters.isFurnished as boolean) ?? filter.isFurnished,
+        hasBasement: (parsedFilters.hasBasement as boolean) ?? filter.hasBasement,
+        sortBy: (parsedFilters.sortBy as SortBy) ?? filter.sortBy,
+        q: (parsedFilters.q as string) ?? filter.q,
+      }
+    }
+    return filter
+  }, [filter, parsedFilters])
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       {open ? (
         <FilterForm
-          filter={filter}
+          filter={effectiveFilter}
           onApply={(draft) => {
             onApply(draft)
             onOpenChange(false)
