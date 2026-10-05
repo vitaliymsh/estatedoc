@@ -44,7 +44,38 @@ export function Header({
   showFilters = true,
 }: HeaderProps) {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(Boolean(searchInput))
+  const [isVisible, setIsVisible] = useState(true)
+  const lastScrollY = useRef(0)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    let ticking = false
+
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const currentScrollY = window.scrollY
+          const diff = currentScrollY - lastScrollY.current
+
+          if (Math.abs(diff) > 6) {
+            if (currentScrollY <= 20) {
+              setIsVisible(true)
+            } else if (diff > 0 && currentScrollY > 80) {
+              setIsVisible(false)
+            } else if (diff < 0) {
+              setIsVisible(true)
+            }
+            lastScrollY.current = currentScrollY
+          }
+          ticking = false
+        })
+        ticking = true
+      }
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
 
   useEffect(() => {
     if (isMobileSearchOpen) {
@@ -63,8 +94,15 @@ export function Header({
     setIsMobileSearchOpen(false)
   }
 
+  const showHeader = isVisible || isMobileSearchOpen
+
   return (
-    <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur">
+    <header
+      className={cn(
+        "sticky top-0 z-30 border-b bg-background/95 backdrop-blur transition-transform duration-300 ease-in-out",
+        showHeader ? "translate-y-0" : "-translate-y-full"
+      )}
+    >
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 px-4 sm:h-16 sm:px-6 lg:px-8">
         {/* Brand Icon + Collapsible Title */}
         <div className="flex items-center gap-2.5 shrink-0">
