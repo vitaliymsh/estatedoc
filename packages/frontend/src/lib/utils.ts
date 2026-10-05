@@ -1,3 +1,6 @@
-export function cn(...inputs: (string | boolean | undefined | null | 0)[]): string {
-  return inputs.filter(Boolean).join(' ')
+export function cn(...inputs: any[]): string {
+  return inputs
+    .flatMap((input) => (typeof input === 'function' ? input({}) : input))
+    .filter(Boolean)
+    .join(' ')
 }
