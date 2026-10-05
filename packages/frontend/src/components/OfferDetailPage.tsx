@@ -165,9 +165,9 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
   )
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6 pb-20 md:pb-8">
-      {/* Top Navigation Row */}
-      <div className="flex items-center justify-between gap-4">
+    <div className="mx-auto max-w-7xl px-4 py-4 sm:py-6 sm:px-6 lg:px-8 space-y-5 sm:space-y-6 pb-20 md:pb-8 flex flex-col">
+      {/* Top Navigation Row (Desktop & Tablet only — Mobile uses floating gallery controls) */}
+      <div className="hidden md:flex items-center justify-between gap-4 order-1">
         <Button
           variant="outline"
           size="sm"
@@ -189,44 +189,36 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
         </Button>
       </div>
 
-      {/* Classification Badges & Title Section */}
-      <div className="space-y-2.5">
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-          <Badge
-            variant="outline"
-            className="rounded-full bg-secondary/80 px-2.5 py-0.5 text-xs font-semibold text-foreground uppercase tracking-wider shadow-2xs"
-          >
-            {offer.portal}
-          </Badge>
-          <Badge
-            variant="secondary"
-            className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-          >
-            {transactionTypeLabel}
-          </Badge>
+      {/* Offer Gallery & Lightbox (Order 1 on mobile: Photo First! Order 3 on desktop) */}
+      <div className="order-1 md:order-3">
+        <OfferGallery
+          images={images}
+          title={offer.title}
+          onImageError={handleImageError}
+          onBack={onBack}
+          onShare={handleCopyLink}
+          isCopied={isCopied}
+        />
+      </div>
+
+      {/* De-cluttered Title & Info Section (Order 2 on mobile: under photo. Order 2 on desktop) */}
+      <div className="order-2 md:order-2 space-y-2">
+        {/* Unified Subtle Metadata Line (Replaces 4 redundant pill badges) */}
+        <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <span className="text-foreground font-bold">{offer.portal}</span>
+          <span>•</span>
+          <span>{sellerLabel || transactionTypeLabel}</span>
           {propertyTypeLabel && propertyTypeLabel !== 'Nieruchomość' && (
-            <Badge
-              variant="outline"
-              className="rounded-full px-2.5 py-0.5 text-xs font-medium text-muted-foreground border-border/70"
-            >
-              {propertyTypeLabel}
-            </Badge>
+            <>
+              <span>•</span>
+              <span>{propertyTypeLabel}</span>
+            </>
           )}
-          {sellerLabel && (
-            <Badge
-              variant="outline"
-              className={
-                sellerLabel.toLowerCase().includes('prywat') || sellerLabel.toLowerCase().includes('bez')
-                  ? 'rounded-full px-2.5 py-0.5 text-xs font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25'
-                  : 'rounded-full px-2.5 py-0.5 text-xs font-medium text-muted-foreground bg-secondary/50 border-border/70'
-              }
-            >
-              {sellerLabel}
-            </Badge>
-          )}
+          <span>•</span>
+          <span className="normal-case font-normal">{relativeTime}</span>
         </div>
 
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground leading-tight">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight text-foreground leading-snug">
           {offer.title}
         </h1>
 
@@ -245,48 +237,43 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
             </span>
             <ExternalLink className="size-3 ml-0.5 opacity-60" />
           </a>
-          <span className="text-muted-foreground/50">•</span>
-          <span>{relativeTime}</span>
         </div>
 
-        {/* Compact Mobile Meta Chips (Replaces redundant 5-card block on mobile) */}
-        <div className="flex md:hidden flex-wrap items-center gap-2 pt-1">
+        {/* Clean Mobile 1-Line Key Stats Strip */}
+        <div className="flex md:hidden flex-wrap items-center gap-1.5 pt-1">
           {offer.areaSqm && (
-            <div className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/70 px-2.5 py-1 text-xs font-semibold text-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/80 px-2.5 py-1 text-xs font-semibold text-foreground">
               <Maximize2 className="size-3 text-primary" />
               {offer.areaSqm} m²
-            </div>
+            </span>
           )}
           {offer.roomsCount && (
-            <div className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/70 px-2.5 py-1 text-xs font-semibold text-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/80 px-2.5 py-1 text-xs font-semibold text-foreground">
               <Layers className="size-3 text-primary" />
               {offer.roomsCount} {offer.roomsCount === 1 ? 'pokój' : offer.roomsCount < 5 ? 'pokoje' : 'pokoi'}
-            </div>
+            </span>
           )}
           {floorText && (
-            <div className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/70 px-2.5 py-1 text-xs font-semibold text-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/80 px-2.5 py-1 text-xs font-semibold text-foreground">
               <Building className="size-3 text-primary" />
               {floorText}
-            </div>
+            </span>
           )}
           {offer.metadata?.marketType && (
-            <div className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/70 px-2.5 py-1 text-xs font-semibold text-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-secondary/80 px-2.5 py-1 text-xs font-semibold text-foreground">
               <Tag className="size-3 text-primary" />
               {offer.metadata.marketType === 'primary'
                 ? 'Rynek pierwotny'
                 : offer.metadata.marketType === 'secondary'
                   ? 'Rynek wtórny'
                   : String(offer.metadata.marketType)}
-            </div>
+            </span>
           )}
         </div>
       </div>
 
-      {/* Offer Gallery & Lightbox */}
-      <OfferGallery images={images} title={offer.title} onImageError={handleImageError} />
-
       {/* Quick Key Metrics Bar (Desktop / Tablet only — avoids 3x duplication on Mobile) */}
-      <div className="hidden md:grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+      <div className="hidden md:grid order-4 grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">
         <div className="rounded-xl border bg-card/60 p-3 shadow-2xs">
           <div className="text-[11px] font-medium text-muted-foreground">Cena całkowita</div>
           <div className="text-base sm:text-lg font-bold text-foreground truncate mt-0.5">
@@ -335,7 +322,7 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
       </div>
 
       {/* Main Content & Sidebar Layout */}
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 items-start">
+      <div className="order-5 grid grid-cols-1 gap-8 lg:grid-cols-3 items-start">
         {/* Left Column (2 Cols) */}
         <div className="space-y-6 lg:col-span-2">
           {/* "Parametry nieruchomości" Card */}
@@ -661,14 +648,51 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
               </CardContent>
             </Card>
           )}
+          {/* Mobile Agency / Trust & Metadata Strip (Replaces orphaned sidebar box on mobile) */}
+          <div className="block md:hidden rounded-2xl border bg-card/60 p-4 shadow-2xs space-y-3">
+            {offer.metadata?.agencyName && (
+              <div className="flex items-center gap-2.5">
+                <ShieldCheck className="size-4 text-primary shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-[10px] uppercase font-semibold tracking-wider text-muted-foreground">
+                    Kontakt z biurem
+                  </div>
+                  <p className="text-xs font-semibold text-foreground truncate">
+                    {String(offer.metadata.agencyName)}
+                  </p>
+                </div>
+              </div>
+            )}
+            <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1 border-t border-border/40">
+              <span>ID: <code className="font-mono text-foreground/80">{offer.externalId}</code></span>
+              <span>{relativeTime}</span>
+            </div>
+            <div className="flex items-center justify-between pt-0.5 text-[11px] text-muted-foreground">
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="hover:text-foreground underline underline-offset-2 cursor-pointer"
+              >
+                Kopiuj link
+              </button>
+              <a
+                href={offer.url}
+                target="_blank"
+                rel="noreferrer"
+                className="hover:text-foreground underline underline-offset-2"
+              >
+                Zgłoś ogłoszenie
+              </a>
+            </div>
+          </div>
         </div>
 
-        {/* Right Column (1 Col Sticky Sidebar Card) */}
-        <div className="lg:col-span-1">
+        {/* Right Column (1 Col Sticky Sidebar Card - Desktop & Tablet only) */}
+        <div className="hidden md:block lg:col-span-1">
           <div className="sticky top-24 space-y-4">
             <Card className="rounded-2xl border bg-card p-4 sm:p-6 shadow-md space-y-3 sm:space-y-4">
-              {/* Tablet & Desktop Price & Actions (Handled by sticky bottom bar on mobile) */}
-              <div className="hidden md:block space-y-4">
+              {/* Tablet & Desktop Price & Actions */}
+              <div className="space-y-4">
                 {/* Price Row */}
                 <div className="space-y-1">
                   <span className="text-xs font-medium text-muted-foreground">Cena całkowita</span>
@@ -774,10 +798,10 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
         </div>
       </div>
 
-      <Separator />
+      <Separator className="order-6" />
 
       {/* Full-Width Interactive Map Section */}
-      <div className="space-y-4 pt-1">
+      <div className="order-7 space-y-4 pt-1">
         <div className="flex items-center justify-between gap-3">
           <h3 className="text-xl font-bold tracking-tight text-foreground">Lokalizacja</h3>
           <a
@@ -797,18 +821,18 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
         </div>
 
         <div className="overflow-hidden rounded-2xl border bg-muted/20 shadow-xs">
-          <ListingMap offer={offer} height="480px" />
+          <ListingMap offer={offer} className="h-[280px] sm:h-[380px] lg:h-[460px] w-full" />
         </div>
       </div>
 
       {/* Mobile Floating Bottom Action Bar */}
-      <div className="fixed bottom-0 inset-x-0 md:hidden bg-background/95 backdrop-blur-md border-t px-4 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] z-40 flex items-center justify-between gap-3 shadow-lg">
+      <div className="fixed bottom-0 inset-x-0 md:hidden bg-background/95 backdrop-blur-md border-t px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] z-40 flex items-center justify-between gap-3 shadow-lg">
         <div className="min-w-0">
-          <div className="text-sm font-bold text-foreground truncate">
+          <div className="text-base font-bold text-foreground truncate leading-none">
             {formatPrice(offer.price)}
           </div>
           {pricePerSqm && (
-            <div className="text-[10px] text-muted-foreground truncate">
+            <div className="text-[11px] font-medium text-muted-foreground truncate mt-0.5">
               {pricePerSqm}
             </div>
           )}
@@ -818,8 +842,8 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
             <a
               href={`tel:${phone.replace(/\s+/g, '')}`}
               className={buttonVariants({
-                size: 'sm',
-                className: 'gap-1.5 rounded-xl text-xs font-semibold shrink-0 cursor-pointer h-9 px-3',
+                size: 'default',
+                className: 'gap-1.5 rounded-xl text-xs font-semibold shrink-0 cursor-pointer h-10 px-3.5 shadow-xs',
               })}
             >
               <Phone className="size-3.5" />
@@ -832,8 +856,8 @@ export function OfferDetailPage({ offerId, onBack }: OfferDetailPageProps) {
             rel="noreferrer"
             className={buttonVariants({
               variant: phone ? 'outline' : 'default',
-              size: 'sm',
-              className: 'gap-1.5 rounded-xl text-xs font-semibold shrink-0 cursor-pointer h-9 px-3',
+              size: 'default',
+              className: 'gap-1.5 rounded-xl text-xs font-semibold shrink-0 cursor-pointer h-10 px-3.5 shadow-2xs',
             })}
           >
             Oferta
