@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { Building2, MapPin } from 'lucide-react'
+import { Building2, MapPin, Map } from 'lucide-react'
 import type { Offer } from '../types/offer'
+import { ListingMap } from './ListingMap'
 import {
   formatPrice,
   calculatePricePerSqm,
   formatFloor,
   formatSellerType,
   formatMetadataValue,
+  normalizeOfferImages,
   IGNORED_METADATA_KEYS,
 } from '../lib/formatters'
 import { prefetchOffer } from '../lib/offer-prefetch'
@@ -19,10 +21,10 @@ interface OfferCardProps {
 
 export function OfferCard({ offer, onSelect }: OfferCardProps) {
   const [imgError, setImgError] = useState(false)
+  const [showMapPreview, setShowMapPreview] = useState(false)
   const pricePerSqm = calculatePricePerSqm(offer.price, offer.areaSqm)
-  const imageUrl = !imgError
-    ? offer.images?.[0] || offer.metadata?.imageUrl
-    : undefined
+  const normalizedImages = normalizeOfferImages(offer.images, offer.metadata?.imageUrl)
+  const imageUrl = !imgError && normalizedImages.length > 0 ? normalizedImages[0] : undefined
 
   const district = offer.district || offer.metadata?.district
   const street = offer.street || (offer.metadata?.street as string | undefined)
@@ -57,14 +59,26 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
       onTouchStart={handleMouseEnter}
       className="group flex flex-col cursor-pointer no-underline text-inherit"
     >
-      {/* Visual Card Image Banner */}
+      {/* Visual Card Image / Map Banner */}
       <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-gradient-to-br from-muted/80 to-muted flex items-center justify-center border">
-        {imageUrl ? (
+        {showMapPreview ? (
+          <div className="h-full w-full pointer-events-none">
+            <ListingMap
+              offer={offer}
+              height="100%"
+              interactive={false}
+              showControls={false}
+              showPopup={false}
+              zoom={13}
+            />
+          </div>
+        ) : imageUrl ? (
           <img
             src={imageUrl}
             alt={offer.title}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
+            referrerPolicy="no-referrer"
             onError={() => setImgError(true)}
           />
         ) : (
@@ -72,7 +86,7 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
         )}
 
         {/* Portal Badge Top Left */}
-        <div className="absolute top-3 left-3">
+        <div className="absolute top-3 left-3 z-10">
           <Badge
             variant="outline"
             className="rounded-full border-none bg-white/90 px-2.5 py-0.5 text-xs font-semibold text-neutral-900 shadow-xs backdrop-blur-md dark:bg-black/80 dark:text-neutral-100"
@@ -81,17 +95,31 @@ export function OfferCard({ offer, onSelect }: OfferCardProps) {
           </Badge>
         </div>
 
-        {/* Seller Type Badge Top Right */}
-        {sellerLabel && (
-          <div className="absolute top-3 right-3">
+        {/* Top Right Badges & Map Toggle */}
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5">
+          {sellerLabel && !showMapPreview && (
             <Badge
               variant="outline"
               className="rounded-full border-none bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white shadow-xs backdrop-blur-md"
             >
               {sellerLabel}
             </Badge>
-          </div>
-        )}
+          )}
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setShowMapPreview((prev) => !prev)
+            }}
+            title={showMapPreview ? 'Pokaż zdjęcia' : 'Podgląd na mapie'}
+            aria-label={showMapPreview ? 'Pokaż zdjęcia' : 'Podgląd na mapie'}
+            className="rounded-full bg-background/90 p-1.5 text-foreground shadow-xs backdrop-blur-md transition hover:scale-110 hover:bg-background cursor-pointer"
+          >
+            {showMapPreview ? <Building2 className="size-3.5" /> : <Map className="size-3.5" />}
+          </button>
+        </div>
       </div>
 
       {/* Details Body */}

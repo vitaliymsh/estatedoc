@@ -8,9 +8,10 @@ interface OfferGridProps {
   offers: Offer[]
   loading: boolean
   onResetFilters: () => void
+  onSelectOffer?: (id: number) => void
 }
 
-export function OfferGrid({ offers, loading, onResetFilters }: OfferGridProps) {
+export function OfferGrid({ offers, loading, onResetFilters, onSelectOffer }: OfferGridProps) {
   if (loading) {
     return (
       <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -46,7 +47,7 @@ export function OfferGrid({ offers, loading, onResetFilters }: OfferGridProps) {
   return (
     <div className="grid grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {offers.map((offer) => (
-        <OfferCard key={offer.id} offer={offer} />
+        <OfferCard key={offer.id} offer={offer} onSelect={onSelectOffer} />
       ))}
     </div>
   )

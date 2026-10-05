@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { Offer } from '../types/offer'
 import { getCachedOffer, cacheOffers, prefetchImages } from '../lib/offer-prefetch'
+import { normalizeOfferImages } from '../lib/formatters'
 
 export function useOfferDetail(id: number | null) {
   const getInitialOffer = (): Offer | null => {
@@ -27,12 +28,7 @@ export function useOfferDetail(id: number | null) {
     if (initial) {
       setOffer(initial)
       setLoading(false)
-      const images = initial.images?.length
-        ? initial.images
-        : initial.metadata?.imageUrl
-          ? [initial.metadata.imageUrl]
-          : []
-      prefetchImages(images)
+      prefetchImages(normalizeOfferImages(initial.images, initial.metadata?.imageUrl))
     } else {
       setLoading(true)
     }
@@ -49,12 +45,7 @@ export function useOfferDetail(id: number | null) {
         if (isCancelled) return
         setOffer(data)
         cacheOffers([data])
-        const images = data.images?.length
-          ? data.images
-          : data.metadata?.imageUrl
-            ? [data.metadata.imageUrl]
-            : []
-        prefetchImages(images)
+        prefetchImages(normalizeOfferImages(data.images, data.metadata?.imageUrl))
         setError(null)
       })
       .catch((err) => {

@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
 
 @custom-variant dark (&:is(.dark *));
@@ -127,4 +126,51 @@
   html {
     @apply font-sans;
     }
+}
+
+/* Modern Leaflet Map & Popup Overrides */
+.leaflet-popup-content-wrapper {
+  border-radius: 1rem !important;
+  padding: 0 !important;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.15), 0 8px 10px -6px rgb(0 0 0 / 0.1) !important;
+  border: 1px solid var(--color-border) !important;
+  background: var(--color-card) !important;
+  color: var(--color-card-foreground) !important;
+  overflow: hidden !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: inherit !important;
+}
+
+.leaflet-popup-tip {
+  background: var(--color-card) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: none !important;
+}
+
+.leaflet-container {
+  font-family: inherit !important;
+}
+
+.leaflet-container a {
+  text-decoration: none;
+}
+
+.leaflet-popup-content a.leaflet-popup-btn,
+.leaflet-popup-content .leaflet-popup-btn {
+  color: #ffffff !important;
+  background-color: #18181b !important;
+}
+
+.dark .leaflet-popup-content a.leaflet-popup-btn,
+.dark .leaflet-popup-content .leaflet-popup-btn {
+  color: #18181b !important;
+  background-color: #f4f4f5 !important;
+}
+
+.leaflet-custom-badge-icon {
+  background: transparent !important;
+  border: none !important;
 }

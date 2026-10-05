@@ -13,6 +13,12 @@
       "skillPath": "plugins/database-design/skills/postgresql-table-design/SKILL.md",
       "computedHash": "c87d5cac33fbddc757fbb4b38a0098cff7dcf79201d40ddff2af76ec2724c5a1"
     },
+    "rest-ops": {
+      "source": "0xdarkmatter/claude-mods",
+      "sourceType": "github",
+      "skillPath": "skills/rest-ops/SKILL.md",
+      "computedHash": "efada1a332c8b8d87518d8edb8344b65bf2e58c9ca5a4d44be5cc10b749e2a11"
+    },
     "tdd": {
       "source": "mattpocock/skills",
       "sourceType": "github",
