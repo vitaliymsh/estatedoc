@@ -15,6 +15,13 @@
       "when": 1791205449213,
       "tag": "0001_standardize_offer_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1791230600000,
+      "tag": "0002_add_price_sqm",
+      "breakpoints": true
     }
   ]
 }

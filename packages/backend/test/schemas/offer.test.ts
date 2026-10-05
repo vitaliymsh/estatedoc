@@ -18,22 +18,40 @@ describe('Offer Schemas', () => {
       q: ' kawalerka ',
       minPrice: '500000',
       maxPrice: '1000000',
+      minArea: '40',
+      maxArea: '80',
       minRooms: '2',
       maxRooms: '4',
+      minFloor: '1',
+      maxFloor: '5',
+      sellerType: 'private',
+      marketType: 'secondary',
+      hasElevator: 'true',
+      hasBalcony: '1',
+      hasParking: 'false',
       district: 'Mokotów',
       propertyType: 'apartment',
       transactionType: 'sale',
-      sortBy: 'price_asc',
+      sortBy: 'price_sqm_asc',
       limit: '50',
       offset: '10',
       city: 'Warszawa',
     });
     expect(result.q).toBe('kawalerka');
-    expect(result.sortBy).toBe('price_asc');
+    expect(result.sortBy).toBe('price_sqm_asc');
     expect(result.minPrice).toBe(500000);
     expect(result.maxPrice).toBe(1000000);
+    expect(result.minArea).toBe(40);
+    expect(result.maxArea).toBe(80);
     expect(result.minRooms).toBe(2);
     expect(result.maxRooms).toBe(4);
+    expect(result.minFloor).toBe(1);
+    expect(result.maxFloor).toBe(5);
+    expect(result.sellerType).toBe('private');
+    expect(result.marketType).toBe('secondary');
+    expect(result.hasElevator).toBe(true);
+    expect(result.hasBalcony).toBe(true);
+    expect(result.hasParking).toBe(false);
     expect(result.district).toBe('Mokotów');
     expect(result.propertyType).toBe('apartment');
     expect(result.transactionType).toBe('sale');
@@ -78,6 +96,30 @@ describe('Offer Schemas', () => {
     expect(result[0].floor).toBe(3);
     expect(result[0].pricePerSqm).toBe(12000);
     expect(result[0].images).toEqual(['https://img.jpg']);
+  });
+
+  it('coerces and rounds float pricePerSqm in batchIngestOffersSchema', () => {
+    const payload = [
+      {
+        portal: 'otodom',
+        externalId: 'ext-float',
+        url: 'https://otodom.pl/oferta-1',
+        title: 'Mieszkanie z float price/m2',
+        city: 'Warszawa',
+        pricePerSqm: 12049.86,
+      },
+      {
+        portal: 'otodom',
+        externalId: 'ext-float-str',
+        url: 'https://otodom.pl/oferta-2',
+        title: 'Mieszkanie ze string float price/m2',
+        city: 'Warszawa',
+        pricePerSqm: '11920.76',
+      },
+    ];
+    const result = batchIngestOffersSchema.parse(payload);
+    expect(result[0].pricePerSqm).toBe(12050);
+    expect(result[1].pricePerSqm).toBe(11921);
   });
 
   it('rejects invalid image URLs in batchIngestOffersSchema', () => {
