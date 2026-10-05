@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
+import { Dialog as DialogPrimitive } from '@base-ui/react/dialog'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
-  DialogContent,
+  DialogOverlay,
+  DialogPortal,
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
@@ -275,106 +277,108 @@ export function OfferGallery({
 
       {/* Minimal Lightbox Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent
-          className="p-0 gap-0 fixed inset-0 top-0 left-0 w-screen h-dvh max-w-none max-h-none translate-x-0 translate-y-0 rounded-none border-0 bg-black sm:fixed sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[95vw] sm:max-w-5xl md:max-w-6xl sm:h-auto sm:max-h-[92vh] sm:rounded-2xl sm:border sm:border-zinc-800/80 sm:bg-zinc-950 sm:shadow-2xl flex flex-col overflow-hidden"
-          showCloseButton={false}
-        >
-          <DialogTitle className="sr-only">
-            Zdjęcia nieruchomości ({activeIndex + 1} z {images.length})
-          </DialogTitle>
-
-          {/* Floating Image Counter */}
-          <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-30 rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium text-zinc-200 backdrop-blur-md border border-white/10 select-none">
-            {activeIndex + 1} / {images.length}
-          </div>
-
-          {/* Floating Close Button */}
-          <button
-            type="button"
-            onClick={() => setIsOpen(false)}
-            aria-label="Zamknij galerię"
-            className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 flex size-9 sm:size-10 items-center justify-center rounded-full bg-black/60 hover:bg-black/90 text-white backdrop-blur-md transition cursor-pointer border border-white/15 focus:outline-none focus:ring-2 focus:ring-primary shadow-lg"
+        <DialogPortal>
+          <DialogOverlay className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0" />
+          <DialogPrimitive.Popup
+            className="fixed inset-0 z-50 flex flex-col w-screen h-dvh bg-black sm:inset-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-[95vw] sm:max-w-5xl md:max-w-6xl sm:h-[88vh] sm:max-h-[88vh] sm:rounded-2xl sm:border sm:border-zinc-800/80 sm:bg-zinc-950 sm:shadow-2xl overflow-hidden outline-none data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0"
           >
-            <X className="size-5 pointer-events-none" />
-          </button>
+            <DialogTitle className="sr-only">
+              Zdjęcia nieruchomości ({activeIndex + 1} z {images.length})
+            </DialogTitle>
 
-          {/* Main Photo View */}
-          <div
-            className="relative flex-1 sm:flex-initial sm:h-[78vh] w-full bg-black flex items-center justify-center overflow-hidden touch-pan-y"
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
-          >
-            {images.length > 0 && (
-              <img
-                src={images[activeIndex]}
-                alt={`${title} ${activeIndex + 1}`}
-                referrerPolicy="no-referrer"
-                onError={() => onImageError?.(images[activeIndex])}
-                className="h-full w-full object-contain select-none"
-              />
-            )}
-
-            {images.length > 1 && (
-              <>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    prevImage()
-                  }}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  onTouchEnd={(e) => e.stopPropagation()}
-                  aria-label="Poprzednie zdjęcie"
-                  className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-20 rounded-full bg-black/60 hover:bg-black/90 p-2.5 sm:p-3 text-white backdrop-blur-md transition cursor-pointer border border-white/15 focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <ChevronLeft className="size-5 sm:size-6 pointer-events-none" />
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    nextImage()
-                  }}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  onTouchEnd={(e) => e.stopPropagation()}
-                  aria-label="Następne zdjęcie"
-                  className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-20 rounded-full bg-black/60 hover:bg-black/90 p-2.5 sm:p-3 text-white backdrop-blur-md transition cursor-pointer border border-white/15 focus:outline-none focus:ring-2 focus:ring-primary"
-                >
-                  <ChevronRight className="size-5 sm:size-6 pointer-events-none" />
-                </button>
-              </>
-            )}
-          </div>
-
-          {/* Compact Bottom Thumbnail Dock */}
-          {images.length > 1 && (
-            <div className="flex gap-1.5 overflow-x-auto p-2.5 bg-zinc-950 justify-start sm:justify-center border-t border-zinc-900 scrollbar-none items-center">
-              {images.map((img, idx) => (
-                <button
-                  key={idx}
-                  ref={(el) => {
-                    thumbnailRefs.current[idx] = el
-                  }}
-                  type="button"
-                  onClick={() => setActiveIndex(idx)}
-                  className={`relative aspect-[4/3] w-14 sm:w-16 shrink-0 overflow-hidden rounded-md transition cursor-pointer ${
-                    idx === activeIndex
-                      ? 'ring-2 ring-primary opacity-100 scale-105'
-                      : 'opacity-40 hover:opacity-80'
-                  }`}
-                >
-                  <img
-                    src={img}
-                    alt=""
-                    referrerPolicy="no-referrer"
-                    onError={() => onImageError?.(img)}
-                    className="h-full w-full object-cover"
-                  />
-                </button>
-              ))}
+            {/* Floating Image Counter */}
+            <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-30 rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium text-zinc-200 backdrop-blur-md border border-white/10 select-none">
+              {activeIndex + 1} / {images.length}
             </div>
-          )}
-        </DialogContent>
+
+            {/* Floating Close Button */}
+            <button
+              type="button"
+              onClick={() => setIsOpen(false)}
+              aria-label="Zamknij galerię"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 z-30 flex size-9 sm:size-10 items-center justify-center rounded-full bg-black/60 hover:bg-black/90 text-white backdrop-blur-md transition cursor-pointer border border-white/15 focus:outline-none focus:ring-2 focus:ring-primary shadow-lg"
+            >
+              <X className="size-5 pointer-events-none" />
+            </button>
+
+            {/* Main Photo View */}
+            <div
+              className="relative flex-1 min-h-0 w-full bg-black flex items-center justify-center overflow-hidden touch-pan-y"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
+              {images.length > 0 && (
+                <img
+                  src={images[activeIndex]}
+                  alt={`${title} ${activeIndex + 1}`}
+                  referrerPolicy="no-referrer"
+                  onError={() => onImageError?.(images[activeIndex])}
+                  className="h-full w-full max-h-full max-w-full object-contain select-none"
+                />
+              )}
+
+              {images.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      prevImage()
+                    }}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    onTouchEnd={(e) => e.stopPropagation()}
+                    aria-label="Poprzednie zdjęcie"
+                    className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 z-20 rounded-full bg-black/60 hover:bg-black/90 p-2.5 sm:p-3 text-white backdrop-blur-md transition cursor-pointer border border-white/15 focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <ChevronLeft className="size-5 sm:size-6 pointer-events-none" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      nextImage()
+                    }}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    onTouchEnd={(e) => e.stopPropagation()}
+                    aria-label="Następne zdjęcie"
+                    className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 z-20 rounded-full bg-black/60 hover:bg-black/90 p-2.5 sm:p-3 text-white backdrop-blur-md transition cursor-pointer border border-white/15 focus:outline-none focus:ring-2 focus:ring-primary"
+                  >
+                    <ChevronRight className="size-5 sm:size-6 pointer-events-none" />
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Compact Bottom Thumbnail Dock */}
+            {images.length > 1 && (
+              <div className="shrink-0 flex gap-1.5 overflow-x-auto p-2.5 bg-zinc-950 justify-start sm:justify-center border-t border-zinc-900 scrollbar-none items-center">
+                {images.map((img, idx) => (
+                  <button
+                    key={idx}
+                    ref={(el) => {
+                      thumbnailRefs.current[idx] = el
+                    }}
+                    type="button"
+                    onClick={() => setActiveIndex(idx)}
+                    className={`relative aspect-[4/3] w-14 sm:w-16 shrink-0 overflow-hidden rounded-md transition cursor-pointer ${
+                      idx === activeIndex
+                        ? 'ring-2 ring-primary opacity-100 scale-105'
+                        : 'opacity-40 hover:opacity-80'
+                    }`}
+                  >
+                    <img
+                      src={img}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      onError={() => onImageError?.(img)}
+                      className="h-full w-full object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </DialogPrimitive.Popup>
+        </DialogPortal>
       </Dialog>
     </>
   )
