@@ -1,15 +1,28 @@
+import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Building2, MapPin } from 'lucide-react'
 import type { Offer } from '../types/offer'
-import { formatPrice, calculatePricePerSqm, formatMetadataValue } from '../lib/formatters'
+import {
+  formatPrice,
+  calculatePricePerSqm,
+  formatMetadataValue,
+  IGNORED_METADATA_KEYS,
+} from '../lib/formatters'
 
 interface OfferCardProps {
   offer: Offer
 }
 
 export function OfferCard({ offer }: OfferCardProps) {
+  const [imgError, setImgError] = useState(false)
   const pricePerSqm = calculatePricePerSqm(offer.price, offer.areaSqm)
-  const metadataEntries = offer.metadata ? Object.entries(offer.metadata) : []
+  const imageUrl = !imgError ? offer.metadata?.imageUrl : undefined
+
+  const metadataEntries = offer.metadata
+    ? Object.entries(offer.metadata).filter(
+        ([key, val]) => !IGNORED_METADATA_KEYS.has(key) && val !== null && val !== undefined
+      )
+    : []
 
   return (
     <a
@@ -18,9 +31,19 @@ export function OfferCard({ offer }: OfferCardProps) {
       rel="noreferrer"
       className="group flex flex-col cursor-pointer no-underline text-inherit"
     >
-      {/* Visual Card Image Placeholder */}
+      {/* Visual Card Image Banner */}
       <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-gradient-to-br from-muted/80 to-muted flex items-center justify-center border">
-        <Building2 className="size-12 text-muted-foreground/30 transition-transform duration-300 group-hover:scale-110" />
+        {imageUrl ? (
+          <img
+            src={imageUrl}
+            alt={offer.title}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+            onError={() => setImgError(true)}
+          />
+        ) : (
+          <Building2 className="size-12 text-muted-foreground/30 transition-transform duration-300 group-hover:scale-110" />
+        )}
 
         {/* Portal Badge Top Left */}
         <div className="absolute top-3 left-3">
@@ -28,18 +51,30 @@ export function OfferCard({ offer }: OfferCardProps) {
             {offer.portal}
           </span>
         </div>
+
+        {/* Seller Type Badge Top Right */}
+        {offer.metadata?.sellerType && (
+          <div className="absolute top-3 right-3">
+            <span className="inline-flex items-center rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-medium text-white shadow-xs backdrop-blur-md">
+              {offer.metadata.sellerType === 'private' ? 'Prywatne' : 'Biuro'}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Details Body */}
       <div className="mt-3 flex flex-col gap-1 text-sm">
-        {/* City & Room Count */}
+        {/* City & District + Room Count */}
         <div className="flex items-center justify-between font-semibold">
           <span className="truncate text-foreground flex items-center gap-1">
             <MapPin className="size-3.5 text-muted-foreground shrink-0" />
-            {offer.city}
+            <span className="truncate">
+              {offer.city}
+              {offer.metadata?.district ? `, ${offer.metadata.district}` : ''}
+            </span>
           </span>
           {offer.roomsCount && (
-            <span className="shrink-0 text-xs font-medium text-muted-foreground">
+            <span className="shrink-0 text-xs font-medium text-muted-foreground ml-2">
               {offer.roomsCount} pok.
             </span>
           )}

@@ -12,8 +12,20 @@ export function calculatePricePerSqm(price: string | null, areaSqm: string | nul
   return `${Math.round(p / a).toLocaleString('pl-PL')} zł/m²`
 }
 
+export const IGNORED_METADATA_KEYS = new Set([
+  'imageUrl',
+  'district',
+  'postedAt',
+  'sellerType',
+])
+
 export function formatMetadataValue(key: string, val: unknown): string {
   if (key === 'plotSqm') return `Działka: ${val} m²`
   if (key === 'buildingType') return `Zabudowa: ${val}`
+  if (key === 'sellerType') {
+    if (val === 'private') return 'Prywatna'
+    if (val === 'company') return 'Biuro'
+    if (val === 'verified') return 'Zweryfikowany'
+  }
   return `${key}: ${String(val)}`
 }

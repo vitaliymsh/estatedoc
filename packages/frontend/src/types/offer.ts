@@ -1,3 +1,13 @@
+export interface OfferMetadata {
+  imageUrl?: string
+  district?: string
+  sellerType?: 'company' | 'private' | 'verified' | string
+  postedAt?: string
+  plotSqm?: number
+  buildingType?: string
+  [key: string]: unknown
+}
+
 export interface Offer {
   id: number
   portal: string
@@ -9,7 +19,7 @@ export interface Offer {
   roomsCount: number | null
   city: string
   description: string | null
-  metadata: Record<string, unknown> | null
+  metadata: OfferMetadata | null
   createdAt: string
   updatedAt: string
 }
