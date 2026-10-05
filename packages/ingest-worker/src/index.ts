@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import { resolve } from 'path';
 import { fetchAllListings as fetchSprzedajemy } from './portals/sprzedajemy/index.js';
 import { fetchAllListings as fetchMorizon } from './portals/morizon/index.js';
+import { fetchAllListings as fetchOtodom } from './portals/otodom/index.js';
 import { mapListingToBatchDto, pushOffersBatch } from './exporter.js';
 import { enrichWithJev } from './utils/jev.js';
 import type { StandardListing } from './types.js';
@@ -10,7 +11,7 @@ dotenv.config();
 dotenv.config({ path: resolve(process.cwd(), '.env') });
 dotenv.config({ path: resolve(process.cwd(), '../../.env') });
 
-export type SupportedPortal = 'sprzedajemy' | 'morizon';
+export type SupportedPortal = 'sprzedajemy' | 'morizon' | 'otodom';
 
 export interface IngestOptions {
   portal?: SupportedPortal | 'all';
@@ -99,6 +100,34 @@ export async function runIngest(options: IngestOptions = {}): Promise<IngestResu
       listings.push(...portalListings);
     } catch (err) {
       console.error('[Ingest-Morizon] Failed to crawl Morizon:', err);
+    }
+  }
+
+  if (portal === 'otodom' || portal === 'all') {
+    const categoryPath =
+      (portal === 'otodom' ? options.categoryPath : undefined) ||
+      (portal === 'otodom' ? process.env.SCRAPE_CATEGORY : undefined) ||
+      '/pl/wyniki/sprzedaz/mieszkanie/cala-polska';
+    try {
+      console.log(
+        `[Ingest-Otodom] Starting crawl for "${categoryPath}" (maxPages: ${maxPages}, limit: ${limitPerPortal}, enrichDetails: ${enrichDetails}, forceEnrich: ${forceEnrich})...`
+      );
+      let portalListings = await fetchOtodom({
+        categoryPath,
+        maxPages,
+        limit: limitPerPortal > 0 ? limitPerPortal : undefined,
+        delayMs,
+        enrichDetails,
+        backendUrl,
+        knownIds,
+      });
+      if (limitPerPortal > 0) {
+        portalListings = portalListings.slice(0, limitPerPortal);
+      }
+      console.log(`[Ingest-Otodom] Scraped & kept ${portalListings.length} listings.`);
+      listings.push(...portalListings);
+    } catch (err) {
+      console.error('[Ingest-Otodom] Failed to crawl Otodom:', err);
     }
   }
 
