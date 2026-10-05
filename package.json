@@ -15,6 +15,7 @@
     "db:migrate": "npm run db:migrate --workspace=packages/backend",
     "db:clean": "npm run db:clean --workspace=packages/backend",
     "db:studio": "npm run db:studio --workspace=packages/backend",
+    "test": "vitest run",
     "build": "npm run build --workspaces"
   },
   "devDependencies": {
