@@ -44,6 +44,7 @@ export interface Offer {
 export type SortBy = 'newest' | 'price_asc' | 'price_desc'
 
 export interface ListOffersFilter {
+  prompt?: string
   q?: string
   city?: string
   portal?: string
@@ -58,4 +59,5 @@ export interface OffersResponse {
   total: number
   limit: number
   offset: number
+  parsedFilters?: Record<string, unknown>
 }

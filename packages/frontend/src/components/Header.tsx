@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { Search, SlidersHorizontal, X, ArrowUpDown, RefreshCw } from 'lucide-react'
+import { SlidersHorizontal, X, ArrowUpDown, RefreshCw, Sparkles } from 'lucide-react'
 import type { ListOffersFilter, SortBy } from '../types/offer'
 
 const QUICK_CITIES = ['Warszawa', 'Kraków', 'Gdańsk', 'Wrocław', 'Poznań', 'Łódź']
@@ -19,6 +19,7 @@ interface HeaderProps {
   filter: ListOffersFilter
   searchInput: string
   onSearchChange: (value: string) => void
+  onSearchSubmit?: (value?: string) => void
   onClearSearch: () => void
   onCitySelect: (city?: string) => void
   onSortChange: (sortBy: SortBy) => void
@@ -33,6 +34,7 @@ export function Header({
   filter,
   searchInput,
   onSearchChange,
+  onSearchSubmit,
   onClearSearch,
   onCitySelect,
   onSortChange,
@@ -63,13 +65,19 @@ export function Header({
         </div>
 
         {/* Airbnb Center Search Capsule */}
-        <div className="relative flex w-full max-w-md items-center rounded-full border bg-muted/30 px-3 py-1.5 shadow-xs transition hover:shadow-md focus-within:ring-2 focus-within:ring-ring sm:w-80 md:w-96">
-          <Search className="size-4 text-muted-foreground shrink-0" />
+        <form
+          onSubmit={(e) => {
+            e.preventDefault()
+            onSearchSubmit?.(searchInput)
+          }}
+          className="relative flex w-full max-w-md items-center rounded-full border bg-muted/30 px-3 py-1.5 shadow-xs transition hover:shadow-md focus-within:ring-2 focus-within:ring-ring sm:w-80 md:w-96"
+        >
+          <Sparkles className="size-4 text-primary shrink-0 animate-pulse" />
           <Input
             type="text"
             value={searchInput}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Szukaj miasta, tytułu, opisu..."
+            placeholder="Szukaj np. 3 pokoje do 600k Kraków..."
             className="h-7 border-0 bg-transparent px-2 text-sm shadow-none focus-visible:ring-0"
           />
           {searchInput && (
@@ -82,7 +90,7 @@ export function Header({
               <X className="size-3.5" />
             </button>
           )}
-        </div>
+        </form>
       </div>
 
       {/* Quick Filter Chips Horizontal Scrollbar */}

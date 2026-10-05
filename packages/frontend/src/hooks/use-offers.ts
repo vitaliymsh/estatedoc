@@ -6,6 +6,7 @@ export const PAGE_SIZE = 12
 
 export function parseUrlFilters(): ListOffersFilter {
   const params = new URLSearchParams(window.location.search)
+  const prompt = params.get('prompt') || undefined
   const q = params.get('q') || undefined
   const city = params.get('city') || undefined
   const portal = params.get('portal') || undefined
@@ -18,11 +19,12 @@ export function parseUrlFilters(): ListOffersFilter {
       : 'newest'
   const page = Math.max(1, Number(params.get('page')) || 1)
 
-  return { q, city, portal, minPrice, maxPrice, sortBy, page }
+  return { prompt, q, city, portal, minPrice, maxPrice, sortBy, page }
 }
 
 export function syncUrlFilters(filter: ListOffersFilter) {
   const params = new URLSearchParams(window.location.search)
+  if (filter.prompt) params.set('prompt', filter.prompt); else params.delete('prompt')
   if (filter.q) params.set('q', filter.q); else params.delete('q')
   if (filter.city) params.set('city', filter.city); else params.delete('city')
   if (filter.portal) params.set('portal', filter.portal); else params.delete('portal')
@@ -38,7 +40,8 @@ export function syncUrlFilters(filter: ListOffersFilter) {
 
 export function useOffers() {
   const [filter, setFilter] = useState<ListOffersFilter>(parseUrlFilters)
-  const [searchInput, setSearchInput] = useState(filter.q || '')
+  const [searchInput, setSearchInput] = useState(filter.prompt || filter.q || '')
+  const [parsedFilters, setParsedFilters] = useState<Record<string, unknown> | null>(null)
   const [offers, setOffers] = useState<Offer[]>([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -73,20 +76,37 @@ export function useOffers() {
     syncUrlFilters(filter)
   }, [filter])
 
-  // Debounced search query
+  // Debounced search query or prompt submit
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handleSearchChange = (value: string) => {
     setSearchInput(value)
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      setFilter((prev) => ({ ...prev, q: value.trim() || undefined, page: 1 }))
-    }, 350)
+      setFilter((prev) => ({
+        ...prev,
+        prompt: value.trim() ? value.trim() : undefined,
+        q: undefined,
+        page: 1,
+      }))
+    }, 400)
+  }
+
+  const handleSearchSubmit = (value?: string) => {
+    const text = (value ?? searchInput).trim()
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    setFilter((prev) => ({
+      ...prev,
+      prompt: text || undefined,
+      q: undefined,
+      page: 1,
+    }))
   }
 
   const handleClearSearch = () => {
     setSearchInput('')
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    setFilter((prev) => ({ ...prev, q: undefined, page: 1 }))
+    setParsedFilters(null)
+    setFilter((prev) => ({ ...prev, prompt: undefined, q: undefined, page: 1 }))
   }
 
   // Fetch from backend API
@@ -94,33 +114,51 @@ export function useOffers() {
     let isCancelled = false
     setLoading(true)
 
-    const params = new URLSearchParams()
-    if (filter.q) params.set('q', filter.q)
-    if (filter.city) params.set('city', filter.city)
-    if (filter.portal) params.set('portal', filter.portal)
-    if (filter.minPrice !== undefined) params.set('minPrice', String(filter.minPrice))
-    if (filter.maxPrice !== undefined) params.set('maxPrice', String(filter.maxPrice))
-    params.set('sortBy', filter.sortBy)
-    params.set('limit', String(PAGE_SIZE))
-    params.set('offset', String((filter.page - 1) * PAGE_SIZE))
+    const offset = (filter.page - 1) * PAGE_SIZE
 
-    fetch(`/api/offers?${params.toString()}`)
+    const fetchPromise = filter.prompt
+      ? fetch('/api/offers/search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            prompt: filter.prompt,
+            limit: PAGE_SIZE,
+            offset,
+          }),
+        })
+      : (() => {
+          const params = new URLSearchParams()
+          if (filter.q) params.set('q', filter.q)
+          if (filter.city) params.set('city', filter.city)
+          if (filter.portal) params.set('portal', filter.portal)
+          if (filter.minPrice !== undefined) params.set('minPrice', String(filter.minPrice))
+          if (filter.maxPrice !== undefined) params.set('maxPrice', String(filter.maxPrice))
+          params.set('sortBy', filter.sortBy)
+          params.set('limit', String(PAGE_SIZE))
+          params.set('offset', String(offset))
+          return fetch(`/api/offers?${params.toString()}`)
+        })()
+
+    fetchPromise
       .then((res) => (res.ok ? res.json() : null))
       .then((data: OffersResponse | null) => {
         if (isCancelled) return
         if (data && typeof data.total === 'number') {
           setOffers(data.items)
           setTotal(data.total)
+          setParsedFilters(data.parsedFilters ?? null)
           cacheOffers(data.items)
         } else {
           setOffers([])
           setTotal(0)
+          setParsedFilters(null)
         }
       })
       .catch(() => {
         if (isCancelled) return
         setOffers([])
         setTotal(0)
+        setParsedFilters(null)
       })
       .finally(() => {
         if (!isCancelled) setLoading(false)
@@ -133,6 +171,7 @@ export function useOffers() {
 
   const resetFilters = () => {
     setSearchInput('')
+    setParsedFilters(null)
     setFilter({ sortBy: 'newest', page: 1 })
   }
 
@@ -140,7 +179,9 @@ export function useOffers() {
     filter,
     setFilter,
     searchInput,
+    parsedFilters,
     handleSearchChange,
+    handleSearchSubmit,
     handleClearSearch,
     offers,
     total,

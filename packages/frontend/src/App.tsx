@@ -19,7 +19,9 @@ export default function App() {
     filter,
     setFilter,
     searchInput,
+    parsedFilters,
     handleSearchChange,
+    handleSearchSubmit,
     handleClearSearch,
     offers,
     total,
@@ -61,6 +63,7 @@ export default function App() {
 
   const activeFiltersCount = useMemo(() => {
     let count = 0
+    if (filter.prompt) count++
     if (filter.city) count++
     if (filter.portal) count++
     if (filter.minPrice !== undefined) count++
@@ -85,6 +88,15 @@ export default function App() {
           }
           handleSearchChange(val)
         }}
+        onSearchSubmit={(val) => {
+          if (selectedOfferId !== null) {
+            setSelectedOfferId(null)
+            const url = new URL(window.location.href)
+            url.searchParams.delete('offerId')
+            window.history.pushState(null, '', url.toString())
+          }
+          handleSearchSubmit(val)
+        }}
         onClearSearch={handleClearSearch}
         onCitySelect={(city) => {
           setSelectedOfferId(null)
@@ -106,6 +118,23 @@ export default function App() {
         </main>
       ) : (
         <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          {/* AI Extracted Filters Feedback */}
+          {parsedFilters && Object.keys(parsedFilters).length > 0 && (
+            <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-xs text-primary">
+              <span className="font-semibold">AI Rozpoznane kryteria:</span>
+              {parsedFilters.city ? <span>Miasto: <strong>{String(parsedFilters.city)}</strong></span> : null}
+              {parsedFilters.district ? <span>Dzielnica: <strong>{String(parsedFilters.district)}</strong></span> : null}
+              {parsedFilters.minRooms || parsedFilters.maxRooms ? (
+                <span>
+                  Pokoje: <strong>{parsedFilters.minRooms === parsedFilters.maxRooms ? String(parsedFilters.minRooms) : `${parsedFilters.minRooms ?? 1}-${parsedFilters.maxRooms ?? 'dowolnie'}`}</strong>
+                </span>
+              ) : null}
+              {parsedFilters.maxPrice ? <span>Max cena: <strong>{Number(parsedFilters.maxPrice).toLocaleString('pl-PL')} zł</strong></span> : null}
+              {parsedFilters.minPrice ? <span>Min cena: <strong>{Number(parsedFilters.minPrice).toLocaleString('pl-PL')} zł</strong></span> : null}
+              {parsedFilters.q ? <span>Słowa: <strong>{String(parsedFilters.q)}</strong></span> : null}
+            </div>
+          )}
+
           {/* Stats Row */}
           <div className="mb-6 flex items-center justify-between text-sm text-muted-foreground">
             <p>
