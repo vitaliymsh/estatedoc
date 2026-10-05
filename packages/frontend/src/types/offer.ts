@@ -9,6 +9,8 @@ export interface OfferMetadata {
   ownership?: string
   agencyName?: string
   agencyPhone?: string
+  latitude?: number | null
+  longitude?: number | null
   imageUrl?: string
   [key: string]: unknown
 }
@@ -29,6 +31,8 @@ export interface Offer {
   city: string
   district?: string | null
   street?: string | null
+  latitude?: number | null
+  longitude?: number | null
   sellerType?: 'company' | 'private' | 'agency' | 'developer' | 'verified' | string | null
   images?: string[] | null
   description: string | null
