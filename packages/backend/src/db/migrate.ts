@@ -1,16 +1,12 @@
 import { migrate } from 'drizzle-orm/mysql2/migrator';
 import { db, pool } from './index.js';
-import { fileURLToPath } from 'url';
-import { dirname, resolve } from 'path';
-import fs from 'fs';
-import crypto from 'crypto';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { resolve } from 'node:path';
+import fs from 'node:fs';
+import crypto from 'node:crypto';
 
 async function runMigrations() {
   console.log('Running migrations...');
-  const migrationsFolder = resolve(__dirname, '../../drizzle');
+  const migrationsFolder = resolve(import.meta.dirname, '../../drizzle');
   try {
     // Ensure __drizzle_migrations table exists
     await pool.query(`
