@@ -31,15 +31,6 @@ export class DrizzleOfferRepository implements IOfferRepository {
   async findAll(query: ListOffersQuery): Promise<ListOffersResult> {
     const conditions = [];
 
-    if (query.q) {
-      conditions.push(
-        or(
-          like(offers.title, `%${query.q}%`),
-          like(offers.description, `%${query.q}%`),
-          like(offers.city, `%${query.q}%`)
-        )
-      );
-    }
     if (query.city) {
       const city = normalizeCityQuery(query.city);
       if (city) {
@@ -105,7 +96,19 @@ export class DrizzleOfferRepository implements IOfferRepository {
       price_sqm_asc: asc(sql`(${offers.price} / NULLIF(${offers.areaSqm}, 0))`),
       price_sqm_desc: desc(sql`(${offers.price} / NULLIF(${offers.areaSqm}, 0))`),
     };
-    const orderByClause = (query.sortBy && sortMap[query.sortBy]) || desc(offers.createdAt);
+    const primaryOrder = (query.sortBy && sortMap[query.sortBy]) || desc(offers.createdAt);
+    const orderByClause = query.q
+      ? [
+          desc(
+            sql`CASE 
+              WHEN ${offers.title} LIKE ${`%${query.q}%`} THEN 2 
+              WHEN ${offers.description} LIKE ${`%${query.q}%`} OR ${offers.city} LIKE ${`%${query.q}%`} THEN 1 
+              ELSE 0 
+            END`
+          ),
+          primaryOrder,
+        ]
+      : primaryOrder;
 
     const [countResult] = await this.db
       .select({ total: count() })

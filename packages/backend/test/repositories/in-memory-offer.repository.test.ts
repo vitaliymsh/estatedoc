@@ -55,7 +55,7 @@ describe('InMemoryOfferRepository', () => {
     expect(cheapList.total).toBe(1);
 
     const textSearchList = await repo.findAll({ q: 'Expensive', limit: 10, offset: 0, sortBy: 'newest' });
-    expect(textSearchList.total).toBe(1);
+    expect(textSearchList.total).toBe(2);
     expect(textSearchList.items[0].city).toBe('Krakow');
 
     const sortedAsc = await repo.findAll({ limit: 10, offset: 0, sortBy: 'price_asc' });

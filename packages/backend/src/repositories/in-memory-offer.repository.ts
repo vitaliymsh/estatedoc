@@ -37,15 +37,6 @@ export class InMemoryOfferRepository implements IOfferRepository {
   async findAll(query: ListOffersQuery): Promise<ListOffersResult> {
     let filtered = [...this.offers];
 
-    if (query.q) {
-      const qLower = query.q.toLowerCase();
-      filtered = filtered.filter(
-        (o) =>
-          o.title.toLowerCase().includes(qLower) ||
-          (o.description && o.description.toLowerCase().includes(qLower)) ||
-          o.city.toLowerCase().includes(qLower)
-      );
-    }
     if (query.city) {
       const normalized = normalizeCityQuery(query.city) || query.city;
       const cityLower = normalized.toLowerCase();
@@ -108,6 +99,14 @@ export class InMemoryOfferRepository implements IOfferRepository {
       return a && p != null ? p / a : null;
     };
 
+    const qLower = query.q?.toLowerCase();
+    const getQScore = (o: Offer) => {
+      if (!qLower) return 0;
+      if (o.title.toLowerCase().includes(qLower)) return 2;
+      if ((o.description && o.description.toLowerCase().includes(qLower)) || o.city.toLowerCase().includes(qLower)) return 1;
+      return 0;
+    };
+
     const sortComparators: Record<string, (a: Offer, b: Offer) => number> = {
       price_asc: (a, b) => (getPrice(a) ?? Infinity) - (getPrice(b) ?? Infinity),
       price_desc: (a, b) => (getPrice(b) ?? -Infinity) - (getPrice(a) ?? -Infinity),
@@ -117,11 +116,15 @@ export class InMemoryOfferRepository implements IOfferRepository {
       price_sqm_desc: (a, b) => (getPricePerSqm(b) ?? -Infinity) - (getPricePerSqm(a) ?? -Infinity),
     };
 
-    if (query.sortBy && sortComparators[query.sortBy]) {
-      filtered.sort(sortComparators[query.sortBy]);
-    } else {
-      filtered.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
-    }
+    const baseComparator = (query.sortBy && sortComparators[query.sortBy]) || ((a: Offer, b: Offer) => b.createdAt.getTime() - a.createdAt.getTime());
+
+    filtered.sort((a, b) => {
+      if (qLower) {
+        const scoreDiff = getQScore(b) - getQScore(a);
+        if (scoreDiff !== 0) return scoreDiff;
+      }
+      return baseComparator(a, b);
+    });
 
     const total = filtered.length;
     const items = filtered.slice(query.offset, query.offset + query.limit);
