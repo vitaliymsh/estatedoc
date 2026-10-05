@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import {
   Dialog,
   DialogContent,
@@ -66,7 +68,7 @@ export function FilterModal({ open, onOpenChange, filter, onApply }: FilterModal
         <div className="space-y-5 py-2">
           {/* City Input */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold">Miasto</label>
+            <Label className="text-xs font-semibold">Miasto</Label>
             <Input
               placeholder="np. Warszawa, Kraków"
               value={city}
@@ -76,39 +78,44 @@ export function FilterModal({ open, onOpenChange, filter, onApply }: FilterModal
 
           {/* Portal Selection */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold">Portal</label>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setPortal('')}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                  !portal
-                    ? 'bg-secondary text-secondary-foreground ring-1 ring-border'
-                    : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-                }`}
+            <Label className="text-xs font-semibold">Portal</Label>
+            <ToggleGroup
+              value={portal ? [portal] : ['all']}
+              onValueChange={(val) => {
+                const selected = val[val.length - 1]
+                if (!selected || selected === 'all') {
+                  setPortal('')
+                } else {
+                  setPortal(selected)
+                }
+              }}
+              className="flex flex-wrap gap-2"
+            >
+              <ToggleGroupItem
+                value="all"
+                size="sm"
+                variant="outline"
+                className="rounded-full px-3 py-1 text-xs font-medium cursor-pointer aria-pressed:bg-secondary aria-pressed:text-secondary-foreground aria-pressed:ring-1 aria-pressed:ring-border"
               >
                 Wszystkie
-              </button>
+              </ToggleGroupItem>
               {PORTALS.map((p) => (
-                <button
+                <ToggleGroupItem
                   key={p}
-                  type="button"
-                  onClick={() => setPortal(portal === p ? '' : p)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium capitalize transition ${
-                    portal === p
-                      ? 'bg-secondary text-secondary-foreground ring-1 ring-border'
-                      : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-                  }`}
+                  value={p}
+                  size="sm"
+                  variant="outline"
+                  className="rounded-full px-3 py-1 text-xs font-medium capitalize cursor-pointer aria-pressed:bg-secondary aria-pressed:text-secondary-foreground aria-pressed:ring-1 aria-pressed:ring-border"
                 >
                   {p}
-                </button>
+                </ToggleGroupItem>
               ))}
-            </div>
+            </ToggleGroup>
           </div>
 
           {/* Price Range */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold">Zakres cenowy (PLN)</label>
+            <Label className="text-xs font-semibold">Zakres cenowy (PLN)</Label>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <span className="text-[11px] text-muted-foreground">Od</span>
@@ -135,42 +142,42 @@ export function FilterModal({ open, onOpenChange, filter, onApply }: FilterModal
 
           {/* Sort Selection */}
           <div className="space-y-1.5">
-            <label className="text-xs font-semibold">Sortowanie</label>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setSortBy('newest')}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                  sortBy === 'newest'
-                    ? 'bg-secondary text-secondary-foreground ring-1 ring-border'
-                    : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-                }`}
+            <Label className="text-xs font-semibold">Sortowanie</Label>
+            <ToggleGroup
+              value={[sortBy]}
+              onValueChange={(val) => {
+                const selected = val[val.length - 1]
+                if (selected) {
+                  setSortBy(selected as SortBy)
+                }
+              }}
+              className="flex flex-wrap gap-2"
+            >
+              <ToggleGroupItem
+                value="newest"
+                size="sm"
+                variant="outline"
+                className="rounded-full px-3 py-1 text-xs font-medium cursor-pointer aria-pressed:bg-secondary aria-pressed:text-secondary-foreground aria-pressed:ring-1 aria-pressed:ring-border"
               >
                 Najnowsze
-              </button>
-              <button
-                type="button"
-                onClick={() => setSortBy('price_asc')}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                  sortBy === 'price_asc'
-                    ? 'bg-secondary text-secondary-foreground ring-1 ring-border'
-                    : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-                }`}
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="price_asc"
+                size="sm"
+                variant="outline"
+                className="rounded-full px-3 py-1 text-xs font-medium cursor-pointer aria-pressed:bg-secondary aria-pressed:text-secondary-foreground aria-pressed:ring-1 aria-pressed:ring-border"
               >
                 Cena: rosnąco
-              </button>
-              <button
-                type="button"
-                onClick={() => setSortBy('price_desc')}
-                className={`rounded-full px-3 py-1 text-xs font-medium transition ${
-                  sortBy === 'price_desc'
-                    ? 'bg-secondary text-secondary-foreground ring-1 ring-border'
-                    : 'bg-muted/50 text-muted-foreground hover:bg-muted'
-                }`}
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="price_desc"
+                size="sm"
+                variant="outline"
+                className="rounded-full px-3 py-1 text-xs font-medium cursor-pointer aria-pressed:bg-secondary aria-pressed:text-secondary-foreground aria-pressed:ring-1 aria-pressed:ring-border"
               >
                 Cena: malejąco
-              </button>
-            </div>
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
         </div>
 

@@ -1,5 +1,15 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import { Separator } from '@/components/ui/separator'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Search, SlidersHorizontal, X, ArrowUpDown, RefreshCw } from 'lucide-react'
 import type { ListOffersFilter, SortBy } from '../types/offer'
 
@@ -81,63 +91,79 @@ export function Header({
             variant={activeFiltersCount > 0 ? 'default' : 'outline'}
             size="sm"
             onClick={onOpenFilterModal}
-            className="shrink-0 rounded-full gap-1.5 text-xs h-7"
+            className="shrink-0 rounded-full gap-1.5 text-xs h-7 cursor-pointer"
           >
             <SlidersHorizontal className="size-3.5" />
             Filtry
             {activeFiltersCount > 0 && (
-              <span className="ml-1 rounded-full bg-background px-1.5 py-0.2 text-[10px] font-bold text-foreground">
+              <Badge
+                variant="secondary"
+                className="ml-1 rounded-full px-1.5 py-0 text-[10px] font-bold bg-background text-foreground"
+              >
                 {activeFiltersCount}
-              </span>
+              </Badge>
             )}
           </Button>
 
-          <div className="h-4 w-px bg-border shrink-0" />
+          <Separator orientation="vertical" className="h-4" />
 
           {/* Quick City Chips */}
-          <button
-            type="button"
-            onClick={() => onCitySelect(undefined)}
-            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition ${
-              !filter.city
-                ? 'bg-secondary text-secondary-foreground'
-                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
+          <ToggleGroup
+            value={filter.city ? [filter.city] : ['all']}
+            onValueChange={(val) => {
+              const selected = val[val.length - 1]
+              if (!selected || selected === 'all' || selected === filter.city) {
+                onCitySelect(undefined)
+              } else {
+                onCitySelect(selected)
+              }
+            }}
+            className="flex items-center gap-1.5 shrink-0"
           >
-            Wszystkie miasta
-          </button>
-          {QUICK_CITIES.map((city) => {
-            const active = filter.city?.toLowerCase() === city.toLowerCase()
-            return (
-              <button
+            <ToggleGroupItem
+              value="all"
+              size="sm"
+              variant="outline"
+              className="rounded-full text-xs font-medium cursor-pointer aria-pressed:bg-secondary aria-pressed:text-secondary-foreground"
+            >
+              Wszystkie miasta
+            </ToggleGroupItem>
+            {QUICK_CITIES.map((city) => (
+              <ToggleGroupItem
                 key={city}
-                type="button"
-                onClick={() => onCitySelect(active ? undefined : city)}
-                className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium transition ${
-                  active
-                    ? 'bg-secondary text-secondary-foreground ring-1 ring-border'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                }`}
+                value={city}
+                size="sm"
+                variant="outline"
+                className="rounded-full text-xs font-medium cursor-pointer aria-pressed:bg-secondary aria-pressed:text-secondary-foreground aria-pressed:ring-1 aria-pressed:ring-border"
               >
                 {city}
-              </button>
-            )
-          })}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
 
-          <div className="h-4 w-px bg-border shrink-0" />
+          <Separator orientation="vertical" className="h-4" />
 
           {/* Quick Sort Options */}
           <div className="ml-auto flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
             <ArrowUpDown className="size-3" />
-            <select
+            <Select
               value={filter.sortBy}
-              onChange={(e) => onSortChange(e.target.value as SortBy)}
-              className="bg-transparent text-xs font-medium text-foreground outline-none cursor-pointer"
+              onValueChange={(val) => {
+                if (val) onSortChange(val as SortBy)
+              }}
             >
-              <option value="newest">Najnowsze</option>
-              <option value="price_asc">Cena: rosnąco</option>
-              <option value="price_desc">Cena: malejąco</option>
-            </select>
+              <SelectTrigger
+                size="sm"
+                className="h-7 border-none bg-transparent shadow-none text-xs font-medium text-foreground px-1 gap-1 focus-visible:ring-0 cursor-pointer"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end">
+                <SelectItem value="newest">Najnowsze</SelectItem>
+                <SelectItem value="price_asc">Cena: rosnąco</SelectItem>
+                <SelectItem value="price_desc">Cena: malejąco</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
